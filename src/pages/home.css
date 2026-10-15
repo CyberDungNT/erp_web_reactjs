@@ -26,20 +26,27 @@
 .hl__card-head h2 { margin: 0 0 14px; font-size: 18px; font-weight: 600; color: #0f2f47; }
 
 .hl__chips {
-  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line-2);
+  position: relative; display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line-2);
   scrollbar-width: none; mask-image: linear-gradient(90deg, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent);
 }
 .hl__chips::-webkit-scrollbar { display: none; }
 .hl__chip {
-  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; flex-shrink: 0; border-radius: 999px;
-  border: 1px solid #dfe8ef; background: #fff; color: #263848; font: inherit; font-size: 15px; cursor: pointer;
-  transition: background-color .2s, color .2s, border-color .2s, transform .2s var(--ease), box-shadow .2s;
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px; flex-shrink: 0; border-radius: 999px;
+  border: 1px solid #dfe8ef; background: #fff; color: #263848; font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background-color .25s, color .25s, border-color .25s, transform .2s var(--ease), box-shadow .2s;
 }
-.hl__chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: transform .25s var(--ease-spring); }
-.hl__chip:hover { border-color: var(--brand); color: var(--brand-text); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(31, 95, 139, .1); }
+.hl__chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); transition: transform .25s var(--ease-spring), background-color .25s; }
+.hl__chip:hover { border-color: var(--brand-200); color: var(--brand-text); background: var(--brand-50); transform: translateY(-1px); }
 .hl__chip:hover i { transform: scale(1.4); }
-.hl__chip.is-on { background: var(--brand); border-color: var(--brand); color: #fff; box-shadow: 0 6px 14px var(--brand-glow); }
+/* Nhóm đang chọn: chip trong suốt, nền xanh là "hl__chip-ink" trượt sang */
+.hl__chip.is-on, .hl__chip.is-on:hover { background: transparent; border-color: transparent; color: #fff; font-weight: 600; transform: none; }
 .hl__chip.is-on i { background: #fff; }
+.hl__chip-ink {
+  position: absolute; left: 0; top: 0; z-index: 0; border-radius: 999px; pointer-events: none; opacity: 0;
+  background: linear-gradient(135deg, #276f9f, var(--brand)); box-shadow: 0 6px 14px var(--brand-glow);
+  transition: transform .45s var(--ease-spring), width .45s var(--ease), opacity .2s;
+}
+.hl__chip-ink.is-on { opacity: 1; }
 
 .hl__stage { position: relative; }
 .hl__grid-wrap { overflow: hidden; min-height: 304px; }

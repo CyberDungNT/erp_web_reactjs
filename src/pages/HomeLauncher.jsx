@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Icon from '../components/icons/Icon';
 import { useMain } from '../layouts/MainLayout';
 import { flattenLeaves, normalize } from '../utils/menuTree';
@@ -20,6 +20,7 @@ export default function HomeLauncher() {
   const [cols, setCols] = useState(5);
   const gridRef = useRef(null);
   const chipsRef = useRef(null);
+  const [chipInk, setChipInk] = useState(null); // nền trượt dưới nhóm đang chọn
 
   // Các phân hệ (nhóm gốc của menu trái có chức năng bên trong)
   const groups = useMemo(() => leftTree
@@ -64,6 +65,15 @@ export default function HomeLauncher() {
     setPage(n);
   };
   const shown = items.slice(page * pageSize, page * pageSize + pageSize);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = chipsRef.current?.querySelector('.hl__chip.is-on');
+      setChipInk(el ? { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight } : null);
+    };
+    measure();
+    document.fonts?.ready.then(measure);
+  }, [group, groups, k, lang]);
 
   const pickGroup = (g, el) => {
     setGroup(g);
@@ -110,6 +120,8 @@ export default function HomeLauncher() {
                 <i />{g.node.text}
               </button>
             ))}
+            <span className={`hl__chip-ink ${chipInk ? 'is-on' : ''}`} aria-hidden="true"
+              style={chipInk ? { transform: `translate(${chipInk.x}px, ${chipInk.y}px)`, width: chipInk.w, height: chipInk.h } : undefined} />
           </div>
         )}
 

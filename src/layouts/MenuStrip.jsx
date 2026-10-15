@@ -8,7 +8,7 @@ import './menustrip.css';
  * Menu trên cùng kiểu MenuStrip của WinForms.
  *
  * Chuột:
- *   - Bấm mục trên thanh -> thả xuống; khi đang mở, rê sang mục khác trên thanh sẽ đổi menu.
+ *   - Rê chuột vào mục trên thanh -> thả xuống ngay (bấm cũng mở được); rời khỏi thanh + menu -> tự đóng.
  *   - Rê vào mục có ▸ -> menu con xổ sang phải (nhiều cấp). Bấm mục lá -> mở chức năng.
  *   - Bấm ra ngoài -> đóng.
  * Bàn phím:
@@ -21,6 +21,8 @@ import './menustrip.css';
  *        variant: 'strip' (thanh riêng kiểu WinForms) | 'header' (nằm trên thanh tiêu đề, có mũi tên ▾).
  */
 const HOVER_DELAY = 250;
+const HOVER_OPEN_DELAY = 90;    // rê vào mục trên thanh -> mở dropdown
+const HOVER_CLOSE_DELAY = 320;  // rời thanh + dropdown -> đóng
 const usable = (list = []) => list.filter((n) => !n.separator);
 const hasKids = (n) => usable(n?.children).length > 0;
 const keyOf = (n) => normalize(n.accel >= 0 ? n.text[n.accel] : n.text.charAt(0));
@@ -61,8 +63,13 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
     else refs.current.delete(id);
   }, []);
 
+  const openTimer = useRef(null);         // trễ nhỏ trước khi mở bằng hover (tránh mở khi chỉ lướt chuột qua)
+  const closeTimer = useRef(null);        // trễ trước khi đóng khi chuột rời thanh + dropdown
+
   const close = useCallback(() => {
     clearTimeout(timer.current);
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
     setOpen([]);
     setHot([]);
     setActive(false);
@@ -91,19 +98,30 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
     else invoke(node);
   }, [openSub, invoke]);
 
-  // ----- Chuột trên thanh -----
+  // ----- Chuột trên thanh: rê vào là mở, rời thanh + dropdown thì tự đóng -----
+  const cancelClose = () => clearTimeout(closeTimer.current);
+  const scheduleClose = () => {
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(close, HOVER_CLOSE_DELAY);
+  };
   const onBarDown = (e, node) => {
     e.preventDefault();
     if (!hasKids(node)) return invoke(node);
-    if (open[0] === node.id) return close();
-    setActive(true);
-    openSub(0, node, false);
+    clearTimeout(openTimer.current);
+    if (open[0] !== node.id) openSub(0, node, false); // bấm vẫn mở được (màn hình cảm ứng)
   };
   const onBarEnter = (node) => {
-    if (open.length && open[0] !== node.id) {
-      if (hasKids(node)) openSub(0, node, false);
-      else { setOpen([]); setHot([node.id]); }
+    cancelClose();
+    clearTimeout(openTimer.current);
+    if (open[0] === node.id) return;
+    if (!hasKids(node)) {
+      if (open.length) { setOpen([]); setHot([node.id]); }
+      return;
     }
+    // Đang mở menu khác -> đổi ngay; chưa mở -> mở sau một chút
+    if (open.length) openSub(0, node, false);
+    else openTimer.current = setTimeout(() => openSub(0, node, false), HOVER_OPEN_DELAY);
   };
 
   // ----- Chuột trong dropdown (mục ở cấp k) -----
@@ -261,7 +279,11 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
     };
   }, [tree, nodeMap, open, hot, active, close, openSub, choose, invoke]);
 
-  useEffect(() => () => clearTimeout(timer.current), []);
+  useEffect(() => () => {
+    clearTimeout(timer.current);
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
+  }, []);
 
   const barHot = hot[0];
 
@@ -277,7 +299,11 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
   return (
     <>
       <nav ref={stripRef} className={`menustrip menustrip--${variant} ${kb ? 'ms-kb' : ''}`} role="menubar" aria-label="Menu chính"
-        onMouseLeave={() => { hoverId.current = null; moveInk(open[0] || (active ? barHot : null)); }}>
+        onMouseLeave={() => {
+          hoverId.current = null;
+          moveInk(open[0] || (active ? barHot : null));
+          if (open.length || openTimer.current) scheduleClose();
+        }}>
         {variant === 'header' && (
           <span className={`ms-ink ${ink ? 'is-on' : ''} ${open.length ? 'is-open' : ''}`} aria-hidden="true"
             style={ink ? { transform: `translateX(${ink.x}px)`, width: ink.w } : undefined} />
@@ -303,15 +329,17 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
         if (!node || !hasKids(node)) return null;
         return (
           <Dropdown key={id} level={i + 1} node={node} anchor={refs.current.get(id)} isRoot={i === 0} gap={variant === 'header' ? 8 : 0}
+            minTop={(stripRef.current?.getBoundingClientRect().bottom ?? 0) + (variant === 'header' ? 8 : 0)}
             hotId={hot[i + 1]} openId={open[i + 1]} kb={kb} setRef={setRef}
-            onEnter={onItemEnter} onChoose={(k, c) => choose(k, c, false)} />
+            onEnter={onItemEnter} onChoose={(k, c) => choose(k, c, false)}
+            onPointerIn={cancelClose} onPointerOut={scheduleClose} />
         );
       })}
     </>
   );
 }
 
-function Dropdown({ level, node, anchor, isRoot, gap = 0, hotId, openId, kb, setRef, onEnter, onChoose }) {
+function Dropdown({ level, node, anchor, isRoot, gap = 0, minTop = 0, hotId, openId, kb, setRef, onEnter, onChoose, onPointerIn, onPointerOut }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ left: -9999, top: -9999 });
 
@@ -325,18 +353,26 @@ function Dropdown({ level, node, anchor, isRoot, gap = 0, hotId, openId, kb, set
     const vh = window.innerHeight;
     let left;
     let top;
+    let maxHeight;
     if (isRoot) {
+      // Menu cấp 1 luôn nằm ngay dưới thanh menu; dài quá thì cuộn bên trong chứ không đẩy lên che thanh menu
       left = r.left;
       top = r.bottom + gap;
+      maxHeight = vh - top - 8;
       if (left + w > vw - 4) left = vw - w - 4;
     } else {
       left = r.right + 2;                       // xổ sang phải
       if (left + w > vw - 4) left = r.left - w - 2; // không đủ chỗ -> xổ sang trái
+      // Menu con: dài quá thì dịch lên nhưng không vượt lên trên thanh menu, phần thừa cuộn bên trong
+      const floor = Math.max(4, minTop);
+      maxHeight = vh - floor - 8;
+      const shown = Math.min(h, maxHeight);
       top = r.top - 7;
+      if (top + shown > vh - 4) top = vh - shown - 4;
+      top = Math.max(floor, top);
     }
-    if (top + h > vh - 4) top = vh - h - 4;
-    setPos({ left: Math.max(4, left), top: Math.max(4, top) });
-  }, [anchor, node, isRoot, gap]);
+    setPos({ left: Math.max(4, left), top: Math.max(4, top), maxHeight });
+  }, [anchor, node, isRoot, gap, minTop]);
 
   // Mục được chọn bằng bàn phím luôn nằm trong vùng nhìn thấy
   useEffect(() => {
@@ -346,7 +382,8 @@ function Dropdown({ level, node, anchor, isRoot, gap = 0, hotId, openId, kb, set
 
   return createPortal(
     <div ref={ref} className={`ms-drop ms-drop--${isRoot ? 'root' : 'sub'} ${kb ? 'ms-kb' : ''}`} role="menu" style={pos}
-      onMouseDown={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
+      onMouseDown={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}
+      onMouseEnter={onPointerIn} onMouseLeave={onPointerOut}>
       {node.children.map((c, i) => {
         if (c.separator) return <div key={c.id} className="ms-sep" role="separator" />;
         const sub = hasKids(c);

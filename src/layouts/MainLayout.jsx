@@ -1,4 +1,4 @@
-import { Component, Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Component, Suspense, createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiConfig } from '../api/apiClient';
@@ -13,9 +13,16 @@ import { BRAND } from '../config/brand';
 import MenuStrip from './MenuStrip';
 import SideMenu from './SideMenu';
 import UnitSwitcher from './UnitSwitcher';
+import TaskBar from './TaskBar';
 import './main.css';
 
 const SIDEBAR_KEY = 'cyber_sidebar_collapsed';
+const SIDEBAR_W_KEY = 'cyber_sidebar_width';
+const SIDE_DEFAULT = 264;
+const SIDE_MIN = 200;
+const SIDE_MAX = 480;
+const SIDE_COLLAPSE_AT = 130; // kéo nhỏ hơn mức này thì tự thu gọn thành dạng icon
+const clampSide = (w) => Math.round(Math.min(SIDE_MAX, Math.max(SIDE_MIN, w)));
 
 const USER_TEXT = {
   V: {
@@ -115,10 +122,50 @@ export default function MainLayout() {
   const [ctxMenu, setCtxMenu] = useState(null);
   const [userOpen, setUserOpen] = useState(false);
   const userRef = useRef(null);
-  const taskRef = useRef(null);
+  const tabsRef = useRef(null);
+  const [tabInk, setTabInk] = useState(null); // thanh nhấn trượt dưới tab dashboard đang chọn
 
   useEffect(() => { try { localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'); } catch { /* ignore */ } }, [collapsed]);
+
+  // ----- Kéo cạnh phải menu trái để đổi độ rộng (nhớ lại cho lần sau) -----
+  const [sideW, setSideW] = useState(() => {
+    try { return clampSide(Number(localStorage.getItem(SIDEBAR_W_KEY)) || SIDE_DEFAULT); } catch { return SIDE_DEFAULT; }
+  });
+  const [resizing, setResizing] = useState(false);
+  useEffect(() => { try { localStorage.setItem(SIDEBAR_W_KEY, String(sideW)); } catch { /* ignore */ } }, [sideW]);
+  const startResize = (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = sideW;
+    setResizing(true);
+    const move = (ev) => {
+      const raw = startW + ev.clientX - startX;
+      if (raw < SIDE_COLLAPSE_AT) { up(); setSideW(startW); setCollapsed(true); return; } // kéo quá nhỏ -> thu gọn
+      setSideW(clampSide(raw));
+    };
+    const up = () => {
+      setResizing(false);
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+    };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  };
+  const onResizeKey = (e) => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); setSideW((w) => clampSide(w - 16)); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); setSideW((w) => clampSide(w + 16)); }
+    if (e.key === 'Home' || e.key === 'Enter') { e.preventDefault(); setSideW(SIDE_DEFAULT); }
+  };
   useEffect(() => { if (user?.Title) document.title = user.Title; }, [user?.Title]);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = tabsRef.current?.querySelector('.mn__dtab.is-active');
+      setTabInk(el ? { x: el.offsetLeft + 10, w: el.offsetWidth - 20 } : null); // lùi vào trong góc bo của tab
+    };
+    measure();
+    document.fonts?.ready.then(measure); // font tải xong làm đổi độ rộng tab
+  }, [activeKey, boardIdx, boards, lang]);
   useEffect(() => {
     if (!userOpen) return;
     const close = (e) => { if (!userRef.current?.contains(e.target)) setUserOpen(false); };
@@ -139,9 +186,6 @@ export default function MainLayout() {
     if (document.fullscreenElement) document.exitFullscreen?.();
     else document.documentElement.requestFullscreen?.().catch(() => {});
   }, []);
-  useEffect(() => {
-    taskRef.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [activeKey]);
 
   const toggleLang = useCallback(() => setLang(lang === 'E' ? 'V' : 'E'), [lang, setLang]);
   const doLogout = useCallback(async () => {
@@ -238,7 +282,8 @@ export default function MainLayout() {
 
   return (
     <MainContext.Provider value={ctx}>
-      <div className={`mn ${collapsed ? 'mn--collapsed' : ''} ${intro ? 'mn--intro' : ''}`}>
+      <div className={`mn ${collapsed ? 'mn--collapsed' : ''} ${intro ? 'mn--intro' : ''} ${resizing ? 'mn--resizing' : ''}`}
+        style={{ '--side-w-open': `${sideW}px` }}>
         {/* ---------- Thanh trên ---------- */}
         <header className="mn__top">
           <button type="button" className="mn__burger" title={collapsed ? 'Mở menu' : 'Thu gọn menu'}
@@ -327,17 +372,28 @@ export default function MainLayout() {
             onExpand={() => setCollapsed(false)} onOpen={openMenu} />
           <UnitSwitcher collapsed={collapsed} />
         </aside>
+        {!collapsed && (
+          <div className="mn__resizer" role="separator" aria-orientation="vertical" tabIndex={0}
+            aria-valuemin={SIDE_MIN} aria-valuemax={SIDE_MAX} aria-valuenow={sideW}
+            title={lang === 'E' ? 'Drag to resize · Double-click to reset' : 'Kéo để đổi độ rộng · Nhấp đúp để về mặc định'}
+            onPointerDown={startResize} onDoubleClick={() => setSideW(SIDE_DEFAULT)} onKeyDown={onResizeKey}>
+            <i />
+          </div>
+        )}
 
         {/* ---------- Vùng làm việc ---------- */}
         <section className="mn__work">
-          <nav className="mn__dtabs" role="tablist" aria-label="Trang chủ">
+          <nav className="mn__dtabs" role="tablist" aria-label="Trang chủ" ref={tabsRef}>
             {boards.map((b, i) => (
               <button key={i} type="button" role="tab" aria-selected={activeKey === HOME && boardIdx === i}
-                className={`mn__dtab ${activeKey === HOME && boardIdx === i ? 'is-active' : ''}`}
+                className={`mn__dtab ${activeKey === HOME && boardIdx === i ? 'is-active' : ''}`} style={{ '--i': i }}
                 onClick={() => openBoard(i)} title={b.CP_name ? `${b.Title} · ${b.CP_name}` : b.Title}>
-                {String(b.Title || b.PageName).toUpperCase()}
+                <Icon name={b.PageName === 'FrmReference' ? 'home' : 'dashboard'} size={15} />
+                <span>{String(b.Title || b.PageName).toUpperCase()}</span>
               </button>
             ))}
+            <span className={`mn__dtab-ink ${tabInk ? 'is-on' : ''}`} aria-hidden="true"
+              style={tabInk ? { transform: `translateX(${tabInk.x}px)`, width: tabInk.w } : undefined} />
           </nav>
 
           <div className="mn__content">
@@ -361,28 +417,9 @@ export default function MainLayout() {
             {BRAND.watermark && <div className="mn__watermark" aria-hidden="true">{BRAND.watermark}</div>}
           </div>
 
-          <footer className="mn__task">
-            <div className="mn__task-list" ref={taskRef}>
-              <button type="button" className={`mn__task-item mn__task-home ${activeKey === HOME ? 'is-active' : ''}`}
-                onClick={() => setActiveKey(HOME)}>
-                {lang === 'E' ? 'Home' : 'Trang chủ'}
-              </button>
-              {windows.map((w) => (
-                <div key={w.key} className={`mn__task-item ${activeKey === w.key ? 'is-active' : ''}`}
-                  onClick={() => setActiveKey(w.key)} onContextMenu={(e) => onWindowContext(e, w)}
-                  onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); closeWindows([w.key]); } }}
-                  title={`${winTitle(w)} (${w.key})`} role="button" tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && setActiveKey(w.key)}>
-                  <span className="mn__task-text">{winTitle(w)}</span>
-                  <button type="button" className="mn__task-close" title="Đóng"
-                    onClick={(e) => { e.stopPropagation(); closeWindows([w.key]); }}>
-                    <Icon name="close" size={11} strokeWidth={2.2} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <span className="mn__lockdate" title="Ngày khoá sổ"><Icon name="lock" size={13} strokeWidth={2} /> {user?.Ngay_Ks}</span>
-          </footer>
+          <TaskBar windows={windows} activeKey={activeKey} homeKey={HOME} titleOf={winTitle}
+            onActivate={setActiveKey} onClose={closeWindows} onReorder={setWindows}
+            onContextMenu={onWindowContext} lang={lang} lockDate={user?.Ngay_Ks} />
         </section>
 
         {ctxMenu && <CyberContextMenu {...ctxMenu} onClose={() => setCtxMenu(null)} />}

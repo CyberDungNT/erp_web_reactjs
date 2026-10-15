@@ -64,15 +64,12 @@ export default function UnitSwitcher({ collapsed }) {
         }}
         title={`${user?.Ten_TTCP} (${user?.Ma_TTCP})`} aria-expanded={open}>
         <span className="unit__icon"><Icon name="briefcase" size={18} /></span>
-        {!collapsed && (
-          <>
-            <span className="unit__text">
-              <small>ĐƠN VỊ LÀM VIỆC</small>
-              <b>{user?.Ten_TTCP}</b>
-            </span>
-            <Icon name="chevronUpDown" size={16} className="unit__chev" />
-          </>
-        )}
+        {/* Luôn dựng phần chữ, ẩn bằng CSS khi thu gọn -> co/giãn menu không làm chữ bị ép xuống dòng */}
+        <span className="unit__text" aria-hidden={collapsed || undefined}>
+          <small>ĐƠN VỊ LÀM VIỆC</small>
+          <b>{user?.Ten_TTCP}</b>
+        </span>
+        <Icon name="chevronUpDown" size={16} className="unit__chev" />
       </button>
       {open && pos && createPortal(
         <div className="unit__pop" role="listbox" ref={popRef} style={pos}>

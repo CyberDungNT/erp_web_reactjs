@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Icon, { MenuIcon } from '../components/icons/Icon';
 import { filterTree } from '../utils/menuTree';
 
@@ -59,9 +59,9 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
             : <Icon name="chevronRight" size={13} className={`sidemenu__chev ${isOpen ? 'is-open' : ''}`} />)}
         </button>
         {isGroup && (isOpen || seen.current.has(n.id)) && (
-          <div className={`sidemenu__sub ${isOpen ? 'is-open' : ''}`} inert={isOpen ? undefined : ''}>
-            <ul>{n.children.map((c, ci) => renderNode(c, depth + 1, ci))}</ul>
-          </div>
+          <SubList open={isOpen} x={12 + depth * 14 + (depth === 0 ? 9 : 7)}>
+            {n.children.map((c, ci) => renderNode(c, depth + 1, ci))}
+          </SubList>
         )}
       </li>
     );
@@ -80,6 +80,25 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
         {shown.map((n, i) => renderNode(n, 0, i))}
         {searching && shown.length === 0 && <li className="sidemenu__empty">Không tìm thấy chức năng</li>}
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Khung danh sách con có hiệu ứng mở / thu gọn.
+ * Luôn dựng ở trạng thái đóng trước rồi mới bật is-open, để CSS transition chạy được cả ở lần mở đầu tiên.
+ */
+function SubList({ open, x, children }) {
+  const ref = useRef(null);
+  const [on, setOn] = useState(false);
+  useLayoutEffect(() => {
+    if (!open) { setOn(false); return; }
+    void ref.current?.offsetHeight; // ép trình duyệt áp trạng thái đóng trước khi chuyển sang mở
+    setOn(true);
+  }, [open]);
+  return (
+    <div ref={ref} className={`sidemenu__sub ${on ? 'is-open' : ''}`} inert={on ? undefined : ''} style={{ '--x': `${x}px` }}>
+      <ul>{children}</ul>
     </div>
   );
 }
