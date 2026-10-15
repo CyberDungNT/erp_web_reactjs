@@ -32,6 +32,14 @@ export const MENU_TABLE = {
   top: 1,  // bảng 1 -> menu trên cùng
 };
 
+/** Lấy dữ liệu menu trái / menu trên từ phiên đăng nhập theo MENU_TABLE */
+export function getMenuRows(session) {
+  const tables = session?.tables || [];
+  return { left: tables[MENU_TABLE.left] || [], top: tables[MENU_TABLE.top] || [] };
+}
+
+// Đổi số này khi cấu trúc phiên thay đổi -> phiên cũ lưu trên trình duyệt tự bị huỷ, phải đăng nhập lại
+const SESSION_VERSION = 2;
 const SESSION_KEY = 'cyber_session';
 const DEVICE_KEY = 'cyber_device_id';
 const LAST_LOGIN_KEY = 'cyber_last_login';
@@ -68,15 +76,14 @@ export function parseLoginResult(tables) {
     ok: true,
     message: info.Note || 'Đăng nhập thành công',
     info,
-    leftMenu: tables[MENU_TABLE.left] || [],
-    topMenu: tables[MENU_TABLE.top] || [],
+    tables, // lưu nguyên các bảng; menu trái/trên lấy theo MENU_TABLE lúc hiển thị (getMenuRows)
     dashboards: tables.find((t) => hasCols(t, 'PageName')) || [],
   };
 }
 
 /**
  * Gọi đăng nhập.
- * @returns {Promise<{ok:boolean, message:string, info:object, topMenu?:[], leftMenu?:[], dashboards?:[]}>}
+ * @returns {Promise<{ok:boolean, message:string, info:object, tables?:any[][], dashboards?:[]}>}
  */
 export async function login({ userName, password, maTTCP, otp = '', idOtp = '' }) {
   const params = [
@@ -101,6 +108,7 @@ export async function login({ userName, password, maTTCP, otp = '', idOtp = '' }
 // remember = false -> sessionStorage (đóng tab là mất)
 export function saveSession(session, remember) {
   clearSession();
+  session = { ...session, v: SESSION_VERSION };
   const store = remember ? localStorage : sessionStorage;
   try { store.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* bộ nhớ đầy/bị chặn */ }
 }
@@ -112,7 +120,13 @@ export function isRemembered() {
 export function loadSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s?.v !== SESSION_VERSION || !Array.isArray(s.tables)) {
+      clearSession(); // phiên kiểu cũ -> bỏ
+      return null;
+    }
+    return s;
   } catch {
     return null;
   }

@@ -6,7 +6,7 @@ import * as auth from './authService';
  * Thông tin đăng nhập dùng chung toàn app.
  *   const { session, user, lang, login, logout, setLang } = useAuth();
  *   user      -> dòng thông tin (User_name, Ma_Dvcs, Ten_TTCP, TokenKey, ...)
- *   session   -> { info, topMenu, leftMenu, dashboards, lang, loginAt }
+ *   session   -> { info, tables, dashboards, lang, loginAt }  (menu: getMenuRows(session))
  *   lang      -> 'V' (tiếng Việt, dùng cột Bar) | 'E' (tiếng Anh, dùng cột Bar2)
  */
 const AuthContext = createContext(null);
@@ -19,8 +19,7 @@ export function AuthProvider({ children }) {
     if (res.ok) {
       const s = {
         info: res.info,
-        topMenu: res.topMenu,
-        leftMenu: res.leftMenu,
+        tables: res.tables,
         dashboards: res.dashboards,
         lang: res.info.M_Lan === 'E' ? 'E' : 'V',
         loginAt: new Date().toISOString(),

@@ -1,11 +1,12 @@
 import { Component, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { apiConfig } from '../api/apiClient';
+import { getMenuRows } from '../auth/authService';
 import { buildMenuTree } from '../utils/menuTree';
 import { screens, Placeholder, devMenu, SHOW_DEV_MENU, EXIT_MENU_IDS, LANG_MENU_IDS } from '../screens/registry';
 import { CyberContextMenu } from '../components/cyber';
 import Icon from '../components/icons/Icon';
-import TopMenu from './TopMenu';
+import MenuStrip from './MenuStrip';
 import SideMenu from './SideMenu';
 import './main.css';
 
@@ -22,11 +23,13 @@ const SIDEBAR_KEY = 'cyber_sidebar_collapsed';
 export default function MainLayout() {
   const { session, user, lang, logout, setLang } = useAuth();
 
-  const topTree = useMemo(() => buildMenuTree(session.topMenu, lang), [session.topMenu, lang]);
+  // Bảng nào là menu trái / menu trên: cấu hình MENU_TABLE trong auth/authService.js
+  const menuRows = useMemo(() => getMenuRows(session), [session]);
+  const topTree = useMemo(() => buildMenuTree(menuRows.top, lang), [menuRows, lang]);
   const leftTree = useMemo(() => {
-    const t = buildMenuTree(session.leftMenu, lang);
+    const t = buildMenuTree(menuRows.left, lang);
     return SHOW_DEV_MENU ? [...t, ...devMenu] : t;
-  }, [session.leftMenu, lang]);
+  }, [menuRows, lang]);
 
   // Tra cứu node theo Menu_Id để tiêu đề tab đổi theo ngôn ngữ
   const nodeMap = useMemo(() => {
@@ -138,7 +141,7 @@ export default function MainLayout() {
           <span className="main__logo-mark">C</span>
           <span className="main__logo-text">Cyber<b>Plus</b></span>
         </div>
-        <TopMenu tree={topTree} onOpen={openMenu} />
+        <div className="main__title" title={user?.Title}>{user?.Title}</div>
         <div className="main__right">
           {apiConfig.USE_MOCK && <span className="badge badge--warn" title="VITE_USE_MOCK=true">Mock</span>}
           <button type="button" className="main__lang" onClick={toggleLang} title="Đổi ngôn ngữ">
@@ -172,6 +175,10 @@ export default function MainLayout() {
           </div>
         </div>
       </header>
+
+      <div className="main__strip">
+        <MenuStrip tree={topTree} onOpen={openMenu} />
+      </div>
 
       <aside className="main__side">
         <SideMenu tree={leftTree} activeId={activeKey} collapsed={collapsed}

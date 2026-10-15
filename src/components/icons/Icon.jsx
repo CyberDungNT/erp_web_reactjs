@@ -61,6 +61,12 @@ const MENU_ICON_MAP = {
   kh: 'calendar', loa: 'check', in: 'box', sx: 'database', das: 'dashboard',
 };
 
+/** Icon trong DB có map được sang icon vẽ sẵn không */
+export function hasMenuIcon(icon) {
+  const key = String(icon || '').trim().toLowerCase();
+  return !!(MENU_ICON_MAP[key] || P[key]);
+}
+
 export function MenuIcon({ icon, fallbackText = '', size = 18, color }) {
   const key = String(icon || '').trim().toLowerCase();
   const name = MENU_ICON_MAP[key] || (P[key] ? key : null);

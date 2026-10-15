@@ -3,8 +3,8 @@
   --side-w: 256px;
   height: 100vh; display: grid; overflow: hidden;
   grid-template-columns: var(--side-w) minmax(0, 1fr);
-  grid-template-rows: 48px minmax(0, 1fr) 24px;
-  grid-template-areas: 'top top' 'side work' 'status status';
+  grid-template-rows: 44px 28px minmax(0, 1fr) 24px;
+  grid-template-areas: 'top top' 'strip strip' 'side work' 'status status';
 }
 .main--collapsed { --side-w: 52px; }
 
@@ -24,6 +24,11 @@
   width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center;
   background: #fff; color: #1f5fa8; font-weight: 800; font-size: 15px;
 }
+.main__title {
+  flex: 1; min-width: 0; text-align: center; font-size: 12px; color: #9fb2c8; letter-spacing: .02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 12px;
+}
+.main__strip { grid-area: strip; position: relative; z-index: 40; min-width: 0; }
 .main__right { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding-left: 8px; }
 .main__lang {
   display: flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border-radius: 6px;
@@ -56,39 +61,6 @@
 .main__user-act:hover { background: #f0f5fb; }
 .main__user-act.is-danger { color: #c62828; }
 .main__user-act.is-danger:hover { background: #fdecea; }
-
-/* ---- Menu phân hệ (trên) ---- */
-.topmenu { min-width: 0; flex: 1; position: static; }
-.topmenu__bar { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
-.topmenu__bar::-webkit-scrollbar { display: none; }
-.topmenu__item {
-  display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border: 0; border-radius: 6px;
-  background: transparent; color: #c5d0dd; cursor: pointer; font: inherit; font-size: 13px; white-space: nowrap; flex-shrink: 0;
-}
-.topmenu__item:hover { background: #22395a; color: #fff; }
-.topmenu__item.is-open { background: #fff; color: #17283d; }
-.topmenu__panel {
-  position: absolute; left: 12px; right: 12px; top: 46px; max-height: calc(100vh - 80px); overflow: auto;
-  background: #fff; color: #1d2733; border: 1px solid #d9dee5; border-radius: 8px;
-  box-shadow: 0 16px 40px rgba(15, 25, 40, .22); padding: 14px 18px 18px;
-}
-.topmenu__panel-head {
-  display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: #17283d;
-  padding-bottom: 10px; margin-bottom: 12px; border-bottom: 1px solid #edf0f3;
-}
-.topmenu__cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px 24px; }
-.topmenu__col-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #1f5fa8; margin-bottom: 6px; padding: 0 8px; }
-.topmenu__link {
-  display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; padding: 6px 8px;
-  border: 0; border-radius: 5px; background: transparent; text-align: left; cursor: pointer; font: inherit; font-size: 13px; color: #303a3d;
-}
-.topmenu__link:hover { background: #e6eef8; color: #1f5fa8; }
-.topmenu__group { margin: 4px 0 2px; }
-.topmenu__group-title {
-  font-size: 12px; font-weight: 600; color: #4a5866; padding: 5px 8px 3px; display: flex; align-items: center; gap: 6px;
-}
-.topmenu__group-title::before { content: ''; width: 4px; height: 4px; border-radius: 1px; background: #9fb4cc; }
-.topmenu__sep { height: 1px; background: #edf0f3; margin: 4px 8px; }
 
 /* ---- Menu trái ---- */
 .main__side { grid-area: side; background: #fff; border-right: 1px solid #d9dee5; min-height: 0; display: flex; flex-direction: column; }
@@ -128,8 +100,6 @@
   display: inline-grid; place-items: center; border-radius: 4px; background: #e2e8f0; color: #4a6584;
   font-weight: 700; line-height: 1; flex-shrink: 0;
 }
-.topmenu__item .cy-icon-letter { background: #2a4263; color: #c5d0dd; }
-.topmenu__item.is-open .cy-icon-letter { background: #e6eef8; color: #1f5fa8; }
 
 /* ---- Vùng tab ---- */
 .main__work { grid-area: work; display: flex; flex-direction: column; min-width: 0; min-height: 0; background: #eef1f5; }

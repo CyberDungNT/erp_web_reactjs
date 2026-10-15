@@ -28,7 +28,8 @@ Khi deploy khác domain: điền `VITE_API_BASE_URL` và bật CORS bên .NET.
   `M_Type`, `M_PlatForm` sửa trong `loginConfig`. `M_Id_Device` là mã 64 ký tự sinh 1 lần và lưu trên trình duyệt
   (web không đọc được MAC / user Windows nên 2 tham số đó để trống).
 - Bảng menu lấy theo vị trí, khai báo ở `MENU_TABLE` trong `authService.js`:
-  bảng 0 → menu bên trái, bảng 1 → menu trên cùng (muốn đổi chỉ sửa 2 số này).
+  bảng 0 → menu bên trái, bảng 1 → menu trên cùng (muốn đổi chỉ sửa 2 số này, có hiệu lực ngay, không cần đăng nhập lại).
+- Phiên lưu nguyên các bảng trả về. Khi đổi cấu trúc phiên, tăng `SESSION_VERSION` để phiên cũ trên trình duyệt tự huỷ.
 - Bảng thông tin đăng nhập (có `status` + `TokenKey`) và bảng dashboard (có `PageName`) nhận dạng theo cột,
   vì khi đăng nhập sai thứ tự bảng khác khi đúng. `status = 'Y'` là thành công, `Note` là thông báo.
 - Thông tin phiên dùng ở mọi màn hình: `const { user, session, lang, logout } = useAuth();`
@@ -37,7 +38,10 @@ Khi deploy khác domain: điền `VITE_API_BASE_URL` và bật CORS bên .NET.
 
 ## Màn hình chính
 
-- Menu trên: mục gốc → mỗi nhóm cấp 2 là 1 cột, nhóm sâu hơn hiển thị thụt vào. Menu trái: cây nhiều cấp theo `Menu_Id`/`Menu_Id0`,
+- Menu trên (`layouts/MenuStrip.jsx`): kiểu MenuStrip WinForms – bấm mục trên thanh để thả xuống,
+  rê vào mục có ▸ để xổ menu con sang phải (nhiều cấp). Chữ sau `&` trong `Bar` là phím tắt
+  (Alt + chữ để mở; giữ Alt để thấy gạch chân). Alt/F10 kích hoạt thanh, ← → ↑ ↓ Enter Esc như WinForms.
+- Menu trái: cây nhiều cấp theo `Menu_Id`/`Menu_Id0`,
   có tìm kiếm không dấu, nút ☰ thu gọn. `---` là đường kẻ, `&` trong tiêu đề được bỏ.
 - Bấm chức năng → mở tab (giữ trạng thái khi chuyển tab). Chuột phải tab: đóng / đóng tab khác / đóng tất cả;
   chuột giữa hoặc Ctrl+Alt+W để đóng.
@@ -68,7 +72,8 @@ src/
     AuthContext.jsx     useAuth(), RequireAuth
   layouts/
     MainLayout.jsx      khung chính: thanh trên, menu trái, tab, thanh trạng thái
-    TopMenu.jsx / SideMenu.jsx
+    MenuStrip.jsx       menu trên kiểu WinForms
+    SideMenu.jsx        menu trái dạng cây
   screens/registry.js   Menu_Id -> màn hình
   utils/menuTree.js     dựng cây menu từ Menu_Id / Menu_Id0
   pages/

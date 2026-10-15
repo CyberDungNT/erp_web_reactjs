@@ -5,7 +5,7 @@
  * - Con của một dòng '---' (lỗi dữ liệu) được gắn lên cha của dòng đó.
  * - Bỏ ký tự '&' (phím tắt kiểu WinForms) trong tiêu đề.
  *
- * Mỗi node: { id, parentId, text, icon, color, iconColor, isMaxForm, isShowTab, tag, url,
+ * Mỗi node: { id, parentId, text, accel, icon, color, iconColor, isMaxForm, isShowTab, tag, url,
  *             phanHe, module, separator, children: [], raw }
  */
 const pick = (o, ...keys) => {
@@ -15,10 +15,38 @@ const pick = (o, ...keys) => {
 
 export const cleanText = (s) => String(s ?? '').replace(/&(?!&)/g, '').trim();
 
-export function menuText(row, lang = 'V') {
+function rawText(row, lang) {
   const vi = pick(row, 'Bar', 'bar');
   const en = pick(row, 'Bar2', 'bar2');
-  return cleanText(lang === 'E' ? en || vi : vi || en);
+  return lang === 'E' ? en || vi : vi || en;
+}
+
+export function menuText(row, lang = 'V') {
+  return parseAccel(rawText(row, lang)).text;
+}
+
+/**
+ * Tách phím tắt kiểu WinForms: '&Báo cáo' -> { text: 'Báo cáo', accel: 0 } ; '&&' là ký tự & thật.
+ * accel = vị trí ký tự được gạch chân (-1 nếu không có).
+ */
+export function parseAccel(s) {
+  const src = String(s ?? '');
+  let out = '';
+  let accel = -1;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '&') {
+      if (src[i + 1] === '&') { out += '&'; i++; continue; }
+      if (accel < 0 && i + 1 < src.length && src[i + 1] !== ' ') accel = out.length;
+      continue;
+    }
+    out += ch;
+  }
+  const lead = out.length - out.trimStart().length;
+  const text = out.trim();
+  if (accel >= 0) accel -= lead;
+  if (accel < 0 || accel >= text.length) accel = -1;
+  return { text, accel };
 }
 
 export function buildMenuTree(rows = [], lang = 'V') {
@@ -28,11 +56,12 @@ export function buildMenuTree(rows = [], lang = 'V') {
   rows.forEach((r) => {
     const id = String(pick(r, 'Menu_Id', 'menu_id') ?? '').trim();
     if (!id) return;
-    const text = menuText(r, lang);
+    const { text, accel } = parseAccel(rawText(r, lang));
     const node = {
       id,
       parentId: String(pick(r, 'Menu_Id0', 'menu_id0') ?? '').trim(),
       text,
+      accel,
       separator: text === '---' || text === '-',
       icon: pick(r, 'Icon', 'icon') || '',
       iconColor: pick(r, 'ForeColor_Icon') || '',

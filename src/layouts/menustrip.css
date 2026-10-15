@@ -1,0 +1,41 @@
+/* ===== MenuStrip kiểu WinForms ===== */
+.menustrip {
+  display: flex; align-items: stretch; height: 100%; padding: 0 4px;
+  background: #f5f6f7; border-bottom: 1px solid #d3d9e0;
+  font-size: 13px; color: #1b1b1b; user-select: none;
+  overflow-x: auto; scrollbar-width: none;
+}
+.menustrip::-webkit-scrollbar { display: none; }
+
+.ms-top {
+  display: flex; align-items: center; gap: 5px; padding: 0 8px; margin: 2px 0;
+  border: 1px solid transparent; white-space: nowrap; cursor: default; flex-shrink: 0;
+}
+.ms-top .cy-icon { color: #4a6584; }
+.ms-top:hover, .ms-top.is-hot { background: #e5f1fb; border-color: #cce4f7; }
+.ms-top.is-open { background: #cce8ff; border-color: #99d1ff; }
+.ms-top-sep { width: 1px; margin: 5px 4px; background: #d3d9e0; }
+
+/* Gạch chân phím tắt chỉ hiện khi dùng bàn phím (giữ Alt / F10) như Windows */
+.ms-label u { text-decoration: none; }
+.ms-kb .ms-label u { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---- Dropdown ---- */
+.ms-drop {
+  position: fixed; z-index: 5000; min-width: 210px; max-width: 460px;
+  max-height: calc(100vh - 8px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 2px; font-size: 13px; color: #1b1b1b; user-select: none;
+  /* cột lề icon màu xám bên trái như ToolStripDropDown */
+  background: linear-gradient(90deg, #f0f2f4 0, #f0f2f4 29px, #e3e6ea 29px, #e3e6ea 30px, #fff 30px);
+  border: 1px solid #a9b2bd;
+  box-shadow: 2px 3px 8px rgba(0, 0, 0, .2);
+}
+.ms-item {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; align-items: center;
+  height: 24px; border: 1px solid transparent; cursor: default;
+}
+.ms-item.is-hot, .ms-item.is-open { background: #e5f1fb; border-color: #99d1ff; }
+.ms-gutter { display: grid; place-items: center; color: #4a6584; }
+.ms-item .ms-label { padding: 0 8px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-arrow { display: grid; place-items: center; color: #3a3a3a; }
+.ms-sep { height: 1px; margin: 3px 2px 3px 32px; background: #d7dbe0; }
