@@ -146,7 +146,9 @@ const baseInfo = {
   Version: 'Cyber Plus 10.1', isUpdateMenu: 1, Mfa_Method: '', Mfa_Enrolled: 0, IsChat: '1', ShowDashBoardHome: '1',
 };
 
-export function mockLogin([, , userName = '', password = '', , , , maTTCP = '01']) {
+const MOCK_TOKEN = '21138272-B3C6-43E3-8A08-A6F18B424893';
+
+export function mockLogin([, , userName = '', password = '', tokenKey = '', , , maTTCP = '01']) {
   const unit = UNITS.find((u) => u.Ma_TTCP === maTTCP);
   if (!unit) {
     return { Table: dashboards, Table1: [{ ...baseInfo, status: 'N', Msg: 'Y', Note: `Không có quyền truy cập đơn vị ${maTTCP}`, TokenKey: '', User_name: userName }] };
@@ -154,14 +156,14 @@ export function mockLogin([, , userName = '', password = '', , , , maTTCP = '01'
   const unitInfo = { Ma_Dvcs: unit.Ma_Dvcs, Ma_TTCP: unit.Ma_TTCP, Ten_TTCP: unit.Ten_TTCP, Ten_Cty: unit.Ten_TTCP,
     Ngay_Ks: unit.Ngay_KS.slice(8, 10) + '/' + unit.Ngay_KS.slice(5, 7) + '/' + unit.Ngay_KS.slice(0, 4),
     Title: `${baseInfo.Ten_Dvcs}  -  ${unit.Ten_TTCP.toUpperCase()}` };
-  if (password === '123') {
+  if (password === '123' || tokenKey === MOCK_TOKEN) { // mật khẩu đúng hoặc đăng nhập lại bằng token
     return {
       Table: menuBang0,
       Table1: menuBang1,
       Table2: dashboards,
       Table3: [{
         ...baseInfo, ...unitInfo, status: 'Y', Msg: 'N', Note: 'Truy cập thành công', is_Admin: 1, Is_Login_Otp: 0, ChangPass: 0,
-        TokenKey: '21138272-B3C6-43E3-8A08-A6F18B424893', User_name: userName,
+        TokenKey: MOCK_TOKEN, User_name: userName,
         Comment: 'Nguyễn Tiến Dũng', EMail: 'admin@congty.vn', Telephone: '',
       }],
     };

@@ -49,3 +49,14 @@ code { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; font-s
 
 /* Tô màu dòng tuỳ biến qua rowClassName */
 .cy-table tbody tr.row-out-of-stock td { color: var(--accent-text); }
+
+/* Màn chờ tự đăng nhập lại bằng token (AuthContext.AuthSplash) */
+.auth-splash {
+  position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  background: #fff; color: var(--muted); font-size: 13.5px;
+}
+.auth-splash__spin {
+  width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--brand-100); border-top-color: var(--brand);
+  animation: auth-spin .7s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }

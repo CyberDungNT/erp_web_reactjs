@@ -37,7 +37,7 @@
   --line-2: #e6edf2;
   --surface: #ffffff;
   --surface-2: #f4f8fb;
-  --bg: #D9EAF2;
+  --bg: #ffffff;               /* nền vùng làm việc (trang chủ, các màn hình) */
 
   --danger: #d1373f;
   --danger-50: #fdeced;

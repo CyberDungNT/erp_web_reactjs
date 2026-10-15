@@ -4,7 +4,7 @@ import { CyberTextBox, CyberSelect } from '../components/cyber';
 import Icon from '../components/icons/Icon';
 import LoginIllustration from './LoginIllustration';
 import { useCyberForm } from '../hooks/useCyberForm';
-import { useAuth } from '../auth/AuthContext';
+import { AuthSplash, useAuth } from '../auth/AuthContext';
 import { getLastLogin, getUnits } from '../auth/authService';
 import { apiConfig } from '../api/apiClient';
 import { BRAND, SOCIAL_LOGINS } from '../config/brand';
@@ -47,7 +47,7 @@ const MODULES = {
 const norm = (s) => String(s || '').trim().toLowerCase();
 
 export default function LoginPage() {
-  const { session, login } = useAuth();
+  const { session, login, restoring, notice } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [last] = useState(() => getLastLogin());
@@ -68,6 +68,8 @@ export default function LoginPage() {
 
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState(null); // { type: 'error' | 'info', text }
+  // Tự đăng nhập lại bằng token thất bại (hết hạn...) -> báo trên thẻ đăng nhập
+  useEffect(() => { if (notice) setMessage({ type: 'info', text: notice }); }, [notice]);
   const [phase, setPhase] = useState('idle'); // idle | loading | success | reveal | leave
   const [shake, setShake] = useState(0);
   const [showPass, setShowPass] = useState(false);
@@ -140,6 +142,7 @@ export default function LoginPage() {
     Object.entries(errors).filter(([k]) => !String(form.data[k] ?? '').trim())
   );
 
+  if (restoring) return <AuthSplash />;
   if (session) return <Navigate to={location.state?.from || '/'} replace />;
 
   const fail = (text) => {

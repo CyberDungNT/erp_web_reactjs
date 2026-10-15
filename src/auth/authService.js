@@ -12,6 +12,7 @@
  *     (2 bảng này tìm theo cột vì khi đăng nhập sai thứ tự bảng khác khi đúng)
  */
 import { callProc } from '../api/apiClient';
+import { decryptText, encryptText } from './tokenVault';
 
 export const LOGIN_PROC = 'CP_SysLogin';
 
@@ -57,9 +58,10 @@ export function getMenuRows(session) {
   return { left: tables[MENU_TABLE.left] || [], top: tables[MENU_TABLE.top] || [] };
 }
 
-// Đổi số này khi cấu trúc phiên thay đổi -> phiên cũ lưu trên trình duyệt tự bị huỷ, phải đăng nhập lại
-const SESSION_VERSION = 2;
-const SESSION_KEY = 'cyber_session';
+// Đổi số này khi cấu trúc bản ghi token thay đổi -> bản ghi cũ tự bị bỏ, phải đăng nhập lại
+const TOKEN_VERSION = 2;
+const TOKEN_KEY = 'cyber_auth';
+const LEGACY_SESSION_KEY = 'cyber_session';
 const DEVICE_KEY = 'cyber_device_id';
 const LAST_LOGIN_KEY = 'cyber_last_login';
 
@@ -104,13 +106,13 @@ export function parseLoginResult(tables) {
  * Gọi đăng nhập.
  * @returns {Promise<{ok:boolean, message:string, info:object, tables?:any[][], dashboards?:[]}>}
  */
-export async function login({ userName, password, maTTCP, otp = '', idOtp = '' }) {
+export async function login({ userName, password = '', maTTCP, tokenKey = '', otp = '', idOtp = '' }) {
   const params = [
     loginConfig.type,
     loginConfig.platform,
     userName,
     password,
-    '',          // @M_TokenKey
+    tokenKey,    // @M_TokenKey – rỗng khi đăng nhập bằng mật khẩu, có giá trị khi tự đăng nhập lại bằng token
     otp,         // @M_Ma_OTP
     idOtp,       // @M_Id_OTP
     maTTCP,
@@ -122,39 +124,78 @@ export async function login({ userName, password, maTTCP, otp = '', idOtp = '' }
   return parseLoginResult(res.tables);
 }
 
-// ===== Lưu phiên =====
-// remember = true  -> localStorage (giữ đăng nhập khi tắt trình duyệt)
-// remember = false -> sessionStorage (đóng tab là mất)
-export function saveSession(session, remember) {
-  clearSession();
-  session = { ...session, v: SESSION_VERSION };
-  const store = remember ? localStorage : sessionStorage;
-  try { store.setItem(SESSION_KEY, JSON.stringify(session)); } catch { /* bộ nhớ đầy/bị chặn */ }
+// ===== Ghi nhớ đăng nhập bằng TokenKey đã mã hoá =====
+// Đăng nhập thành công -> mã hoá NGUYÊN bản ghi (tokenVault: AES-GCM) rồi lưu localStorage[TOKEN_KEY]:
+//   "v2:<base64( IV + mã hoá JSON { tokenKey, userName, maTTCP, lang, savedAt } )>"
+//   -> nhìn localStorage không đọc được tài khoản, đơn vị hay token.
+// Lần sau mở web -> giải mã -> gọi lại CP_SysLogin với @M_TokenKey (không cần mật khẩu) để lấy menu / quyền mới nhất.
+// Không lưu menu / thông tin phiên ra trình duyệt nữa: phiên chỉ nằm trong bộ nhớ.
+
+const TOKEN_PREFIX = `v${TOKEN_VERSION}:`;
+
+const readRaw = () => {
+  try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+};
+
+/** Có bản ghi đăng nhập đã lưu không (để màn hình biết đang tự đăng nhập lại) */
+export function hasSavedToken() {
+  return readRaw().startsWith(TOKEN_PREFIX);
 }
 
-export function isRemembered() {
-  try { return !!localStorage.getItem(SESSION_KEY); } catch { return false; }
-}
-
-export function loadSession() {
+/** Giải mã bản ghi đã lưu. Không có / sai khoá / bị sửa -> null (và xoá bản ghi hỏng) */
+async function readRecord() {
+  const raw = readRaw();
+  if (!raw.startsWith(TOKEN_PREFIX)) return null;
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw);
-    if (s?.v !== SESSION_VERSION || !Array.isArray(s.tables)) {
-      clearSession(); // phiên kiểu cũ -> bỏ
-      return null;
-    }
-    return s;
+    const rec = JSON.parse(await decryptText(raw.slice(TOKEN_PREFIX.length)));
+    return rec?.tokenKey ? rec : null;
   } catch {
+    clearToken(); // khoá đã đổi / dữ liệu bị sửa -> bỏ, đăng nhập lại bằng mật khẩu
     return null;
   }
 }
 
-export function clearSession() {
+async function writeRecord(rec) {
+  const enc = await encryptText(JSON.stringify(rec));
+  try { localStorage.setItem(TOKEN_KEY, TOKEN_PREFIX + enc); } catch { /* bộ nhớ đầy / bị chặn */ }
+}
+
+/** Mã hoá + lưu TokenKey kèm tài khoản, đơn vị, ngôn ngữ */
+export async function saveToken({ tokenKey, userName, maTTCP, lang }) {
+  if (!tokenKey) return;
+  await writeRecord({ tokenKey, userName, maTTCP, lang, savedAt: new Date().toISOString() });
+}
+
+/** Cập nhật thông tin phụ (vd. ngôn ngữ) mà không đổi token: giải mã -> sửa -> mã hoá lại */
+export async function updateSavedToken(patch) {
+  const rec = await readRecord();
+  if (rec) await writeRecord({ ...rec, ...patch });
+}
+
+export function clearToken() {
+  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+}
+
+/**
+ * Tự đăng nhập lại bằng token đã lưu: giải mã -> CP_SysLogin(@M_TokenKey).
+ * @returns {Promise<null | {ok, message, info, tables, dashboards, userName, maTTCP, lang, tokenKey}>}
+ *          null = không có token hợp lệ để thử.
+ */
+export async function loginWithSavedToken() {
+  const rec = await readRecord();
+  if (!rec) return null;
+  const res = await login({ userName: rec.userName, maTTCP: rec.maTTCP, tokenKey: rec.tokenKey });
+  // Thủ tục có thể cấp token mới; không trả thì giữ token cũ
+  return { ...res, userName: rec.userName, maTTCP: rec.maTTCP, lang: rec.lang, tokenKey: res.info?.TokenKey || rec.tokenKey };
+}
+
+/** Dọn dữ liệu kiểu cũ còn dạng chữ rõ: phiên đầy đủ (menu + TokenKey) và bản ghi token v1 lộ tài khoản */
+export function clearLegacySession() {
   try {
-    sessionStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(LEGACY_SESSION_KEY);
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
+    const raw = readRaw();
+    if (raw && !raw.startsWith(TOKEN_PREFIX)) clearToken();
   } catch { /* ignore */ }
 }
 
