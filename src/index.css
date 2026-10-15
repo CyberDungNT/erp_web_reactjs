@@ -1,54 +1,51 @@
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 body {
-  margin: 0; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
-  font-size: 13px; color: #1d2733; background: #eef1f5;
+  margin: 0;
+  font-family: "Be Vietnam Pro", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  font-size: 13px; color: var(--ink); background: var(--bg);
+  -webkit-font-smoothing: antialiased;
 }
-code { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+code { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; font-size: 12px; }
+::selection { background: var(--brand-200); color: var(--brand-ink); }
 
-.app { display: flex; height: 100%; }
-.app__sidebar { width: 220px; flex-shrink: 0; background: #17283d; color: #c5d0dd; display: flex; flex-direction: column; }
-.app__brand { height: 48px; display: flex; align-items: center; padding: 0 18px; font-size: 18px; font-weight: 700; color: #fff; border-bottom: 1px solid #23384f; }
-.app__brand span { color: #6fa8ea; margin-left: 2px; }
-.app__nav-group { padding: 12px 0 4px; }
-.app__nav-title { padding: 0 18px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #7b8ea4; }
-.app__nav-link { display: block; padding: 8px 18px; color: #c5d0dd; text-decoration: none; border-left: 3px solid transparent; }
-.app__nav-link:hover { background: #1e3350; color: #fff; }
-.app__nav-link.is-active { background: #1e3350; color: #fff; border-left-color: #6fa8ea; }
-.app__main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.app__header { height: 48px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 20px; background: #fff; border-bottom: 1px solid #d9dee5; }
-.app__api { color: #6b7785; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app__content { flex: 1; overflow: auto; }
+/* Thanh cuộn mảnh */
+* { scrollbar-width: thin; scrollbar-color: #c3d1ca transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: #c3d1ca; border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: #9fb5aa; }
 
-.badge { padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.badge--warn { background: #fff3cd; color: #8a6100; }
-.badge--ok { background: #dcf3e3; color: #1d6b37; }
+.badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em; }
+.badge--warn { background: var(--accent); color: var(--accent-ink); }
+.badge--ok { background: var(--brand-100); color: var(--brand-text); }
 
-.page { padding: 18px 20px 40px; max-width: 1400px; }
-.page__title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.page__title h2 { margin: 0; font-size: 19px; }
+.page { padding: 20px 22px 40px; max-width: 1440px; }
+.page__title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.page__title h2 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .page__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.panel { background: #fff; border: 1px solid #d9dee5; border-radius: 6px; padding: 14px 16px; margin-bottom: 16px; }
-.panel__title { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: #1f5fa8; }
+.panel {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px;
+  box-shadow: var(--shadow-sm); transition: box-shadow .25s var(--ease);
+}
+.panel:hover { box-shadow: var(--shadow-md); }
+.panel__title { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.panel__title::before { content: ''; width: 4px; height: 16px; border-radius: 2px; background: var(--brand); }
 .grid { display: grid; gap: 0 24px; }
 .grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .split { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
-.json-view { margin: 0; padding: 10px; background: #0f1b2b; color: #b8e0a8; border-radius: 4px; font-family: Consolas, monospace; font-size: 12px; max-height: 520px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
-.log { margin: 0; padding: 0; list-style: none; max-height: 160px; overflow: auto; font-family: Consolas, monospace; font-size: 12px; }
-.log li { padding: 3px 0; border-bottom: 1px dashed #e3e7ec; }
-.alert { padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; }
-.alert--error { background: #fdecea; color: #a12222; border: 1px solid #f5c2c0; }
-.alert--ok { background: #e7f6ec; color: #1d6b37; border: 1px solid #bfe5cb; }
-.hint { color: #6b7785; font-size: 12px; margin: 0 0 10px; }
+.json-view { margin: 0; padding: 12px; background: var(--dark-900); color: #8ff0c6; border-radius: 8px; font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; max-height: 520px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+.log { margin: 0; padding: 0; list-style: none; max-height: 160px; overflow: auto; font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; }
+.log li { padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.alert { padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
+.alert--error { background: var(--danger-50); color: #a3242b; border: 1px solid #f6c4c7; }
+.alert--ok { background: var(--brand-50); color: var(--brand-text); border: 1px solid var(--brand-200); }
+.hint { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
 
 @media (max-width: 1000px) {
   .split, .grid--2, .grid--3 { grid-template-columns: 1fr; }
-  .app__sidebar { width: 64px; }
-  .app__brand span, .app__nav-title { display: none; }
-  .app__nav-link { padding: 8px 6px; font-size: 11px; }
 }
 
 /* Tô màu dòng tuỳ biến qua rowClassName */
-.cy-table tbody tr.row-out-of-stock td { color: #b23b3b; }
+.cy-table tbody tr.row-out-of-stock td { color: var(--accent-text); }

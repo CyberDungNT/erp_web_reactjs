@@ -45,14 +45,16 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
           aria-expanded={isGroup ? isOpen : undefined}
           title={n.text}>
           {depth === 0 ? (
-            <MenuIcon icon={n.icon} fallbackText={n.text} size={17} />
+            <MenuIcon icon={n.icon} fallbackText={n.text} size={18} />
           ) : isGroup ? (
             <Icon name="folder" size={14} />
           ) : (
             <span className="sidemenu__dot" />
           )}
           <span className="sidemenu__text">{highlight(n.text, keyword)}</span>
-          {isGroup && <Icon name={isOpen ? 'chevronDown' : 'chevronRight'} size={13} className="sidemenu__chev" />}
+          {isGroup && (depth === 0
+            ? <Icon name="chevronDown" size={16} className={`sidemenu__chev sidemenu__chev--root ${isOpen ? 'is-open' : ''}`} />
+            : <Icon name="chevronRight" size={13} className={`sidemenu__chev ${isOpen ? 'is-open' : ''}`} />)}
         </button>
         {isGroup && isOpen && <ul>{n.children.map((c) => renderNode(c, depth + 1))}</ul>}
       </li>

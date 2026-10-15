@@ -1,41 +1,60 @@
-/* ===== MenuStrip kiểu WinForms ===== */
+/* ===== MenuStrip kiểu WinForms (màu theo theme xanh) ===== */
 .menustrip {
-  display: flex; align-items: stretch; height: 100%; padding: 0 4px;
-  background: #f5f6f7; border-bottom: 1px solid #d3d9e0;
-  font-size: 13px; color: #1b1b1b; user-select: none;
+  display: flex; align-items: stretch; height: 100%; padding: 0 6px; gap: 1px;
+  background: linear-gradient(#ffffff, #f4f8f6); border-bottom: 1px solid var(--line);
+  font-size: 13px; color: var(--ink); user-select: none;
   overflow-x: auto; scrollbar-width: none;
 }
 .menustrip::-webkit-scrollbar { display: none; }
 
 .ms-top {
-  display: flex; align-items: center; gap: 5px; padding: 0 8px; margin: 2px 0;
-  border: 1px solid transparent; white-space: nowrap; cursor: default; flex-shrink: 0;
+  position: relative; display: flex; align-items: center; gap: 6px; padding: 0 10px; margin: 3px 0;
+  border: 1px solid transparent; border-radius: 4px; white-space: nowrap; cursor: default; flex-shrink: 0;
+  transition: background-color .15s, border-color .15s, color .15s;
 }
-.ms-top .cy-icon { color: #4a6584; }
-.ms-top:hover, .ms-top.is-hot { background: #e5f1fb; border-color: #cce4f7; }
-.ms-top.is-open { background: #cce8ff; border-color: #99d1ff; }
-.ms-top-sep { width: 1px; margin: 5px 4px; background: #d3d9e0; }
+.ms-top .cy-icon { color: var(--brand-text); transition: transform .25s var(--ease-spring); }
+.ms-top:hover, .ms-top.is-hot { background: var(--brand-50); border-color: var(--brand-200); }
+.ms-top:hover .cy-icon { transform: scale(1.12); }
+.ms-top.is-open { background: var(--brand-100); border-color: var(--brand); color: var(--brand-ink); }
+.ms-top-sep { width: 1px; margin: 6px 4px; background: var(--line); }
 
 /* Gạch chân phím tắt chỉ hiện khi dùng bàn phím (giữ Alt / F10) như Windows */
 .ms-label u { text-decoration: none; }
-.ms-kb .ms-label u { text-decoration: underline; text-underline-offset: 2px; }
+.ms-kb .ms-label u { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 2px; }
 
 /* ---- Dropdown ---- */
 .ms-drop {
-  position: fixed; z-index: 5000; min-width: 210px; max-width: 460px;
+  position: fixed; z-index: 5000; min-width: 220px; max-width: 460px;
   max-height: calc(100vh - 8px); overflow-y: auto; overscroll-behavior: contain;
-  padding: 2px; font-size: 13px; color: #1b1b1b; user-select: none;
-  /* cột lề icon màu xám bên trái như ToolStripDropDown */
-  background: linear-gradient(90deg, #f0f2f4 0, #f0f2f4 29px, #e3e6ea 29px, #e3e6ea 30px, #fff 30px);
-  border: 1px solid #a9b2bd;
-  box-shadow: 2px 3px 8px rgba(0, 0, 0, .2);
+  padding: 3px; font-size: 13px; color: var(--ink); user-select: none; border-radius: 4px;
+  /* cột lề icon bên trái như ToolStripDropDown */
+  background: linear-gradient(90deg, #f1f7f4 0, #f1f7f4 30px, #e2ebe7 30px, #e2ebe7 31px, #fff 31px);
+  border: 1px solid #b9c9c1;
+  box-shadow: 0 10px 26px rgba(4, 21, 15, .16), 0 2px 6px rgba(4, 21, 15, .08);
+  transform-origin: top left;
 }
 .ms-item {
   display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; align-items: center;
-  height: 24px; border: 1px solid transparent; cursor: default;
+  height: 26px; border: 1px solid transparent; border-radius: 3px; cursor: default;
+  transition: background-color .1s, border-color .1s;
 }
-.ms-item.is-hot, .ms-item.is-open { background: #e5f1fb; border-color: #99d1ff; }
-.ms-gutter { display: grid; place-items: center; color: #4a6584; }
-.ms-item .ms-label { padding: 0 8px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ms-arrow { display: grid; place-items: center; color: #3a3a3a; }
-.ms-sep { height: 1px; margin: 3px 2px 3px 32px; background: #d7dbe0; }
+.ms-item.is-hot, .ms-item.is-open { background: var(--brand-50); border-color: var(--brand-200); }
+.ms-item.is-open { background: var(--brand-100); }
+.ms-gutter { display: grid; place-items: center; color: var(--brand-text); }
+.ms-item .ms-label { padding: 0 8px 0 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ms-arrow { display: grid; place-items: center; color: var(--muted); transition: transform .2s var(--ease), color .15s; }
+.ms-item.is-hot .ms-arrow, .ms-item.is-open .ms-arrow { color: var(--brand-text); transform: translateX(2px); }
+.ms-sep { height: 1px; margin: 3px 2px 3px 34px; background: var(--line); }
+
+/* ---- Biến thể nằm trên thanh tiêu đề (header) ---- */
+.menustrip--header { background: transparent; border-bottom: 0; padding: 0; gap: 4px; align-items: center; font-size: 14px; }
+.menustrip--header .ms-top {
+  height: 38px; margin: 0; padding: 0 12px; gap: 8px; border-radius: 8px; border-color: transparent; font-weight: 600; color: #2b3a34;
+}
+.menustrip--header .ms-top .cy-icon { color: #4a5852; }
+.menustrip--header .ms-top-chev { color: #8a9a93 !important; transition: transform .25s var(--ease) !important; }
+.menustrip--header .ms-top:hover, .menustrip--header .ms-top.is-hot { background: var(--brand-50); border-color: transparent; color: var(--brand-text); }
+.menustrip--header .ms-top:hover .cy-icon { color: var(--brand-text); }
+.menustrip--header .ms-top.is-open { background: var(--brand-100); border-color: transparent; color: var(--brand-ink); }
+.menustrip--header .ms-top.is-open .ms-top-chev { transform: rotate(180deg); color: var(--brand-text) !important; }
+.menustrip--header .ms-top:hover .ms-top-chev { transform: translateY(1px); }

@@ -1,59 +1,208 @@
-.login { display: flex; min-height: 100vh; background: #f4f6f9; }
+/* ===================== MÀN ĐĂNG NHẬP ===================== */
+.lg {
+  position: relative; min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(400px, .92fr);
+  align-items: center; gap: 24px; padding: 28px clamp(20px, 4vw, 72px); overflow: hidden;
+  background:
+    radial-gradient(70% 70% at 0% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 60%),
+    radial-gradient(60% 60% at 100% 100%, #7fe8c0 0%, rgba(127, 232, 192, 0) 70%),
+    linear-gradient(135deg, #f6fdfa 0%, #dcf8ec 55%, #9eedcd 100%);
+}
+/* Chữ chìm tên công ty ở đáy */
+.lg__watermark {
+  position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+  font-size: clamp(36px, 5.2vw, 76px); font-weight: 900; letter-spacing: .01em; color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, .55); text-transform: uppercase; user-select: none;
+}
 
-/* ---- Cột thương hiệu ---- */
-.login__brand {
-  position: relative; flex: 0 0 44%; overflow: hidden; color: #dbe6f3;
-  background: linear-gradient(160deg, #17283d 0%, #1b3556 55%, #1f5fa8 130%);
-  display: flex; align-items: center; padding: 48px 56px;
-}
-.login__brand-inner { position: relative; z-index: 1; max-width: 440px; }
-.login__grid {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(135deg, transparent 20%, #000 90%);
-  -webkit-mask-image: linear-gradient(135deg, transparent 20%, #000 90%);
-}
-.login__logo { display: flex; align-items: center; gap: 10px; font-size: 20px; color: #fff; margin-bottom: 56px; }
-.login__logo b { color: #7fb4f0; font-weight: 700; }
-.login__logo-mark {
-  width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center;
-  background: #fff; color: #1f5fa8; font-weight: 800; font-size: 20px;
-}
-.login__brand h1 { margin: 0 0 16px; font-size: 32px; line-height: 1.25; color: #fff; font-weight: 700; letter-spacing: -.01em; }
-.login__brand p { margin: 0 0 32px; font-size: 15px; line-height: 1.6; color: #b5c6da; }
-.login__features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
-.login__features li { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-.login__features .cy-icon { color: #7fb4f0; flex-shrink: 0; }
+/* ---------- Bên trái ---------- */
+.lg__left { position: relative; z-index: 1; display: flex; flex-direction: column; align-self: stretch; justify-content: center; min-width: 0; }
+@keyframes lg-rise { from { opacity: 0; transform: translateY(16px); } }
 
-/* ---- Cột form ---- */
-.login__main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 16px; }
-.login__card {
-  width: 100%; max-width: 380px; background: #fff; border: 1px solid #dde3ea; border-radius: 10px;
-  padding: 32px 32px 24px; box-shadow: 0 10px 30px rgba(20, 35, 60, .07);
+.brand-logo { display: inline-flex; flex-direction: column; align-items: flex-start; margin: 0 0 28px 6px; }
+.brand-logo__row { display: flex; align-items: center; gap: 2px; }
+.brand-logo__word {
+  font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: .02em; line-height: 1;
+  background: linear-gradient(180deg, #2ee39f 0%, #00b371 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(0, 120, 80, .15));
 }
-.login__card h2 { margin: 0 0 4px; font-size: 22px; color: #17283d; }
-.login__sub { margin: 0 0 22px; color: #6b7785; font-size: 13px; }
-.login__card .cy-field { margin-bottom: 14px; }
-.login__card .cy-input { height: 38px; font-size: 14px; }
-.login__card .cy-btn-icon { height: 38px; width: 38px; }
-.login__eye { display: grid; place-items: center; }
-.login__caps { margin: -8px 0 12px; font-size: 12px; color: #a35c00; }
-.login__error {
-  display: flex; align-items: center; gap: 8px; padding: 9px 12px; margin-bottom: 16px;
-  border-radius: 6px; background: #fdecea; color: #a12222; border: 1px solid #f5c2c0; font-size: 13px;
-}
-.login__submit { width: 100%; height: 40px; justify-content: center; font-size: 14px; font-weight: 600; margin-top: 8px; }
-.login__spinner {
-  width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
-  animation: login-spin .7s linear infinite;
-}
-@keyframes login-spin { to { transform: rotate(360deg); } }
-.login__hint { margin: 14px 0 0; font-size: 12px; color: #8a6100; background: #fff8e1; padding: 8px 10px; border-radius: 6px; }
-.login__footer { margin-top: 20px; font-size: 12px; color: #9aa6b2; }
+.brand-logo__mark { width: 22px; height: 36px; margin-left: -2px; transform: translateY(-3px); }
+.brand-logo__tag { margin-top: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: #0a9a66; }
+.brand-logo-img { max-height: 64px; margin: 0 0 28px 6px; align-self: flex-start; }
 
-@media (max-width: 860px) {
-  .login__brand { display: none; }
+.lg__slogan { margin: 0 0 14px 6px; display: flex; flex-direction: column; line-height: 1.2; }
+.lg__slogan span:first-child { font-size: clamp(22px, 2.1vw, 30px); font-weight: 800; color: #0b5a3c; }
+.lg__slogan-hl { font-size: clamp(30px, 3vw, 42px); font-weight: 800; color: var(--brand); letter-spacing: -.01em; }
+.lg__desc { margin: 0 0 8px 6px; max-width: 460px; font-size: 14px; line-height: 1.6; color: #24453a; }
+.lg__illu { max-width: 600px; width: 100%; margin-top: 4px; }
+.illu { width: 100%; height: auto; display: block; overflow: visible; }
+.lg__company { margin: 10px 0 0 6px; font-size: 13px; font-weight: 800; letter-spacing: .04em; color: rgba(255, 255, 255, .95); text-shadow: 0 1px 2px rgba(0, 120, 80, .35); }
+
+/* Chuyển động hình minh hoạ */
+.illu-float { animation: illu-float 5s ease-in-out infinite; }
+.illu-float--slow { animation-duration: 7s; animation-delay: -2s; }
+.illu-float--fast { animation-duration: 4s; animation-delay: -1s; }
+@keyframes illu-float { 50% { transform: translateY(-7px); } }
+.illu-flow { animation: illu-flow 1.6s linear infinite; }
+@keyframes illu-flow { to { stroke-dashoffset: -32; } }
+
+/* ---------- Thẻ đăng nhập ---------- */
+.lg__right { position: relative; z-index: 2; display: flex; justify-content: center; align-self: stretch; align-items: center; }
+.lg__card {
+  width: 100%; max-width: 500px; background: #fff; border-radius: 14px; padding: 40px 48px 22px;
+  box-shadow: 0 30px 60px rgba(0, 94, 62, .14), 0 6px 16px rgba(0, 94, 62, .06);
+}
+.lg__card.is-shake { animation: lg-shake .45s var(--ease); }
+@keyframes lg-shake { 15%, 55% { transform: translateX(-8px); } 35%, 75% { transform: translateX(7px); } 90% { transform: translateX(-2px); } }
+
+.lg__card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.lg__product { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #0a9a66; letter-spacing: .02em; }
+.lg__product i { width: 22px; height: 3px; border-radius: 2px; background: var(--accent); }
+.lg__lang { position: relative; }
+.lg__lang-btn {
+  display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 5px; border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; color: var(--ink); font: inherit; font-size: 12.5px; cursor: pointer;
+  transition: border-color .2s, box-shadow .2s, transform .2s var(--ease);
+}
+.lg__lang-btn:hover { border-color: var(--brand); box-shadow: 0 3px 10px rgba(0, 150, 100, .15); transform: translateY(-1px); }
+.lg__flag { border-radius: 50%; flex-shrink: 0; }
+.lg__lang-pop {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; min-width: 150px; padding: 4px; background: #fff;
+  border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-lg);
+}
+.lg__lang-pop button {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 8px; border: 0; border-radius: 6px; background: none;
+  font: inherit; font-size: 13px; cursor: pointer; text-align: left; transition: background-color .15s;
+}
+.lg__lang-pop button:hover { background: var(--brand-50); }
+.lg__lang-pop button.is-on { color: var(--brand-text); font-weight: 600; }
+
+.lg__title { margin: 0 0 6px; font-size: 22px; font-weight: 800; color: #0f2a20; letter-spacing: -.01em; }
+.lg__sub { margin: 0 0 22px; font-size: 13.5px; color: #4f6259; }
+
+.lg__fields { border: 0; margin: 0; padding: 0; min-width: 0; }
+.lg__card .cy-field { margin-bottom: 14px; }
+.lg__card .cy-field__label { font-size: 13px; font-weight: 500; color: #3b4a44; }
+.lg__card .cy-input, .lg__card .cy-select {
+  height: 36px; border-radius: 6px; font-size: 14px; padding: 0 12px; border-color: #d6dfdb; background: #fff;
+}
+.lg__card .cy-input:hover, .lg__card .cy-select:hover:not(:disabled) { border-color: #9fd9c1; }
+.lg__card .cy-input:focus, .lg__card .cy-select.is-open, .lg__card .cy-select:focus-visible {
+  border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-100);
+}
+.lg__card .cy-select:disabled { background: #f7faf9; }
+.lg__card .cy-input-group { position: relative; }
+.lg__card .cy-input-group .cy-input { border-radius: 6px; padding-right: 40px; }
+.lg__eye {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 30px; height: 28px; border: 0; border-radius: 6px;
+  display: grid; place-items: center; background: transparent; color: #8a9a93; cursor: pointer; transition: color .15s, background-color .15s;
+}
+.lg__eye:hover { color: var(--brand-text); background: var(--brand-50); }
+.lg__caps { display: flex; align-items: center; gap: 6px; margin: -8px 0 12px; font-size: 12px; color: var(--accent-text); }
+
+.lg__forgot { display: flex; justify-content: flex-end; margin: -4px 0 14px; }
+.lg__forgot a, .lg__forgot button {
+  border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; color: #0a8a5c; text-decoration: underline;
+  text-underline-offset: 2px; cursor: pointer; transition: color .15s;
+}
+.lg__forgot a:hover, .lg__forgot button:hover { color: var(--accent-text); }
+
+.lg__msg {
+  display: flex; align-items: center; gap: 8px; padding: 9px 12px; margin-bottom: 16px; border-radius: 8px; font-size: 13px;
+}
+.lg__msg--error { background: var(--danger-50); color: #a3242b; border: 1px solid #f6c4c7; }
+.lg__msg--info { background: var(--accent-50); color: var(--accent-ink); border: 1px solid var(--accent-100); }
+.lg__msg--info .cy-icon { color: var(--accent); }
+
+/* ---------- Nút đăng nhập ---------- */
+.lg__submit {
+  position: relative; overflow: hidden; width: 100%; height: 40px; border: 0; border-radius: 6px;
+  background: var(--brand); color: #fff; font: inherit; font-size: 14.5px; font-weight: 700; cursor: pointer;
+  text-shadow: 0 1px 1px rgba(0, 90, 60, .35);
+  box-shadow: 0 6px 16px var(--brand-glow);
+  transition: transform .2s var(--ease), box-shadow .25s var(--ease), background-color .2s;
+}
+.lg__submit::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .45) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .7s var(--ease);
+}
+.lg__submit:hover:not(:disabled) { transform: translateY(-2px); background: #00c47e; box-shadow: 0 12px 26px var(--brand-glow); }
+.lg__submit:hover:not(:disabled)::before { transform: translateX(120%); }
+.lg__submit:active:not(:disabled) { transform: translateY(0) scale(.985); transition-duration: .08s; }
+.lg__submit:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--brand-200), 0 6px 16px var(--brand-glow); }
+.lg__submit:disabled { cursor: default; }
+.lg__submit-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform .35s var(--ease), opacity .25s; }
+.lg__submit-face--loading, .lg__submit-face--success { opacity: 0; transform: translateY(100%); }
+.lg__submit.is-loading .lg__submit-face--idle, .lg__submit.is-success .lg__submit-face--idle, .lg__submit.is-reveal .lg__submit-face--idle { opacity: 0; transform: translateY(-100%); }
+.lg__submit.is-loading .lg__submit-face--loading { opacity: 1; transform: none; }
+.lg__submit.is-success .lg__submit-face--success, .lg__submit.is-reveal .lg__submit-face--success { opacity: 1; transform: none; }
+.lg__submit.is-success .lg__submit-face--loading, .lg__submit.is-reveal .lg__submit-face--loading { opacity: 0; transform: translateY(-100%); }
+.lg__spinner { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255, 255, 255, .4); border-top-color: #fff; animation: cy-spin .7s linear infinite; }
+.lg__tick path { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 24; stroke-dashoffset: 24; }
+.lg__submit.is-success .lg__tick path, .lg__submit.is-reveal .lg__tick path { animation: lg-draw .4s var(--ease) .1s forwards; }
+@keyframes lg-draw { to { stroke-dashoffset: 0; } }
+@keyframes cy-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Đăng nhập khác ---------- */
+.lg__or { display: flex; align-items: center; gap: 14px; margin: 34px 0 14px; font-size: 12.5px; color: #4f6259; }
+.lg__or::before, .lg__or::after { content: ''; flex: 1; height: 1px; background: #d9e3df; }
+.lg__or::before { margin-left: 50px; }
+.lg__or::after { margin-right: 50px; }
+.lg__social { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lg__social-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; height: 36px; border: 1px solid #d6dfdb; border-radius: 6px;
+  background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer;
+  transition: transform .2s var(--ease), box-shadow .2s, border-color .2s;
+}
+.lg__social-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--brand); box-shadow: 0 6px 14px rgba(0, 120, 80, .12); }
+.lg__social-btn:active:not(:disabled) { transform: translateY(0) scale(.97); }
+.lg__social-btn .cy-icon { color: #3b4a44; }
+
+.lg__hint { margin: 14px 0 0; text-align: center; font-size: 11.5px; color: var(--accent-text); }
+.lg__foot { margin-top: 40px; text-align: center; font-size: 11.5px; color: #4f6259; letter-spacing: .02em; }
+
+.lg--success .lg__fields, .lg--reveal .lg__fields, .lg--leave .lg__fields { opacity: .55; transition: opacity .3s; }
+
+/* ---------- Chuyển cảnh thành công ---------- */
+.lg__reveal {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+  background: radial-gradient(circle at var(--ox) var(--oy), #2ee39f, transparent 55%), linear-gradient(150deg, #00b371, #0b7a52);
+  clip-path: circle(0 at var(--ox) var(--oy)); animation: lg-reveal .75s cubic-bezier(.7, 0, .2, 1) forwards;
+}
+@keyframes lg-reveal { to { clip-path: circle(150vmax at var(--ox) var(--oy)); } }
+.lg__reveal::after { content: ''; position: absolute; inset: 0; background: var(--bg); opacity: 0; pointer-events: none; }
+.lg__reveal.is-leave::after { animation: lg-leave .35s var(--ease) forwards; }
+.lg__reveal.is-leave .lg__reveal-inner { animation: lg-leave-inner .3s var(--ease) forwards; }
+@keyframes lg-leave { to { opacity: 1; } }
+@keyframes lg-leave-inner { to { opacity: 0; transform: scale(.94); } }
+.lg__reveal-inner { position: relative; z-index: 1; text-align: center; color: #fff; }
+.lg__reveal-check { width: 84px; height: 84px; margin-bottom: 18px; }
+.lg__reveal-check circle { fill: rgba(255, 255, 255, .12); stroke: #fff; stroke-width: 2.5; stroke-dasharray: 151; stroke-dashoffset: 151; animation: lg-draw .55s var(--ease) .35s forwards; }
+.lg__reveal-check path { fill: none; stroke: #fff; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 36; stroke-dashoffset: 36; animation: lg-draw .35s var(--ease) .75s forwards; }
+.lg__reveal-title { font-size: 22px; font-weight: 800; text-shadow: 0 2px 6px rgba(0, 80, 50, .3); animation: lg-rise .5s var(--ease) .5s both; }
+.lg__reveal-sub { margin-top: 6px; font-size: 14px; color: #eafff6; animation: lg-rise .5s var(--ease) .62s both; }
+
+@media (max-width: 980px) {
+  .lg { grid-template-columns: 1fr; }
+  .lg__left { display: none; }
+  .lg__card { padding: 32px 24px 20px; }
+}
+
+/* Màn hình thấp (laptop 768px, cửa sổ nhỏ): thu gọn khoảng cách để thẻ không tràn */
+@media (max-height: 820px) {
+  .lg { padding-top: 18px; padding-bottom: 18px; }
+  .lg__card { padding: 26px 40px 14px; }
+  .lg__card-top { margin-bottom: 12px; }
+  .lg__sub { margin-bottom: 14px; }
+  .lg__card .cy-field { margin-bottom: 10px; }
+  .lg__or { margin: 20px 0 10px; }
+  .lg__foot { margin-top: 18px; }
+  .lg__hint { margin-top: 8px; }
+  .brand-logo { margin-bottom: 18px; }
+  .lg__illu { max-width: 520px; }
+}
+@media (max-height: 640px) {
+  .lg { align-items: start; overflow-y: auto; }
+  .lg__left { display: none; }
+  .lg { grid-template-columns: 1fr; }
 }

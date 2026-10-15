@@ -15,6 +15,25 @@ import { callProc } from '../api/apiClient';
 
 export const LOGIN_PROC = 'CP_SysLogin';
 
+/**
+ * LẤY DANH SÁCH ĐƠN VỊ khi rời ô tài khoản:
+ *   EXECUTE dbo.CP_SysGetUnits N'01', N'<tài khoản>'
+ * Trả về: bảng đơn vị (Ma_Dvcs, Ma_TTCP, Ten_TTCP, Ngay_KS) + bảng mặc định của user (M_LAN, Ma_TTCP, Ten_TTCP).
+ */
+export const UNITS_PROC = 'CP_SysGetUnits';
+export const unitsConfig = {
+  firstParam: '01', // tham số thứ nhất của CP_SysGetUnits
+};
+
+export async function getUnits(userName) {
+  const res = await callProc(UNITS_PROC, [unitsConfig.firstParam, userName]);
+  const tables = res.tables;
+  const units = tables.find((t) => hasCols(t, 'Ma_TTCP', 'Ten_TTCP') && !hasCols(t, 'M_LAN') && !hasCols(t, 'M_Lan')) || [];
+  const def = tables.find((t) => hasCols(t, 'M_LAN') || hasCols(t, 'M_Lan'))?.[0] || null;
+  const lang = def ? String(def.M_LAN ?? def.M_Lan ?? '').toUpperCase() : '';
+  return { units, defaultUnit: def, lang: lang === 'E' ? 'E' : lang === 'V' ? 'V' : '' };
+}
+
 // Các tham số cố định – sửa ở đây nếu backend cần giá trị khác
 export const loginConfig = {
   type: '1',        // @M_Type

@@ -17,7 +17,8 @@ import './menustrip.css';
  *   - ← → : chuyển mục trên thanh / đóng-mở menu con.  ↑ ↓ : chọn mục trong menu.
  *   - Enter / Space: chọn.  Esc: đóng 1 cấp.  Gõ chữ: nhảy tới mục có phím tắt (hoặc chữ cái đầu) đó.
  *
- * Props: tree (cây từ buildMenuTree), onOpen(node) khi chọn 1 chức năng.
+ * Props: tree (cây từ buildMenuTree), onOpen(node) khi chọn 1 chức năng,
+ *        variant: 'strip' (thanh riêng kiểu WinForms) | 'header' (nằm trên thanh tiêu đề, có mũi tên ▾).
  */
 const HOVER_DELAY = 250;
 const usable = (list = []) => list.filter((n) => !n.separator);
@@ -35,7 +36,7 @@ function Label({ node }) {
   );
 }
 
-export default function MenuStrip({ tree, onOpen }) {
+export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
   const nodeMap = useMemo(() => {
     const m = new Map();
     const walk = (list) => list.forEach((n) => { m.set(n.id, n); walk(n.children); });
@@ -264,7 +265,7 @@ export default function MenuStrip({ tree, onOpen }) {
 
   return (
     <>
-      <nav ref={stripRef} className={`menustrip ${kb ? 'ms-kb' : ''}`} role="menubar" aria-label="Menu chính">
+      <nav ref={stripRef} className={`menustrip menustrip--${variant} ${kb ? 'ms-kb' : ''}`} role="menubar" aria-label="Menu chính">
         {tree.map((n) =>
           n.separator ? (
             <span key={n.id} className="ms-top-sep" />
@@ -274,8 +275,9 @@ export default function MenuStrip({ tree, onOpen }) {
               className={`ms-top ${open[0] === n.id ? 'is-open' : ''} ${!open.length && active && barHot === n.id ? 'is-hot' : ''}`}
               onMouseDown={(e) => onBarDown(e, n)}
               onMouseEnter={() => onBarEnter(n)}>
-              {hasMenuIcon(n.icon) && <MenuIcon icon={n.icon} size={14} />}
+              {hasMenuIcon(n.icon) && <MenuIcon icon={n.icon} size={variant === 'header' ? 17 : 14} />}
               <Label node={n} />
+              {variant === 'header' && hasKids(n) && <Icon name="chevronDown" size={14} className="ms-top-chev" />}
             </div>
           )
         )}

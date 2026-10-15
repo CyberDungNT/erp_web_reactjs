@@ -38,6 +38,14 @@ const P = {
   dashboard: 'M4 4h7v9H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 15h7v5H4z',
   tools: 'M4 20l7-7M14 4l6 6-3 3-6-6zM5 5l4 4',
   warning: 'M12 3 2 20h20zM12 10v4M12 17h.01',
+  qr: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 18.5h1.5V20H14zM18.5 14H20v1.5h-1.5zM6.5 6.5h1v1h-1zM16.5 6.5h1v1h-1zM6.5 16.5h1v1h-1z',
+  phone: 'M8 2.5h8a1.5 1.5 0 0 1 1.5 1.5v16a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 20V4A1.5 1.5 0 0 1 8 2.5zM11 18.5h2',
+  chevronUpDown: 'M8 9l4-4 4 4M8 15l4 4 4-4',
+  chevronLeft: 'M15 6l-6 6 6 6',
+  tick: 'M5 12.5l4.5 4.5L19 7.5',
+  briefcase: 'M4 8h16v11H4zM9 8V5h6v3M4 13h16',
+  cart2: 'M3 4h2l2.5 11h10L20 8H6.5M9 20a1 1 0 1 0 0-.01M17 20a1 1 0 1 0 0-.01',
+  doc: 'M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 15.5h5M10 9h2',
 };
 
 export default function Icon({ name, size = 18, strokeWidth = 1.7, className = '', style, title }) {
@@ -59,6 +67,7 @@ const MENU_ICON_MAP = {
   wallet: 'wallet', calculator: 'calculator', user: 'user', exit: 'exit', data: 'database',
   bh: 'cart', do: 'truck', be: 'car', ro: 'wrench', cr: 'users', xm1: 'bike', xm2: 'wrench',
   kh: 'calendar', loa: 'check', in: 'box', sx: 'database', das: 'dashboard',
+  gl: 'bank', ca: 'wallet',
 };
 
 /** Icon trong DB có map được sang icon vẽ sẵn không */

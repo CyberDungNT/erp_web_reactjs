@@ -14,19 +14,25 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => auth.loadSession());
 
-  const login = useCallback(async ({ userName, password, maTTCP, remember: rem }) => {
+  /**
+   * Đăng nhập. Khi thành công KHÔNG vào app ngay mà trả về res.commit():
+   * màn login chạy hiệu ứng xong mới gọi commit() để lưu phiên và chuyển vào màn chính.
+   */
+  const login = useCallback(async ({ userName, password, maTTCP, remember: rem, lang }) => {
     const res = await auth.login({ userName, password, maTTCP });
     if (res.ok) {
       const s = {
         info: res.info,
         tables: res.tables,
         dashboards: res.dashboards,
-        lang: res.info.M_Lan === 'E' ? 'E' : 'V',
+        lang: lang || (res.info.M_Lan === 'E' ? 'E' : 'V'),
         loginAt: new Date().toISOString(),
       };
-      auth.saveSession(s, rem);
-      auth.setLastLogin({ userName, maTTCP, remember: rem });
-      setSession(s);
+      auth.setLastLogin({ userName, maTTCP, remember: rem, lang });
+      res.commit = () => {
+        auth.saveSession(s, rem);
+        setSession(s);
+      };
     }
     return res;
   }, []);

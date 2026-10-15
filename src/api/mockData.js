@@ -4,6 +4,7 @@
  */
 
 import { mockLogin, mockDashboard } from './mockLogin';
+import { mockGetUnits } from './mockUnits';
 
 const khachHang = [
   { MaKH: 'KH001', TenKH: 'Công ty TNHH Minh Phát', DiaChi: 'Q.1, TP.HCM', DienThoai: '0901234567' },
@@ -44,6 +45,9 @@ const hangHoaHead = [
 
 const procs = {
   CP_SysLogin: mockLogin,
+  CP_SysGetUnits: mockGetUnits,
+  CP_ToanLC: mockDashboard,
+  CP_DashboardBE_Sales: mockDashboard,
   CP_DashboardRO_DsLichHen: mockDashboard,
   CP_DashboardBE_DsGiaoXe: mockDashboard,
   CP_DashboardRO_Service: mockDashboard,

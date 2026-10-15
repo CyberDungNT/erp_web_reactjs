@@ -36,21 +36,54 @@ Khi deploy khác domain: điền `VITE_API_BASE_URL` và bật CORS bên .NET.
   (`user.TokenKey`, `user.Ma_Dvcs`, `user.Ma_TTCP`...).
 - "Ghi nhớ đăng nhập" lưu phiên vào localStorage, không chọn thì đóng tab là mất. Mật khẩu không bao giờ được lưu.
 
+## Chọn đơn vị khi đăng nhập (CP_SysGetUnits)
+
+- Rời ô **Tài khoản** → gọi `CP_SysGetUnits` với `Para = "01#<tài khoản>"` (tham số đầu sửa ở `unitsConfig.firstParam`
+  trong `auth/authService.js`). Chỉ gọi lại khi tài khoản đổi.
+- Bảng có `Ma_TTCP/Ten_TTCP` → danh sách đơn vị (nhóm theo `Ma_Dvcs`, tìm kiếm không dấu).
+  Bảng có `M_LAN` → đơn vị mặc định được chọn sẵn + ngôn ngữ mặc định.
+- Mã đơn vị đang chọn được truyền vào `@M_Ma_TTCP` của `CP_SysLogin`. Bấm Đăng nhập khi đơn vị còn đang tải
+  thì app chờ tải xong rồi mới đăng nhập.
+- Đổi đơn vị trong màn chính (thẻ "Đơn vị làm việc" dưới menu trái) → đăng xuất, màn login điền sẵn đơn vị mới.
+- Ô chọn dùng control mới `CyberSelect` (dropdown có tìm kiếm + nhóm, dùng lại được ở màn khác).
+
+## Thương hiệu
+
+`src/config/brand.js`: logo (đặt `logoUrl: '/logo.png'` và chép file vào `public/` để dùng logo ảnh thật),
+tên sản phẩm, version, khẩu hiệu, chữ chìm website/hotline, link "Quên mật khẩu", các nút đăng nhập khác
+(Google/Microsoft/QR/OTP – chưa nối backend, bấm sẽ hiện thông báo; `enabled: false` để ẩn).
+
 ## Màn hình chính
+
+- Hàng tab trên vùng làm việc = các dashboard (bảng có `PageName` của CP_SysLogin). `FrmReference` (HOME) là trang
+  "Bạn muốn làm gì hôm nay?" (tìm chức năng, lọc theo phân hệ, lưới chức năng chia trang). Dashboard khác mặc định
+  gọi `CP_name` + `Para` rồi hiện bảng. Gắn màn riêng cho 1 PageName: `dashboardPages` trong `screens/registry.js`.
+- Chức năng mở ra hiện ở thanh dưới cùng ("Trang chủ" + các cửa sổ đang mở, giữ trạng thái khi chuyển).
+  Chuột phải: đóng / đóng cửa sổ khác / đóng tất cả; chuột giữa hoặc Ctrl+Alt+W để đóng. Góc phải: ngày khoá sổ.
 
 - Menu trên (`layouts/MenuStrip.jsx`): kiểu MenuStrip WinForms – bấm mục trên thanh để thả xuống,
   rê vào mục có ▸ để xổ menu con sang phải (nhiều cấp). Chữ sau `&` trong `Bar` là phím tắt
   (Alt + chữ để mở; giữ Alt để thấy gạch chân). Alt/F10 kích hoạt thanh, ← → ↑ ↓ Enter Esc như WinForms.
 - Menu trái: cây nhiều cấp theo `Menu_Id`/`Menu_Id0`,
   có tìm kiếm không dấu, nút ☰ thu gọn. `---` là đường kẻ, `&` trong tiêu đề được bỏ.
-- Bấm chức năng → mở tab (giữ trạng thái khi chuyển tab). Chuột phải tab: đóng / đóng tab khác / đóng tất cả;
-  chuột giữa hoặc Ctrl+Alt+W để đóng.
 - Ngôn ngữ VI/EN đổi giữa cột `Bar` và `Bar2`/`bar2`. `01.12.00` đổi ngôn ngữ, `01.19.00` (hoặc Icon `EXIT`) đăng xuất.
 - **Gắn màn hình vào menu**: thêm vào `src/screens/registry.js`
   ```js
   '02.02.01': lazy(() => import('../pages/PhieuKeToanPage')),
   ```
   Màn hình nhận prop `menu` (Menu_Id, tiêu đề, IsMaxForm, isShowTab, Tag...). Chưa khai báo thì mở trang tạm.
+
+## Giao diện & màu
+
+- Màu dùng chung khai báo trong `src/theme.css` (xanh chủ đạo `--brand: #00d287`, cam nhấn `--accent: #FF990A`).
+  Bộ control Cyber* và mọi màn hình đọc màu từ đây – đổi thương hiệu chỉ cần sửa file này.
+- Chữ trên nền xanh dùng `--brand-ink` (xanh rất đậm) vì chữ trắng trên `#00d287` khó đọc;
+  chữ xanh trên nền trắng dùng `--brand-text`.
+- Hiệu ứng: nút nổi lên + vệt sáng khi hover; đăng nhập sai thì khung rung; đăng nhập đúng thì nút chuyển dấu tích →
+  vòng tròn xanh lan ra màn hình → "Đăng nhập thành công" → mờ dần vào màn chính (các phần màn chính trượt vào lần lượt).
+  Thời gian từng bước sửa ở đầu `pages/LoginPage.jsx` (`T_CHECK`, `T_LEAVE`, `T_ENTER`).
+- Máy bật "Giảm chuyển động" (prefers-reduced-motion) sẽ tự tắt hiệu ứng.
+- Font Be Vietnam Pro tải từ Google Fonts; máy không có mạng ngoài sẽ dùng Segoe UI.
 
 ## Cấu trúc
 
@@ -66,7 +99,7 @@ src/
   components/cyber/     bộ control dùng chung
     CyberTextBox  CyberNumeric  CyberLookup  CyberDate  CyberCheckBox
     CyberRadioButton  CyberCombobox  CyberTable  CyberContextMenu  CyberPopup
-    cyber.css           đổi màu toàn bộ ở biến :root
+    cyber.css           style control (màu lấy từ theme.css)
   auth/
     authService.js      gọi CP_SysLogin, phân tích kết quả, lưu phiên
     AuthContext.jsx     useAuth(), RequireAuth

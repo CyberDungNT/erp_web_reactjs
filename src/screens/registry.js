@@ -8,13 +8,23 @@ import { lazy } from 'react';
  * Menu_Id chưa khai báo sẽ mở trang PlaceholderPage.
  */
 export const screens = {
-  HOME: lazy(() => import('../pages/HomePage')),
   'DEV.DEMO': lazy(() => import('../pages/DemoControlsPage')),
   'DEV.HANGHOA': lazy(() => import('../pages/HangHoaPage')),
   'DEV.PROC': lazy(() => import('../pages/ProcTesterPage')),
 };
 
 export const Placeholder = lazy(() => import('../pages/PlaceholderPage'));
+
+/**
+ * TRANG DASHBOARD (hàng tab trên cùng vùng làm việc) lấy từ bảng có cột PageName / CP_name / Para / Title
+ * trong kết quả CP_SysLogin. PageName -> component. PageName chưa khai báo dùng DashboardView
+ * (gọi CP_name với Para và hiển thị các bảng trả về).
+ * Component nhận props: { board } = dòng dashboard ({ PageName, CP_name, Para, isRefresh, Title }).
+ */
+export const dashboardPages = {
+  FrmReference: lazy(() => import('../pages/HomeLauncher')),
+};
+export const DashboardDefault = lazy(() => import('../pages/DashboardView'));
 
 /** Mã đặc biệt trong menu hệ thống */
 export const EXIT_MENU_IDS = ['01.19.00'];            // Kết thúc -> đăng xuất (hoặc Icon = EXIT)
