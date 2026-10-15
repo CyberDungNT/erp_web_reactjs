@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, RequireAuth } from './auth/AuthContext';
 import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
+import { CyberMsgBoxHost } from './components/cyber';
 
 /**
  * /login  -> màn đăng nhập
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/" element={<RequireAuth><MainLayout /></RequireAuth>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <CyberMsgBoxHost />
     </AuthProvider>
   );
 }

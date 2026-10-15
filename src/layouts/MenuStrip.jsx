@@ -49,6 +49,8 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
   const [hot, setHot] = useState([]);     // id mục đang sáng ở mỗi cấp
   const [active, setActive] = useState(false); // thanh đang được kích hoạt bằng bàn phím
   const [kb, setKb] = useState(false);    // hiện gạch chân phím tắt
+  const [ink, setInk] = useState(null);   // nền trượt dưới mục trên thanh: { x, w } | null
+  const hoverId = useRef(null);           // mục trên thanh đang rê chuột
   const stripRef = useRef(null);
   const refs = useRef(new Map());
   const timer = useRef(null);
@@ -263,18 +265,32 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
 
   const barHot = hot[0];
 
+  // ----- Nền trượt: theo mục đang rê chuột, không rê thì theo mục đang mở / đang chọn bằng phím -----
+  const moveInk = useCallback((id) => {
+    const el = id && refs.current.get(id);
+    setInk(el ? { x: el.offsetLeft, w: el.offsetWidth } : null);
+  }, []);
+  useLayoutEffect(() => {
+    if (!hoverId.current) moveInk(open[0] || (active ? barHot : null));
+  }, [open, active, barHot, moveInk]);
+
   return (
     <>
-      <nav ref={stripRef} className={`menustrip menustrip--${variant} ${kb ? 'ms-kb' : ''}`} role="menubar" aria-label="Menu chính">
-        {tree.map((n) =>
+      <nav ref={stripRef} className={`menustrip menustrip--${variant} ${kb ? 'ms-kb' : ''}`} role="menubar" aria-label="Menu chính"
+        onMouseLeave={() => { hoverId.current = null; moveInk(open[0] || (active ? barHot : null)); }}>
+        {variant === 'header' && (
+          <span className={`ms-ink ${ink ? 'is-on' : ''} ${open.length ? 'is-open' : ''}`} aria-hidden="true"
+            style={ink ? { transform: `translateX(${ink.x}px)`, width: ink.w } : undefined} />
+        )}
+        {tree.map((n, idx) =>
           n.separator ? (
             <span key={n.id} className="ms-top-sep" />
           ) : (
-            <div key={n.id} ref={setRef(n.id)} role="menuitem"
+            <div key={n.id} ref={setRef(n.id)} role="menuitem" style={{ '--i': idx }}
               aria-haspopup={hasKids(n) || undefined} aria-expanded={hasKids(n) ? open[0] === n.id : undefined}
               className={`ms-top ${open[0] === n.id ? 'is-open' : ''} ${!open.length && active && barHot === n.id ? 'is-hot' : ''}`}
               onMouseDown={(e) => onBarDown(e, n)}
-              onMouseEnter={() => onBarEnter(n)}>
+              onMouseEnter={() => { hoverId.current = n.id; moveInk(n.id); onBarEnter(n); }}>
               {hasMenuIcon(n.icon) && <MenuIcon icon={n.icon} size={variant === 'header' ? 17 : 14} />}
               <Label node={n} />
               {variant === 'header' && hasKids(n) && <Icon name="chevronDown" size={14} className="ms-top-chev" />}
@@ -286,7 +302,7 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
         const node = nodeMap.get(id);
         if (!node || !hasKids(node)) return null;
         return (
-          <Dropdown key={id} level={i + 1} node={node} anchor={refs.current.get(id)} isRoot={i === 0}
+          <Dropdown key={id} level={i + 1} node={node} anchor={refs.current.get(id)} isRoot={i === 0} gap={variant === 'header' ? 8 : 0}
             hotId={hot[i + 1]} openId={open[i + 1]} kb={kb} setRef={setRef}
             onEnter={onItemEnter} onChoose={(k, c) => choose(k, c, false)} />
         );
@@ -295,7 +311,7 @@ export default function MenuStrip({ tree, onOpen, variant = 'strip' }) {
   );
 }
 
-function Dropdown({ level, node, anchor, isRoot, hotId, openId, kb, setRef, onEnter, onChoose }) {
+function Dropdown({ level, node, anchor, isRoot, gap = 0, hotId, openId, kb, setRef, onEnter, onChoose }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ left: -9999, top: -9999 });
 
@@ -311,16 +327,16 @@ function Dropdown({ level, node, anchor, isRoot, hotId, openId, kb, setRef, onEn
     let top;
     if (isRoot) {
       left = r.left;
-      top = r.bottom;
+      top = r.bottom + gap;
       if (left + w > vw - 4) left = vw - w - 4;
     } else {
-      left = r.right - 3;                       // xổ sang phải
-      if (left + w > vw - 4) left = r.left - w + 3; // không đủ chỗ -> xổ sang trái
-      top = r.top - 3;
+      left = r.right + 2;                       // xổ sang phải
+      if (left + w > vw - 4) left = r.left - w - 2; // không đủ chỗ -> xổ sang trái
+      top = r.top - 7;
     }
     if (top + h > vh - 4) top = vh - h - 4;
     setPos({ left: Math.max(4, left), top: Math.max(4, top) });
-  }, [anchor, node, isRoot]);
+  }, [anchor, node, isRoot, gap]);
 
   // Mục được chọn bằng bàn phím luôn nằm trong vùng nhìn thấy
   useEffect(() => {
@@ -329,13 +345,13 @@ function Dropdown({ level, node, anchor, isRoot, hotId, openId, kb, setRef, onEn
   }, [hotId]);
 
   return createPortal(
-    <div ref={ref} className={`ms-drop ${kb ? 'ms-kb' : ''}`} role="menu" style={pos}
+    <div ref={ref} className={`ms-drop ms-drop--${isRoot ? 'root' : 'sub'} ${kb ? 'ms-kb' : ''}`} role="menu" style={pos}
       onMouseDown={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
-      {node.children.map((c) => {
+      {node.children.map((c, i) => {
         if (c.separator) return <div key={c.id} className="ms-sep" role="separator" />;
         const sub = hasKids(c);
         return (
-          <div key={c.id} ref={setRef(c.id)} data-id={c.id} role="menuitem"
+          <div key={c.id} ref={setRef(c.id)} data-id={c.id} role="menuitem" style={{ '--i': Math.min(i, 14) }}
             aria-haspopup={sub || undefined} aria-expanded={sub ? openId === c.id : undefined}
             className={`ms-item ${hotId === c.id ? 'is-hot' : ''} ${openId === c.id ? 'is-open' : ''}`}
             onMouseEnter={() => onEnter(level, c)}

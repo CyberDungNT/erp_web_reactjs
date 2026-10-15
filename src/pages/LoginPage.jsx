@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { CyberTextBox, CyberSelect } from '../components/cyber';
 import Icon from '../components/icons/Icon';
-import BrandLogo from '../components/BrandLogo';
 import LoginIllustration from './LoginIllustration';
 import { useCyberForm } from '../hooks/useCyberForm';
 import { useAuth } from '../auth/AuthContext';
@@ -37,6 +36,12 @@ const TEXT = {
     noUnit: 'This account has no unit assigned', group: 'Company',
     forgotMsg: 'Please contact your administrator to reset your password.', social: (n) => `Sign in with ${n} is not enabled yet.`,
   },
+};
+
+// Các phân hệ hiển thị ở panel giới thiệu bên trái
+const MODULES = {
+  V: ['Tài chính – Kế toán', 'Mua hàng – Bán hàng', 'Kho vận', 'Nhân sự – Tiền lương'],
+  E: ['Finance & Accounting', 'Purchasing & Sales', 'Inventory', 'HR & Payroll'],
 };
 
 const norm = (s) => String(s || '').trim().toLowerCase();
@@ -74,6 +79,7 @@ export default function LoginPage() {
   const langRef = useRef(null);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
 
   /**
    * Rời ô tài khoản -> gọi CP_SysGetUnits lấy danh sách đơn vị.
@@ -181,7 +187,7 @@ export default function LoginPage() {
       timers.current.push(setTimeout(() => setPhase('leave'), T_LEAVE));
       timers.current.push(setTimeout(() => {
         res.commit();
-        navigate(location.state?.from || '/', { replace: true });
+        navigate(location.state?.from || '/', { replace: true, state: { intro: true } });
       }, T_ENTER));
     } catch (err) {
       fail(err.message);
@@ -194,16 +200,18 @@ export default function LoginPage() {
 
   return (
     <div className={`lg lg--${phase}`}>
-      <div className="lg__watermark" aria-hidden="true">{BRAND.company}</div>
+      <div className="lg__shell">
 
       {/* ---------- Bên trái ---------- */}
       <section className="lg__left">
-        <BrandLogo />
         <h1 className="lg__slogan">
           <span>{BRAND.slogan[0]}</span>
           <span className="lg__slogan-hl">{BRAND.slogan[1]}</span>
         </h1>
         <p className="lg__desc">{BRAND.sloganSub}</p>
+        <ul className="lg__modules">
+          {MODULES[lang].map((m) => <li key={m}>{m}</li>)}
+        </ul>
         <div className="lg__illu"><LoginIllustration /></div>
         <div className="lg__company">{BRAND.company}</div>
       </section>
@@ -302,6 +310,7 @@ export default function LoginPage() {
           <footer className="lg__foot">{BRAND.copyright}©{new Date().getFullYear()} - Version: {BRAND.version}</footer>
         </form>
       </main>
+      </div>
 
       {(phase === 'reveal' || phase === 'leave') && (
         <div className={`lg__reveal ${phase === 'leave' ? 'is-leave' : ''}`} style={{ '--ox': origin.x, '--oy': origin.y }} role="status">

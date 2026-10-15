@@ -1,4 +1,5 @@
 import { Component, Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { apiConfig } from '../api/apiClient';
 import { getMenuRows } from '../auth/authService';
@@ -6,7 +7,7 @@ import { buildMenuTree } from '../utils/menuTree';
 import {
   screens, Placeholder, devMenu, SHOW_DEV_MENU, EXIT_MENU_IDS, LANG_MENU_IDS, dashboardPages, DashboardDefault,
 } from '../screens/registry';
-import { CyberContextMenu } from '../components/cyber';
+import { CyberContextMenu, msgbox } from '../components/cyber';
 import Icon from '../components/icons/Icon';
 import { BRAND } from '../config/brand';
 import MenuStrip from './MenuStrip';
@@ -15,6 +16,43 @@ import UnitSwitcher from './UnitSwitcher';
 import './main.css';
 
 const SIDEBAR_KEY = 'cyber_sidebar_collapsed';
+
+const USER_TEXT = {
+  V: {
+    admin: 'Quản trị viên', member: 'Người dùng', lockDate: 'Ngày khoá sổ', mock: 'Đang dùng dữ liệu giả',
+    lang: 'Ngôn ngữ', account: 'Thông tin tài khoản', fs: 'Toàn màn hình', exitFs: 'Thoát toàn màn hình',
+    collapseSide: 'Thu gọn menu trái', expandSide: 'Mở rộng menu trái', keys: 'Phím tắt', reload: 'Tải lại ứng dụng',
+    about: 'Giới thiệu phần mềm', logout: 'Đăng xuất', userName: 'Tài khoản', company: 'Công ty', unit: 'Đơn vị', role: 'Vai trò',
+    version: 'Phiên bản', reloadAsk: 'Tải lại ứng dụng?',
+    reloadDetail: (n) => `${n} cửa sổ đang mở sẽ bị đóng, dữ liệu chưa lưu sẽ bị mất.`,
+    keysMsg: 'Các phím tắt dùng trong màn hình chính',
+    keysList: [
+      'Alt / F10 — Kích hoạt thanh menu trên',
+      'Alt + chữ gạch chân — Mở nhanh menu',
+      '← → ↑ ↓ / Enter / Esc — Điều hướng menu',
+      'Ctrl + Alt + W — Đóng cửa sổ đang mở',
+      'Chuột giữa trên thanh dưới — Đóng cửa sổ',
+      'F11 — Toàn màn hình',
+    ],
+  },
+  E: {
+    admin: 'Administrator', member: 'User', lockDate: 'Lock date', mock: 'Using mock data',
+    lang: 'Language', account: 'Account information', fs: 'Full screen', exitFs: 'Exit full screen',
+    collapseSide: 'Collapse sidebar', expandSide: 'Expand sidebar', keys: 'Keyboard shortcuts', reload: 'Reload application',
+    about: 'About', logout: 'Sign out', userName: 'Username', company: 'Company', unit: 'Unit', role: 'Role',
+    version: 'Version', reloadAsk: 'Reload the application?',
+    reloadDetail: (n) => `${n} open window(s) will be closed and unsaved data will be lost.`,
+    keysMsg: 'Shortcuts available on the main screen',
+    keysList: [
+      'Alt / F10 — Activate the top menu',
+      'Alt + underlined letter — Open a menu',
+      '← → ↑ ↓ / Enter / Esc — Navigate menus',
+      'Ctrl + Alt + W — Close the active window',
+      'Middle click on the taskbar — Close a window',
+      'F11 — Full screen',
+    ],
+  },
+};
 const HOME = 'HOME';
 
 /** Dữ liệu dùng chung cho các trang trong màn chính: useMain() */
@@ -32,6 +70,18 @@ export const useMain = () => useContext(MainContext);
  */
 export default function MainLayout() {
   const { session, user, lang, logout, setLang } = useAuth();
+
+  // Vừa đăng nhập thành công -> chạy hiệu ứng mở màn chính 1 lần (thanh trên, menu, vùng làm việc lần lượt hiện ra)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [intro, setIntro] = useState(() => !!location.state?.intro);
+  useEffect(() => {
+    if (!intro) return undefined;
+    navigate(location.pathname, { replace: true, state: null }); // F5 sau đó không chạy lại hiệu ứng
+    const t = setTimeout(() => setIntro(false), 2000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const menuRows = useMemo(() => getMenuRows(session), [session]);
   const topTree = useMemo(() => buildMenuTree(menuRows.top, lang), [menuRows, lang]);
@@ -72,15 +122,40 @@ export default function MainLayout() {
   useEffect(() => {
     if (!userOpen) return;
     const close = (e) => { if (!userRef.current?.contains(e.target)) setUserOpen(false); };
+    const esc = (e) => e.key === 'Escape' && setUserOpen(false);
     document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', esc); };
   }, [userOpen]);
+
+  // Theo dõi chế độ toàn màn hình (F11 / nút trong menu người dùng)
+  const [fullscreen, setFullscreen] = useState(() => !!document.fullscreenElement);
+  useEffect(() => {
+    const on = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', on);
+    return () => document.removeEventListener('fullscreenchange', on);
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  }, []);
   useEffect(() => {
     taskRef.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [activeKey]);
 
   const toggleLang = useCallback(() => setLang(lang === 'E' ? 'V' : 'E'), [lang, setLang]);
-  const doLogout = useCallback(() => { if (window.confirm('Bạn có chắc muốn đăng xuất?')) logout(); }, [logout]);
+  const doLogout = useCallback(async () => {
+    const E = lang === 'E';
+    const ok = await msgbox.yesNo(E ? 'Are you sure you want to sign out?' : 'Bạn có chắc muốn đăng xuất?', {
+      lang,
+      title: E ? 'Sign out' : 'Đăng xuất',
+      detail: E ? 'Open windows will be closed and unsaved data will be lost.' : 'Các cửa sổ đang mở sẽ được đóng, dữ liệu chưa lưu sẽ bị mất.',
+      yesText: E ? 'Sign out' : 'Đăng xuất',
+      noText: E ? 'Cancel' : 'Huỷ',
+      danger: true,
+    });
+    if (ok) logout();
+  }, [logout, lang]);
 
   /** Mở 1 chức năng từ menu / trang chủ */
   const openMenu = useCallback((node) => {
@@ -136,10 +211,34 @@ export default function MainLayout() {
   const ctx = useMemo(() => ({ leftTree, topTree, nodeMap, openMenu, lang }), [leftTree, topTree, nodeMap, openMenu, lang]);
   const displayName = user?.Comment || user?.User_name || '';
   const initial = displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || '?';
+  const UT = USER_TEXT[lang === 'E' ? 'E' : 'V'];
+
+  // ----- Chức năng trong menu người dùng -----
+  const showAccount = () => msgbox.info(displayName, {
+    lang, title: UT.account,
+    detail: [
+      `${UT.userName}: ${user?.User_name || ''}`,
+      user?.EMail && `Email: ${user.EMail}`,
+      `${UT.company}: ${user?.Ten_Dvcs || ''}`,
+      `${UT.unit}: ${user?.Ten_TTCP || ''} (${user?.Ma_TTCP || ''})`,
+      user?.Ngay_Ks && `${UT.lockDate}: ${user.Ngay_Ks}`,
+      `${UT.role}: ${user?.is_Admin ? UT.admin : UT.member}`,
+    ].filter(Boolean).join('\n'),
+  });
+  const showShortcuts = () => msgbox.info(UT.keysMsg, { lang, title: UT.keys, detail: UT.keysList.join('\n') });
+  const showAbout = () => msgbox.info(`${BRAND.product} – ${UT.version} ${BRAND.version}`, {
+    lang, title: UT.about, detail: [BRAND.company, BRAND.watermark].filter(Boolean).join('\n'),
+  });
+  const reloadApp = async () => {
+    const ok = await msgbox.yesNo(UT.reloadAsk, {
+      lang, title: UT.reload, detail: windows.length ? UT.reloadDetail(windows.length) : undefined,
+    });
+    if (ok) window.location.reload();
+  };
 
   return (
     <MainContext.Provider value={ctx}>
-      <div className={`mn ${collapsed ? 'mn--collapsed' : ''}`}>
+      <div className={`mn ${collapsed ? 'mn--collapsed' : ''} ${intro ? 'mn--intro' : ''}`}>
         {/* ---------- Thanh trên ---------- */}
         <header className="mn__top">
           <button type="button" className="mn__burger" title={collapsed ? 'Mở menu' : 'Thu gọn menu'}
@@ -163,23 +262,60 @@ export default function MainLayout() {
               <Icon name="chevronDown" size={16} />
             </button>
             {userOpen && (
-              <div className="mn__user-pop">
+              <div className="mn__user-pop" role="menu">
                 <div className="mn__user-head">
-                  <span className="mn__avatar mn__avatar--lg">{initial}</span>
-                  <div>
+                  <span className="mn__avatar mn__avatar--lg">{initial}<i className="mn__online" /></span>
+                  <div className="mn__user-id">
                     <b>{displayName}</b>
-                    <div className="cy-muted">{user?.EMail || user?.User_name}</div>
+                    <small>{user?.EMail || user?.User_name}</small>
+                    <span className="mn__role">{user?.is_Admin ? UT.admin : UT.member}</span>
                   </div>
                 </div>
-                <div className="mn__user-row"><Icon name="building" size={14} /> {user?.Ten_Dvcs}</div>
-                <div className="mn__user-row"><Icon name="briefcase" size={14} /> {user?.Ten_TTCP}</div>
-                {apiConfig.USE_MOCK && <div className="mn__user-row"><span className="badge badge--warn">MOCK</span> Đang dùng dữ liệu giả</div>}
-                <button type="button" className="mn__user-act" onClick={() => { setUserOpen(false); toggleLang(); }}>
-                  <Icon name="globe" size={15} /> {lang === 'E' ? 'Giao diện tiếng Việt' : 'English interface'}
-                </button>
-                <button type="button" className="mn__user-act is-danger" onClick={() => { setUserOpen(false); doLogout(); }}>
-                  <Icon name="exit" size={15} /> Đăng xuất
-                </button>
+
+                <div className="mn__user-info">
+                  <div className="mn__user-row"><Icon name="building" size={14} /> <span>{user?.Ten_Dvcs}</span></div>
+                  <div className="mn__user-row"><Icon name="briefcase" size={14} /> <span>{user?.Ten_TTCP}</span></div>
+                  {user?.Ngay_Ks && <div className="mn__user-row"><Icon name="lock" size={14} /> <span>{UT.lockDate}: {user.Ngay_Ks}</span></div>}
+                  {apiConfig.USE_MOCK && <div className="mn__user-row"><span className="badge badge--warn">MOCK</span> {UT.mock}</div>}
+                </div>
+
+                <div className="mn__user-sec">
+                  <div className="mn__user-label"><Icon name="globe" size={14} /> {UT.lang}</div>
+                  <div className={`mn__seg ${lang === 'E' ? 'is-right' : ''}`} role="radiogroup" aria-label={UT.lang}>
+                    <button type="button" role="radio" aria-checked={lang !== 'E'} className={lang !== 'E' ? 'is-on' : ''}
+                      onClick={() => setLang('V')}>Tiếng Việt</button>
+                    <button type="button" role="radio" aria-checked={lang === 'E'} className={lang === 'E' ? 'is-on' : ''}
+                      onClick={() => setLang('E')}>English</button>
+                  </div>
+                </div>
+
+                <div className="mn__user-list">
+                  <button type="button" role="menuitem" className="mn__user-act" onClick={() => { setUserOpen(false); showAccount(); }}>
+                    <Icon name="user" size={16} /> <span>{UT.account}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="mn__user-act" onClick={toggleFullscreen}>
+                    <Icon name={fullscreen ? 'shrink' : 'expand'} size={16} /> <span>{fullscreen ? UT.exitFs : UT.fs}</span>
+                    <kbd>F11</kbd>
+                  </button>
+                  <button type="button" role="menuitem" className="mn__user-act" onClick={() => setCollapsed((c) => !c)}>
+                    <Icon name="sidebar" size={16} /> <span>{collapsed ? UT.expandSide : UT.collapseSide}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="mn__user-act" onClick={() => { setUserOpen(false); showShortcuts(); }}>
+                    <Icon name="keyboard" size={16} /> <span>{UT.keys}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="mn__user-act" onClick={() => { setUserOpen(false); reloadApp(); }}>
+                    <Icon name="refresh" size={16} /> <span>{UT.reload}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="mn__user-act" onClick={() => { setUserOpen(false); showAbout(); }}>
+                    <Icon name="info" size={16} /> <span>{UT.about}</span>
+                  </button>
+                </div>
+
+                <div className="mn__user-foot">
+                  <button type="button" role="menuitem" className="mn__user-act is-danger" onClick={() => { setUserOpen(false); doLogout(); }}>
+                    <Icon name="exit" size={16} /> <span>{UT.logout}</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>

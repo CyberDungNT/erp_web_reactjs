@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Icon, { MenuIcon } from '../components/icons/Icon';
 import { filterTree } from '../utils/menuTree';
 
@@ -11,6 +11,7 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
   const [expanded, setExpanded] = useState(() => new Set());
   const searching = keyword.trim().length > 0;
   const shown = useMemo(() => filterTree(tree, keyword), [tree, keyword]);
+  const seen = useRef(new Set()); // nhóm đã từng mở -> giữ DOM để chạy hiệu ứng thu gọn
 
   const toggle = (id) =>
     setExpanded((s) => {
@@ -22,8 +23,8 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
   if (collapsed) {
     return (
       <div className="sidemenu sidemenu--collapsed">
-        {tree.map((n) => (
-          <button key={n.id} type="button" className="sidemenu__rail-btn" title={n.text}
+        {tree.map((n, i) => (
+          <button key={n.id} type="button" className="sidemenu__rail-btn" title={n.text} style={{ '--i': Math.min(i, 16) }}
             onClick={() => { setExpanded((s) => new Set(s).add(n.id)); onExpand(); }}>
             <MenuIcon icon={n.icon} fallbackText={n.text} size={18} />
           </button>
@@ -32,12 +33,13 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
     );
   }
 
-  const renderNode = (n, depth) => {
+  const renderNode = (n, depth, i = 0) => {
     if (n.separator) return <li key={n.id} className="sidemenu__sep" />;
     const isGroup = n.children.length > 0;
     const isOpen = searching || expanded.has(n.id);
+    if (isOpen) seen.current.add(n.id);
     return (
-      <li key={n.id}>
+      <li key={n.id} style={{ '--i': Math.min(i, 16) }}>
         <button type="button"
           className={`sidemenu__item ${depth === 0 ? 'is-root' : ''} ${!isGroup && activeId === n.id ? 'is-active' : ''}`}
           style={{ paddingLeft: 12 + depth * 14 }}
@@ -56,7 +58,11 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
             ? <Icon name="chevronDown" size={16} className={`sidemenu__chev sidemenu__chev--root ${isOpen ? 'is-open' : ''}`} />
             : <Icon name="chevronRight" size={13} className={`sidemenu__chev ${isOpen ? 'is-open' : ''}`} />)}
         </button>
-        {isGroup && isOpen && <ul>{n.children.map((c) => renderNode(c, depth + 1))}</ul>}
+        {isGroup && (isOpen || seen.current.has(n.id)) && (
+          <div className={`sidemenu__sub ${isOpen ? 'is-open' : ''}`} inert={isOpen ? undefined : ''}>
+            <ul>{n.children.map((c, ci) => renderNode(c, depth + 1, ci))}</ul>
+          </div>
+        )}
       </li>
     );
   };
@@ -71,7 +77,7 @@ export default function SideMenu({ tree, activeId, collapsed, onExpand, onOpen }
         )}
       </div>
       <ul className="sidemenu__tree">
-        {shown.map((n) => renderNode(n, 0))}
+        {shown.map((n, i) => renderNode(n, 0, i))}
         {searching && shown.length === 0 && <li className="sidemenu__empty">Không tìm thấy chức năng</li>}
       </ul>
     </div>

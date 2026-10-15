@@ -1,60 +1,87 @@
-/* ===== MenuStrip kiểu WinForms (màu theo theme xanh) ===== */
+/* ===== MenuStrip (thanh menu trên + dropdown nhiều cấp) ===== */
 .menustrip {
-  display: flex; align-items: stretch; height: 100%; padding: 0 6px; gap: 1px;
-  background: linear-gradient(#ffffff, #f4f8f6); border-bottom: 1px solid var(--line);
+  position: relative; display: flex; align-items: stretch; height: 100%; padding: 0 6px; gap: 1px;
+  background: linear-gradient(#ffffff, #f3f7fa); border-bottom: 1px solid var(--line);
   font-size: 13px; color: var(--ink); user-select: none;
   overflow-x: auto; scrollbar-width: none;
 }
 .menustrip::-webkit-scrollbar { display: none; }
 
 .ms-top {
-  position: relative; display: flex; align-items: center; gap: 6px; padding: 0 10px; margin: 3px 0;
-  border: 1px solid transparent; border-radius: 4px; white-space: nowrap; cursor: default; flex-shrink: 0;
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 0 10px; margin: 3px 0;
+  border: 1px solid transparent; border-radius: 6px; white-space: nowrap; cursor: pointer; flex-shrink: 0;
   transition: background-color .15s, border-color .15s, color .15s;
 }
-.ms-top .cy-icon { color: var(--brand-text); transition: transform .25s var(--ease-spring); }
+.ms-top .cy-icon { color: var(--brand-text); transition: transform .25s var(--ease-spring), color .2s; }
 .ms-top:hover, .ms-top.is-hot { background: var(--brand-50); border-color: var(--brand-200); }
 .ms-top:hover .cy-icon { transform: scale(1.12); }
-.ms-top.is-open { background: var(--brand-100); border-color: var(--brand); color: var(--brand-ink); }
-.ms-top-sep { width: 1px; margin: 6px 4px; background: var(--line); }
+.ms-top.is-open { background: var(--brand-100); border-color: var(--brand); color: var(--brand-text); }
+.ms-top-sep { width: 1px; margin: 10px 4px; background: var(--line); flex-shrink: 0; }
 
 /* Gạch chân phím tắt chỉ hiện khi dùng bàn phím (giữ Alt / F10) như Windows */
 .ms-label u { text-decoration: none; }
 .ms-kb .ms-label u { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 2px; }
 
+/* ---- Biến thể nằm trên thanh tiêu đề (header) ---- */
+.menustrip--header { background: transparent; border-bottom: 0; padding: 0; gap: 2px; align-items: center; font-size: 14px; }
+.menustrip--header .ms-top {
+  height: 40px; margin: 0; padding: 0 14px; gap: 8px; border: 0; border-radius: 10px; font-weight: 600; color: var(--ink-2);
+  background: transparent !important;
+}
+.menustrip--header .ms-top .cy-icon { color: var(--muted); }
+.menustrip--header .ms-top-chev { color: var(--muted) !important; transition: transform .3s var(--ease) !important; }
+.menustrip--header .ms-top:hover, .menustrip--header .ms-top.is-hot { color: var(--brand-text); }
+.menustrip--header .ms-top:hover .cy-icon, .menustrip--header .ms-top.is-hot .cy-icon { color: var(--brand); }
+.menustrip--header .ms-top:hover .ms-top-chev { transform: translateY(2px); }
+.menustrip--header .ms-top.is-open { color: var(--brand-text); }
+.menustrip--header .ms-top.is-open .cy-icon { color: var(--brand); }
+.menustrip--header .ms-top.is-open .ms-top-chev { transform: rotate(180deg); color: var(--brand) !important; }
+
+/* Nền trượt theo mục đang rê / đang mở + vạch nhấn ở đáy */
+.ms-ink {
+  position: absolute; left: 0; top: 50%; z-index: 0; height: 40px; margin-top: -20px; border-radius: 10px; pointer-events: none;
+  background: var(--brand-50); opacity: 0;
+  transition: transform .32s var(--ease), width .32s var(--ease), opacity .2s, background-color .2s;
+}
+.ms-ink::after {
+  content: ''; position: absolute; left: 50%; bottom: 3px; width: 18px; height: 3px; margin-left: -9px; border-radius: 3px;
+  background: var(--brand); transform: scaleX(0); transition: transform .3s var(--ease-spring);
+}
+.ms-ink.is-on { opacity: 1; }
+.ms-ink.is-open { background: var(--brand-100); }
+.ms-ink.is-open::after { transform: scaleX(1); }
+
 /* ---- Dropdown ---- */
 .ms-drop {
-  position: fixed; z-index: 5000; min-width: 220px; max-width: 460px;
+  position: fixed; z-index: 5000; min-width: 230px; max-width: 460px;
   max-height: calc(100vh - 8px); overflow-y: auto; overscroll-behavior: contain;
-  padding: 3px; font-size: 13px; color: var(--ink); user-select: none; border-radius: 4px;
-  /* cột lề icon bên trái như ToolStripDropDown */
-  background: linear-gradient(90deg, #f1f7f4 0, #f1f7f4 30px, #e2ebe7 30px, #e2ebe7 31px, #fff 31px);
-  border: 1px solid #b9c9c1;
-  box-shadow: 0 10px 26px rgba(4, 21, 15, .16), 0 2px 6px rgba(4, 21, 15, .08);
-  transform-origin: top left;
+  padding: 6px; font-size: 13px; color: var(--ink); user-select: none;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(15, 47, 71, .16), 0 3px 10px rgba(15, 47, 71, .06);
 }
-.ms-item {
-  display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; align-items: center;
-  height: 26px; border: 1px solid transparent; border-radius: 3px; cursor: default;
-  transition: background-color .1s, border-color .1s;
-}
-.ms-item.is-hot, .ms-item.is-open { background: var(--brand-50); border-color: var(--brand-200); }
-.ms-item.is-open { background: var(--brand-100); }
-.ms-gutter { display: grid; place-items: center; color: var(--brand-text); }
-.ms-item .ms-label { padding: 0 8px 0 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ms-arrow { display: grid; place-items: center; color: var(--muted); transition: transform .2s var(--ease), color .15s; }
-.ms-item.is-hot .ms-arrow, .ms-item.is-open .ms-arrow { color: var(--brand-text); transform: translateX(2px); }
-.ms-sep { height: 1px; margin: 3px 2px 3px 34px; background: var(--line); }
+.ms-drop--root { transform-origin: top left; animation: ms-drop-down .22s var(--ease) both; }
+.ms-drop--sub { transform-origin: left top; animation: ms-drop-side .2s var(--ease) both; }
+@keyframes ms-drop-down { from { opacity: 0; transform: translateY(-8px) scale(.97); } }
+@keyframes ms-drop-side { from { opacity: 0; transform: translateX(-8px) scale(.98); } }
 
-/* ---- Biến thể nằm trên thanh tiêu đề (header) ---- */
-.menustrip--header { background: transparent; border-bottom: 0; padding: 0; gap: 4px; align-items: center; font-size: 14px; }
-.menustrip--header .ms-top {
-  height: 38px; margin: 0; padding: 0 12px; gap: 8px; border-radius: 8px; border-color: transparent; font-weight: 600; color: #2b3a34;
+.ms-item {
+  position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr) 20px; align-items: center;
+  height: 34px; border-radius: 8px; cursor: pointer;
+  transition: background-color .14s, color .14s;
+  animation: ms-item-in .26s var(--ease) both; animation-delay: calc(var(--i, 0) * 18ms + 40ms);
 }
-.menustrip--header .ms-top .cy-icon { color: #4a5852; }
-.menustrip--header .ms-top-chev { color: #8a9a93 !important; transition: transform .25s var(--ease) !important; }
-.menustrip--header .ms-top:hover, .menustrip--header .ms-top.is-hot { background: var(--brand-50); border-color: transparent; color: var(--brand-text); }
-.menustrip--header .ms-top:hover .cy-icon { color: var(--brand-text); }
-.menustrip--header .ms-top.is-open { background: var(--brand-100); border-color: transparent; color: var(--brand-ink); }
-.menustrip--header .ms-top.is-open .ms-top-chev { transform: rotate(180deg); color: var(--brand-text) !important; }
-.menustrip--header .ms-top:hover .ms-top-chev { transform: translateY(1px); }
+@keyframes ms-item-in { from { opacity: 0; transform: translateY(-3px); } }
+.ms-item::before { /* vạch nhấn bên trái khi rê */
+  content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--brand);
+  transform: scaleY(0); transition: transform .2s var(--ease);
+}
+.ms-item.is-hot, .ms-item.is-open { background: var(--brand-50); color: var(--brand-text); }
+.ms-item.is-hot::before, .ms-item.is-open::before { transform: scaleY(1); }
+.ms-item.is-open { background: var(--brand-100); }
+.ms-gutter { display: grid; place-items: center; color: var(--muted); transition: color .15s, transform .25s var(--ease-spring); }
+.ms-item.is-hot .ms-gutter, .ms-item.is-open .ms-gutter { color: var(--brand); transform: scale(1.1); }
+.ms-item .ms-label { padding: 0 8px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: transform .2s var(--ease); }
+.ms-item.is-hot .ms-label { transform: translateX(2px); }
+.ms-arrow { display: grid; place-items: center; color: var(--muted); transition: transform .2s var(--ease), color .15s; }
+.ms-item.is-hot .ms-arrow, .ms-item.is-open .ms-arrow { color: var(--brand); transform: translateX(2px); }
+.ms-sep { height: 1px; margin: 5px 8px; background: var(--line-2); }

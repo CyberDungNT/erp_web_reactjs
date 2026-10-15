@@ -1,20 +1,20 @@
 /* =====================================================================
    BỘ MÀU CHUNG – đổi màu thương hiệu chỉ cần sửa ở đây
-   Xanh chủ đạo #00d287, cam nhấn #FF990A.
-   Lưu ý tương phản: chữ trắng trên #00d287 khó đọc -> nút xanh dùng chữ xanh đậm (--brand-ink);
-   chữ màu xanh trên nền trắng dùng --brand-text (đậm hơn) cho dễ đọc.
+   Màu chủ đạo #D9EAF2 (xanh băng nhạt) cho nền / vùng chọn,
+   xanh thép đậm #1F5F8B cho nút & điểm nhấn (chữ trắng đủ tương phản), cam nhấn #FF990A.
+   Chữ xanh trên nền sáng dùng --brand-text.
    ===================================================================== */
 :root {
-  --brand: #00d287;
-  --brand-hover: #00e394;
-  --brand-press: #00bd79;
-  --brand-600: #00b371;
-  --brand-text: #00805a;      /* chữ xanh trên nền sáng */
-  --brand-ink: #032b1e;       /* chữ trên nền xanh */
-  --brand-50: #ebfcf5;
-  --brand-100: #d2f8e8;
-  --brand-200: #a6f0d2;
-  --brand-glow: rgba(0, 210, 135, .35);
+  --brand: #1f5f8b;
+  --brand-hover: #276f9f;
+  --brand-press: #184e74;
+  --brand-600: #184e74;
+  --brand-text: #1d5a84;      /* chữ xanh trên nền sáng */
+  --brand-ink: #ffffff;       /* chữ trên nền --brand */
+  --brand-50: #eef5f9;
+  --brand-100: #D9EAF2;       /* màu chủ đạo */
+  --brand-200: #b6d3e5;
+  --brand-glow: rgba(31, 95, 139, .28);
 
   --accent: #ff990a;
   --accent-hover: #ffa82e;
@@ -23,21 +23,21 @@
   --accent-50: #fff5e8;
   --accent-100: #ffe6c2;
 
-  --dark-900: #04150f;        /* nền tối (thanh tiêu đề, panel login) */
-  --dark-800: #082319;
-  --dark-700: #0d3324;
-  --dark-600: #154532;
-  --dark-text: #cfe9de;
-  --dark-muted: #86a99a;
+  --dark-900: #0b1f30;        /* nền tối (thanh tiêu đề popup, khối code) */
+  --dark-800: #0f2a40;
+  --dark-700: #163650;
+  --dark-600: #1f4663;
+  --dark-text: #d0e2ee;
+  --dark-muted: #87a2b8;
 
-  --ink: #14211c;
-  --ink-2: #3b4a44;
-  --muted: #6c7a74;
-  --line: #dde5e1;
-  --line-2: #e9efec;
+  --ink: #1b2d3c;
+  --ink-2: #3a4b5b;
+  --muted: #66788a;
+  --line: #d6e1e9;
+  --line-2: #e6edf2;
   --surface: #ffffff;
-  --surface-2: #f6f9f7;
-  --bg: #eef3f1;
+  --surface-2: #f4f8fb;
+  --bg: #D9EAF2;
 
   --danger: #d1373f;
   --danger-50: #fdeced;
@@ -45,9 +45,9 @@
   --radius: 8px;
   --ease: cubic-bezier(.22, .61, .36, 1);
   --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
-  --shadow-sm: 0 1px 2px rgba(4, 21, 15, .06), 0 1px 3px rgba(4, 21, 15, .05);
-  --shadow-md: 0 6px 16px rgba(4, 21, 15, .08), 0 2px 4px rgba(4, 21, 15, .05);
-  --shadow-lg: 0 18px 44px rgba(4, 21, 15, .16), 0 4px 10px rgba(4, 21, 15, .06);
+  --shadow-sm: 0 1px 2px rgba(15, 47, 71, .06), 0 1px 3px rgba(15, 47, 71, .05);
+  --shadow-md: 0 6px 16px rgba(15, 47, 71, .08), 0 2px 4px rgba(15, 47, 71, .05);
+  --shadow-lg: 0 18px 44px rgba(15, 47, 71, .16), 0 4px 10px rgba(15, 47, 71, .06);
 }
 
 @media (prefers-reduced-motion: reduce) {

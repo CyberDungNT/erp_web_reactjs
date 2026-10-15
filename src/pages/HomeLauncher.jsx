@@ -123,7 +123,7 @@ export default function HomeLauncher() {
             <div key={`${page}-${group}-${k}`} className={`hl__grid ${dir > 0 ? 'from-right' : 'from-left'}`}
               style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
               {shown.map((l, i) => (
-                <button key={l.id} type="button" className={`hl__tile hl__tile--${l.palette}`}
+                <button key={l.id} type="button" className={`hl__tile hl__tile--${l.palette}`} style={{ '--i': i }}
                   onClick={() => openMenu(l)}
                   title={`${l.group ? l.group + ' › ' : ''}${l.text} (${l.id})`}>
                   <span className="hl__tile-icon"><Icon name="doc" size={26} strokeWidth={1.6} /></span>

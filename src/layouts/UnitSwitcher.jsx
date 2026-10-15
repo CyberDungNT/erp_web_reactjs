@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import Icon from '../components/icons/Icon';
 import { useAuth } from '../auth/AuthContext';
 import { getLastLogin, getUnits, setLastLogin } from '../auth/authService';
+import { msgbox } from '../components/cyber';
 
 /**
  * Thẻ "ĐƠN VỊ LÀM VIỆC" ở đáy menu trái.
@@ -40,9 +41,13 @@ export default function UnitSwitcher({ collapsed }) {
     return (units || []).filter((u) => !k || norm(u.Ten_TTCP).includes(k) || norm(u.Ma_TTCP).includes(k));
   }, [units, kw]);
 
-  const pick = (u) => {
+  const pick = async (u) => {
     if (String(u.Ma_TTCP) === String(user?.Ma_TTCP)) return setOpen(false);
-    if (!window.confirm(`Chuyển sang đơn vị "${u.Ten_TTCP}"?\nBạn cần đăng nhập lại để tải quyền và menu của đơn vị mới.`)) return;
+    setOpen(false);
+    const ok = await msgbox.yesNo(`Chuyển sang đơn vị "${u.Ten_TTCP}"?`, {
+      title: 'Đổi đơn vị làm việc', detail: 'Bạn cần đăng nhập lại để tải quyền và menu của đơn vị mới.',
+    });
+    if (!ok) return;
     setLastLogin({ ...getLastLogin(), userName: user?.User_name, maTTCP: u.Ma_TTCP });
     logout();
   };
