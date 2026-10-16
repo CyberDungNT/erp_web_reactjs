@@ -13,6 +13,7 @@
  */
 import { callProc } from '@/api/apiClient';
 import { LOCAL_KEYS, localStore } from '@/utils/storage';
+import { md5 } from '@/utils/md5';
 import { decryptText, encryptText } from './tokenVault';
 
 export const LOGIN_PROC = 'CP_SysLogin';
@@ -42,7 +43,16 @@ export const loginConfig = {
   platform: '1',    // @M_PlatForm
   macAddress: '',   // @M_MacAddress – trình duyệt không đọc được MAC
   userWindow: '',   // @M_UserWindow – trình duyệt không đọc được user Windows
+  // @M_Password gửi dạng MD5 (hex 32 ký tự) của mật khẩu (UTF-8). Để trống -> gửi chuỗi rỗng (vd đăng nhập lại bằng token).
+  passwordUpperCase: false, // true nếu DB lưu MD5 dạng chữ HOA (vd 202CB962...)
 };
+
+/** Mật khẩu gửi vào CP_SysLogin: MD5 hex; rỗng -> rỗng */
+export function hashPassword(password) {
+  if (password == null || password === '') return '';
+  const h = md5(password);
+  return loginConfig.passwordUpperCase ? h.toUpperCase() : h;
+}
 
 /**
  * VỊ TRÍ BẢNG MENU trong kết quả CP_SysLogin khi đăng nhập thành công (đếm từ 0: Table = 0, Table1 = 1...).
@@ -121,7 +131,7 @@ export async function login({ userName, password = '', maTTCP, tokenKey = '', ot
     loginConfig.type,
     loginConfig.platform,
     userName,
-    password,
+    hashPassword(password), // @M_Password – MD5, để trống thì gửi rỗng
     tokenKey,    // @M_TokenKey – rỗng khi đăng nhập bằng mật khẩu, có giá trị khi tự đăng nhập lại bằng token
     otp,         // @M_Ma_OTP
     idOtp,       // @M_Id_OTP

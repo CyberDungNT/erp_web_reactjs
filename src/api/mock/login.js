@@ -1,6 +1,7 @@
 /**
  * Dữ liệu giả cho CP_SysLogin (rút gọn từ kết quả thật).
  * Mật khẩu "123" -> thành công, mật khẩu khác -> "Mật khẩu không đúng".
+ * Web gửi @M_Password dạng MD5 -> so với md5('123') (vẫn nhận "123" chữ rõ để gọi tay khi test).
  */
 import { UNITS } from './units';
 
@@ -148,6 +149,8 @@ const baseInfo = {
 
 const MOCK_TOKEN = '21138272-B3C6-43E3-8A08-A6F18B424893';
 
+const MD5_123 = '202cb962ac59075b964b07152d234b70'; // md5('123')
+
 export function mockLogin([, , userName = '', password = '', tokenKey = '', , , maTTCP = '01']) {
   const unit = UNITS.find((u) => u.Ma_TTCP === maTTCP);
   if (!unit) {
@@ -156,7 +159,7 @@ export function mockLogin([, , userName = '', password = '', tokenKey = '', , , 
   const unitInfo = { Ma_Dvcs: unit.Ma_Dvcs, Ma_TTCP: unit.Ma_TTCP, Ten_TTCP: unit.Ten_TTCP, Ten_Cty: unit.Ten_TTCP,
     Ngay_Ks: unit.Ngay_KS.slice(8, 10) + '/' + unit.Ngay_KS.slice(5, 7) + '/' + unit.Ngay_KS.slice(0, 4),
     Title: `${baseInfo.Ten_Dvcs}  -  ${unit.Ten_TTCP.toUpperCase()}` };
-  if (password === '123' || tokenKey === MOCK_TOKEN) { // mật khẩu đúng hoặc đăng nhập lại bằng token
+  if (password === '123' || String(password).toLowerCase() === MD5_123 || tokenKey === MOCK_TOKEN) { // mật khẩu đúng hoặc đăng nhập lại bằng token
     return {
       Table: menuBang0,
       Table1: menuBang1,
