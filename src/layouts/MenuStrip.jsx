@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Icon, { MenuIcon, hasMenuIcon } from '../components/icons/Icon';
-import { normalize } from '../utils/menuTree';
+import Icon, { MenuIcon, hasMenuIcon } from '@/components/icons/Icon';
+import { normalize } from '@/utils/menuTree';
 import './menustrip.css';
 
 /**

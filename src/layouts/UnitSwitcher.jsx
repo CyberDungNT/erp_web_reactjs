@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Icon from '../components/icons/Icon';
-import { useAuth } from '../auth/AuthContext';
-import { getLastLogin, getUnits, setLastLogin } from '../auth/authService';
-import { msgbox } from '../components/cyber';
+import Icon from '@/components/icons/Icon';
+import { useAuth } from '@/auth/AuthContext';
+import { getLastLogin, getUnits, setLastLogin } from '@/auth/authService';
+import { msgbox } from '@/components/cyber';
 
 /**
  * Thẻ "ĐƠN VỊ LÀM VIỆC" ở đáy menu trái.

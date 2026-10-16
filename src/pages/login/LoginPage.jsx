@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { CyberTextBox, CyberSelect } from '../components/cyber';
-import Icon from '../components/icons/Icon';
-import { useCyberForm } from '../hooks/useCyberForm';
-import { AuthSplash, useAuth } from '../auth/AuthContext';
-import { getLastLogin, getUnits, LOGOUT_FX_KEY } from '../auth/authService';
-import { apiConfig } from '../api/apiClient';
-import { BRAND, SOCIAL_LOGINS } from '../config/brand';
+import { CyberTextBox, CyberSelect, toast } from '@/components/cyber';
+import Icon from '@/components/icons/Icon';
+import { useCyberForm } from '@/hooks/useCyberForm';
+import { AuthSplash, useAuth } from '@/auth/AuthContext';
+import { getLastLogin, getUnits, LOGOUT_FX_KEY } from '@/auth/authService';
+import { apiConfig } from '@/api/apiClient';
+import { BRAND, SOCIAL_LOGINS } from '@/config/brand';
 import './login.css';
 
 // Thời gian các bước hiệu ứng đăng nhập thành công (ms)
@@ -340,7 +340,7 @@ export default function LoginPage() {
               <div className="lg__social">
                 {SOCIAL_LOGINS.filter((s) => s.enabled).map((s) => (
                   <button key={s.key} type="button" className="lg__social-btn" disabled={busy}
-                    onClick={() => setMessage({ type: 'info', text: t.social(s.text) })}>
+                    onClick={() => toast.info(t.social(s.text), { title: s.text })}>
                     <SocialIcon name={s.key} /> {s.text}
                   </button>
                 ))}

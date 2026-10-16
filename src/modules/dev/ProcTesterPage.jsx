@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { CyberTextBox, CyberTable } from '../components/cyber';
-import { useCyberForm } from '../hooks/useCyberForm';
-import { callProc, apiConfig } from '../api/apiClient';
+import { CyberTextBox, CyberTable } from '@/components/cyber';
+import { useCyberForm } from '@/hooks/useCyberForm';
+import { callProc, apiConfig } from '@/api/apiClient';
 
 /** Gọi bất kỳ proc nào trên server và hiển thị tất cả bảng trả về. */
 export default function ProcTesterPage() {

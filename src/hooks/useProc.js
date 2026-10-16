@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { callProc } from '../api/apiClient';
+import { callProc } from '@/api/apiClient';
 
 /**
  * Gọi proc theo kiểu hook, tự động gọi khi mount hoặc khi params đổi.

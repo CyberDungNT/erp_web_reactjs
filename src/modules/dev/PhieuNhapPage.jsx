@@ -1,6 +1,6 @@
 import {
   CyberForm, CyberTextBox, CyberDate, CyberLookup, CyberCombobox, CyberNumeric, CyberTable,
-} from '../components/cyber';
+} from '@/components/cyber';
 
 /**
  * MÀN MẪU DÙNG CYBERFORM – Phiếu nhập kho.

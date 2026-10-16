@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { CyberTable, CyberPopup, CyberTextBox, CyberNumeric, CyberDate, CyberCheckBox } from '../components/cyber';
-import { useProc } from '../hooks/useProc';
-import { useCyberForm } from '../hooks/useCyberForm';
-import { callProc } from '../api/apiClient';
+import { CyberTable, CyberPopup, CyberTextBox, CyberNumeric, CyberDate, CyberCheckBox } from '@/components/cyber';
+import { useProc } from '@/hooks/useProc';
+import { useCyberForm } from '@/hooks/useCyberForm';
+import { callProc } from '@/api/apiClient';
 
 /**
  * MẪU MÀN HÌNH DANH MỤC – copy file này để làm màn hình mới.

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { callProc } from '../../api/apiClient';
-import { useAuth } from '../../auth/AuthContext';
-import { useCyberForm } from '../../hooks/useCyberForm';
-import Icon, { MenuIcon } from '../icons/Icon';
+import { callProc } from '@/api/apiClient';
+import { useAuth } from '@/auth/AuthContext';
+import { useCyberForm } from '@/hooks/useCyberForm';
+import Icon, { MenuIcon } from '@/components/icons/Icon';
 import { msgbox } from './CyberMsgBox';
 
 /**

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
-import { CyberForm } from '../components/cyber';
-import { normalizeTables } from '../api/apiClient';
-import { mockDashboardHome } from '../api/mockDashboard';
-import { BarList, Legend, LineChart, SERIES, Sparkline, StackBar, fmtCompact } from '../components/charts/Charts';
+import { CyberForm } from '@/components/cyber';
+import { normalizeTables } from '@/api/apiClient';
+import { mockDashboardHome } from '@/api/mock/dashboard';
+import { BarList, Legend, LineChart, SERIES, Sparkline, StackBar, fmtCompact } from '@/components/charts/Charts';
 import './dashboard.css';
 
 /**

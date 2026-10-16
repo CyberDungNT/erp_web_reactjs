@@ -10,10 +10,10 @@ import {
   useState,
 } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext";
-import { apiConfig } from "../api/apiClient";
-import { getMenuRows, LOGOUT_FX_KEY as BYE_KEY } from "../auth/authService";
-import { buildMenuTree } from "../utils/menuTree";
+import { useAuth } from "@/auth/AuthContext";
+import { apiConfig } from "@/api/apiClient";
+import { getMenuRows, LOGOUT_FX_KEY as BYE_KEY } from "@/auth/authService";
+import { buildMenuTree } from "@/utils/menuTree";
 import {
   screens,
   Placeholder,
@@ -22,10 +22,10 @@ import {
   EXIT_MENU_IDS,
   LANG_MENU_IDS,
   HomePage,
-} from "../screens/registry";
-import { CyberContextMenu, msgbox } from "../components/cyber";
-import Icon from "../components/icons/Icon";
-import { BRAND } from "../config/brand";
+} from "@/screens/registry";
+import { CyberContextMenu, msgbox } from "@/components/cyber";
+import Icon from "@/components/icons/Icon";
+import { BRAND } from "@/config/brand";
 import MenuStrip from "./MenuStrip";
 import SideMenu from "./SideMenu";
 import UnitSwitcher from "./UnitSwitcher";

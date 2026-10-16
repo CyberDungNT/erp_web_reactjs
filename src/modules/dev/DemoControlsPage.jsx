@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   CyberTextBox, CyberNumeric, CyberLookup, CyberDate, CyberCheckBox,
-  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox,
-} from '../components/cyber';
-import { useCyberForm } from '../hooks/useCyberForm';
-import { useProc } from '../hooks/useProc';
-import { callProc } from '../api/apiClient';
+  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox, toast,
+} from '@/components/cyber';
+import { useCyberForm } from '@/hooks/useCyberForm';
+import { useProc } from '@/hooks/useProc';
+import { callProc } from '@/api/apiClient';
 
 const initialForm = {
   SoCT: '',
@@ -208,6 +208,38 @@ export default function DemoControlsPage() {
   // Dạng component (tự quản lý state open)
   const [declOpen, setDeclOpen] = useState(false);
 
+  // ===== CyberToast =====
+  const ts = useCyberForm({
+    Title: '',
+    Message: 'Đã lưu phiếu nhập PN-2026-0001',
+    Duration: 3500,
+    Action: false,
+  });
+  const lastToast = useRef(null);
+  /** Gọi toast.<type> với các tuỳ chọn đang nhập; id trả về dùng cho toast.dismiss(id) */
+  const showToast = (type) => {
+    const id = toast[type](ts.data.Message, {
+      title: ts.data.Title || undefined,
+      duration: Number(ts.data.Duration) || 0,
+      action: ts.data.Action ? { text: 'Hoàn tác', onClick: () => addLog(`toast #${id}: bấm Hoàn tác`) } : undefined,
+    });
+    lastToast.current = id;
+    addLog(`toast.${type}(...) -> id ${id}`);
+  };
+  /** Kịch bản: toast "đang xử lý" không tự ẩn -> xong thì đóng và báo kết quả */
+  const toastFlow = async () => {
+    const id = toast.info('Đang đồng bộ dữ liệu...', { title: 'Đồng bộ', duration: 0 });
+    await new Promise((r) => setTimeout(r, 1800));
+    toast.dismiss(id);
+    toast.success('Đồng bộ xong 128 bản ghi', { title: 'Đồng bộ' });
+    addLog('Kịch bản toast: xử lý -> xong');
+  };
+  const toastBurst = () => {
+    ['success', 'info', 'warning', 'error', 'info'].forEach((type, i) =>
+      setTimeout(() => toast[type](`Toast thứ ${i + 1} (${type})`), i * 250));
+    addLog('Bắn 5 toast liên tiếp (tối đa 4 cái cùng lúc)');
+  };
+
   // ===== Cố định cột / dòng =====
   const freeze = useCyberForm({ Left: 3, Right: 1, Rows: 1, PinUuTien: false });
 
@@ -384,6 +416,41 @@ export default function DemoControlsPage() {
             <CyberMsgBox open={declOpen} type={mb.data.Type} title={mb.data.Title || undefined} message={mb.data.Message}
               detail={mb.data.Detail || undefined} lang={mb.data.Lang} danger={!!mb.data.Danger}
               onClose={(r) => { setDeclOpen(false); addLog(`<CyberMsgBox type="${mb.data.Type}"> onClose(${r})`); }} />
+          </section>
+
+          <section className="panel">
+            <h3 className="panel__title">CyberToast – thông báo nhanh ở trên cùng (success, info, warning, error)</h3>
+            <div className="grid grid--2">
+              <div>
+                <CyberTextBox {...ts.bind('Message')} label="Nội dung" multiline rows={2} />
+                <CyberTextBox {...ts.bind('Title')} label="Tiêu đề" placeholder="Để trống nếu không cần" />
+              </div>
+              <div>
+                <CyberNumeric {...ts.bind('Duration')} label="Thời gian (ms)" min={0} allowNegative={false} />
+                <CyberCheckBox {...ts.bind('Action')} label="Nút hành động" text={'Thêm nút "Hoàn tác" (action)'} />
+              </div>
+            </div>
+
+            <p className="hint">Gọi nhanh <code>toast.*</code> (trả về id – thời gian <b>0</b> = không tự ẩn, rê chuột vào toast để tạm dừng):</p>
+            <div className="page__actions">
+              <button className="cy-btn" onClick={() => showToast('success')}>✔ success</button>
+              <button className="cy-btn cy-btn--primary" onClick={() => showToast('info')}>ℹ info</button>
+              <button className="cy-btn" onClick={() => showToast('warning')}>⚠ warning</button>
+              <button className="cy-btn" onClick={() => showToast('error')}>✖ error</button>
+            </div>
+
+            <p className="hint" style={{ marginTop: 14 }}>Kịch bản &amp; trường hợp đặc biệt:</p>
+            <div className="page__actions">
+              <button className="cy-btn" onClick={toastFlow}>Đang xử lý → xong</button>
+              <button className="cy-btn" onClick={toastBurst}>Bắn 5 toast liên tiếp</button>
+              <button className="cy-btn" onClick={() => toast.warning('Chuỗi rất dài: ' + 'Lorem ipsum dolor sit amet, '.repeat(8), { title: 'Nội dung dài' })}>
+                Nội dung dài
+              </button>
+              <button className="cy-btn" onClick={() => { toast.dismiss(lastToast.current); addLog(`toast.dismiss(${lastToast.current})`); }}>
+                Đóng toast vừa mở
+              </button>
+              <button className="cy-btn" onClick={() => { toast.dismiss(); addLog('toast.dismiss() – đóng tất cả'); }}>Đóng tất cả</button>
+            </div>
           </section>
         </div>
 

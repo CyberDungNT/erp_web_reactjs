@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
  *
  * Gọi nhanh ở bất kỳ đâu (cần gắn <CyberMsgBoxHost /> 1 lần ở gốc app – đã gắn trong App.jsx):
  *
- *   import { msgbox } from '../components/cyber';
+ *   import { msgbox } from '@/components/cyber';
  *   msgbox.success('Lưu thành công');
  *   msgbox.warning('Chưa nhập mã hàng', { title: 'Thiếu dữ liệu' });
  *   msgbox.failed('Không kết nối được máy chủ', { detail: err.message });

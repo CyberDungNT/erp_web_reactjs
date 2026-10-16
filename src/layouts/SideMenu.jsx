@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import Icon, { MenuIcon } from '../components/icons/Icon';
-import { filterTree } from '../utils/menuTree';
+import Icon, { MenuIcon } from '@/components/icons/Icon';
+import { filterTree } from '@/utils/menuTree';
 
 /**
  * Menu bên trái (bảng MENU_TABLE.left của CP_SysLogin) dạng cây nhiều cấp.

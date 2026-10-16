@@ -3,9 +3,9 @@
  * Mỗi hàm nhận mảng tham số (đã tách theo #) và trả về Data giống ds.ToJsonObject().
  */
 
-import { mockLogin, mockDashboard } from './mockLogin';
-import { mockGetUnits } from './mockUnits';
-import { mockDashboardHome } from './mockDashboard';
+import { mockLogin, mockDashboard } from './login';
+import { mockGetUnits } from './units';
+import { mockDashboardHome } from './dashboard';
 
 const khachHang = [
   { MaKH: 'KH001', TenKH: 'Công ty TNHH Minh Phát', DiaChi: 'Q.1, TP.HCM', DienThoai: '0901234567' },

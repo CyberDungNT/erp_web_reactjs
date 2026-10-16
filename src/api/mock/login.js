@@ -2,7 +2,7 @@
  * Dữ liệu giả cho CP_SysLogin (rút gọn từ kết quả thật).
  * Mật khẩu "123" -> thành công, mật khẩu khác -> "Mật khẩu không đúng".
  */
-import { UNITS } from './mockUnits';
+import { UNITS } from './units';
 
 const t = (phanHe, module, id, parent, bar, bar2, icon = '', extra = {}) => ({
   Stt_Phan_he: phanHe, Stt_Module: module, Menu_Id: id, Menu_Id0: parent, Bar: bar, Bar2: bar2,

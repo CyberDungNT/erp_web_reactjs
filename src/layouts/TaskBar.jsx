@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import Icon, { MenuIcon } from '../components/icons/Icon';
+import Icon, { MenuIcon } from '@/components/icons/Icon';
 
 /**
  * Thanh cửa sổ dưới cùng: "Trang chủ" + các cửa sổ chức năng đang mở | ngày khoá sổ.

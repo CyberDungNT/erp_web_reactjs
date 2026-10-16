@@ -1,4 +1,4 @@
-import Icon from '../components/icons/Icon';
+import Icon from '@/components/icons/Icon';
 
 /** Trang tạm cho chức năng chưa có màn hình – hiện thông tin menu để dev biết cần làm gì */
 export default function PlaceholderPage({ menu }) {
@@ -19,8 +19,8 @@ export default function PlaceholderPage({ menu }) {
           </tbody>
         </table>
         <p className="hint">
-          Khai báo trong <code>src/screens/registry.js</code>:<br />
-          <code>'{menu?.id}': lazy(() =&gt; import('../pages/TenManHinh')),</code>
+          Khai báo trong <code>src/modules/&lt;phân-hệ&gt;/index.js</code> (mục <code>screens</code>):<br />
+          <code>'{menu?.id}': lazy(() =&gt; import('./TenManPage')),</code>
         </p>
       </div>
     </div>

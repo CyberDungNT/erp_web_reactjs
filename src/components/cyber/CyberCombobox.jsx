@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import CyberField, { newId } from './CyberField';
-import { useBinding } from '../../hooks/useBinding';
-import { callProc } from '../../api/apiClient';
+import { useBinding } from '@/hooks/useBinding';
+import { callProc } from '@/api/apiClient';
 
 /**
  * Combobox chọn 1 giá trị từ bảng dữ liệu.

@@ -14,7 +14,7 @@
  *
  * Nếu Status = false hoặc lỗi mạng -> throw ApiError (có .message).
  */
-import { mockExecute } from './mockData';
+import { mockExecute } from '@/api/mock';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const USE_MOCK = String(import.meta.env.VITE_USE_MOCK).toLowerCase() === 'true';

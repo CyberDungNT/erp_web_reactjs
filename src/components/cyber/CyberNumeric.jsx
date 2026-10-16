@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CyberField, { newId } from './CyberField';
-import { useBinding } from '../../hooks/useBinding';
+import { useBinding } from '@/hooks/useBinding';
 
 /**
  * Ô nhập số, tự format phân cách hàng nghìn ngay khi gõ, giữ đúng vị trí con trỏ.

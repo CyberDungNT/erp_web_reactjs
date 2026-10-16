@@ -11,7 +11,7 @@
  *   - Bảng có cột status + TokenKey  -> thông tin đăng nhập (status 'Y' = thành công, Note = thông báo)
  *     (2 bảng này tìm theo cột vì khi đăng nhập sai thứ tự bảng khác khi đúng)
  */
-import { callProc } from '../api/apiClient';
+import { callProc } from '@/api/apiClient';
 import { decryptText, encryptText } from './tokenVault';
 
 export const LOGIN_PROC = 'CP_SysLogin';

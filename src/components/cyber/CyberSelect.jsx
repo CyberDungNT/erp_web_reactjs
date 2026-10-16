@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CyberField, { newId } from './CyberField';
-import { useBinding } from '../../hooks/useBinding';
+import { useBinding } from '@/hooks/useBinding';
 
 /**
  * Ô chọn dạng dropdown tuỳ biến: có ô tìm kiếm (không dấu), nhóm, điều khiển bằng bàn phím.

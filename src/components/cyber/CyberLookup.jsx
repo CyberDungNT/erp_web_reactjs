@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import CyberField, { newId } from './CyberField';
-import { useBinding, useExtraField } from '../../hooks/useBinding';
-import { callProc, buildPara as joinPara } from '../../api/apiClient';
+import { useBinding, useExtraField } from '@/hooks/useBinding';
+import { callProc, buildPara as joinPara } from '@/api/apiClient';
 
 /**
  * Ô tra cứu (autocomplete) gọi API khi gõ.

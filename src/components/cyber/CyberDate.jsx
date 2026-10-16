@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import CyberField, { newId } from './CyberField';
-import { useBinding } from '../../hooks/useBinding';
+import { useBinding } from '@/hooks/useBinding';
 
 /**
  * Ô nhập ngày. Giá trị lưu dạng chuỗi 'yyyy-MM-dd' (gửi thẳng xuống SQL được).

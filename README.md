@@ -67,61 +67,91 @@ tên sản phẩm, version, khẩu hiệu, chữ chìm website/hotline, link "Qu
 - Menu trái: cây nhiều cấp theo `Menu_Id`/`Menu_Id0`,
   có tìm kiếm không dấu, nút ☰ thu gọn. `---` là đường kẻ, `&` trong tiêu đề được bỏ.
 - Ngôn ngữ VI/EN đổi giữa cột `Bar` và `Bar2`/`bar2`. `01.12.00` đổi ngôn ngữ, `01.19.00` (hoặc Icon `EXIT`) đăng xuất.
-- **Gắn màn hình vào menu**: thêm vào `src/screens/registry.js`
-  ```js
-  '02.02.01': lazy(() => import('../pages/PhieuKeToanPage')),
-  ```
+- **Gắn màn hình vào menu**: xem mục [Thêm màn hình mới](#thêm-màn-hình-mới).
   Màn hình nhận prop `menu` (Menu_Id, tiêu đề, IsMaxForm, isShowTab, Tag...). Chưa khai báo thì mở trang tạm.
 
 ## Giao diện & màu
 
-- Màu dùng chung khai báo trong `src/theme.css` (xanh chủ đạo `--brand: #00d287`, cam nhấn `--accent: #FF990A`).
+- Màu dùng chung khai báo trong `src/styles/theme.css` (xanh chủ đạo `--brand: #00d287`, cam nhấn `--accent: #FF990A`).
   Bộ control Cyber* và mọi màn hình đọc màu từ đây – đổi thương hiệu chỉ cần sửa file này.
 - Chữ trên nền xanh dùng `--brand-ink` (xanh rất đậm) vì chữ trắng trên `#00d287` khó đọc;
   chữ xanh trên nền trắng dùng `--brand-text`.
 - Hiệu ứng: nút nổi lên + vệt sáng khi hover; đăng nhập sai thì khung rung; đăng nhập đúng thì nút chuyển dấu tích →
   vòng tròn xanh lan ra màn hình → "Đăng nhập thành công" → mờ dần vào màn chính (các phần màn chính trượt vào lần lượt).
-  Thời gian từng bước sửa ở đầu `pages/LoginPage.jsx` (`T_CHECK`, `T_LEAVE`, `T_ENTER`).
+  Thời gian từng bước sửa ở đầu `pages/login/LoginPage.jsx` (`T_CHECK`, `T_LEAVE`, `T_ENTER`).
 - Máy bật "Giảm chuyển động" (prefers-reduced-motion) sẽ tự tắt hiệu ứng.
 - Font Be Vietnam Pro tải từ Google Fonts; máy không có mạng ngoài sẽ dùng Segoe UI.
 
-## Cấu trúc
+## Cấu trúc thư mục
 
 ```
 src/
+  main.jsx, App.jsx       khởi động app + khai báo route (/login, /)
+  config/brand.js         tên đơn vị, version, khẩu hiệu, nút đăng nhập ngoài
+  styles/                 theme.css (biến màu dùng chung), index.css (style chung toàn app)
   api/
-    apiClient.js        callProc(name, params) – HÀM GỌI API DÙNG CHUNG
-    mockData.js         dữ liệu giả cho các proc Demo_*
-  hooks/
-    useCyberForm.js     quản lý form + two-way binding: form.bind('Field')
-    useBinding.js       hook nội bộ của các control
-    useProc.js          gọi proc kiểu hook: { table, tables, loading, error, reload }
-  components/cyber/     bộ control dùng chung
-    CyberTextBox  CyberNumeric  CyberLookup  CyberDate  CyberCheckBox
-    CyberRadioButton  CyberCombobox  CyberTable  CyberContextMenu  CyberPopup
-    cyber.css           style control (màu lấy từ theme.css)
-  auth/
-    authService.js      gọi CP_SysLogin, phân tích kết quả, lưu phiên
-    AuthContext.jsx     useAuth(), RequireAuth
-  layouts/
-    MainLayout.jsx      khung chính: thanh trên, menu trái, tab, thanh trạng thái
-    MenuStrip.jsx       menu trên kiểu WinForms
-    SideMenu.jsx        menu trái dạng cây
-  screens/registry.js   Menu_Id -> màn hình
-  utils/menuTree.js     dựng cây menu từ Menu_Id / Menu_Id0
-  pages/
-    LoginPage.jsx         màn đăng nhập
-    HomePage.jsx          trang chủ + dashboard
-    DemoControlsPage.jsx  màn hình test tất cả control
-    HangHoaPage.jsx       mẫu màn hình danh mục (copy để làm màn mới)
-    ProcTesterPage.jsx    gọi proc bất kỳ, xem mọi bảng trả về
-  App.jsx               khai báo route
+    apiClient.js          callProc(name, params) – HÀM GỌI API DÙNG CHUNG
+    mock/                 dữ liệu giả khi VITE_USE_MOCK=true (index.js = danh sách proc giả)
+  auth/                   đăng nhập, lưu token mã hoá, useAuth(), RequireAuth
+  hooks/                  useCyberForm (binding), useProc, useBinding (nội bộ control)
+  utils/                  hàm tiện ích (dựng cây menu...)
+  components/
+    cyber/                BỘ CONTROL dùng chung: CyberForm, CyberTextBox, CyberTable, msgbox, toast...
+    charts/               biểu đồ SVG (LineChart, BarList, StackBar, Sparkline)
+    icons/                bộ icon
+  layouts/                khung màn chính: thanh trên, MenuStrip, menu trái, TaskBar, chọn đơn vị
+  pages/                  màn HỆ THỐNG (không thuộc menu nghiệp vụ)
+    login/                màn đăng nhập
+    home/                 trang chủ (dashboard)
+    PlaceholderPage.jsx   trang tạm cho chức năng chưa làm
+  modules/                MÀN NGHIỆP VỤ – mỗi thư mục là 1 PHÂN HỆ
+    _template/            mẫu phân hệ để copy (thư mục bắt đầu bằng "_" không được nạp)
+    dev/                  công cụ phát triển: test control, màn mẫu, gọi proc
+      index.js            khai báo Menu_Id -> màn hình của phân hệ
+  screens/registry.js     tự gộp mọi modules/*/index.js + trang chủ + trang tạm
 ```
+
+Import tuyệt đối từ `src` bằng `@/` (không phải đếm `../../`, chuyển file không gãy import):
+
+```js
+import { CyberForm, CyberTextBox, msgbox, toast } from '@/components/cyber';
+import { callProc } from '@/api/apiClient';
+import { useAuth } from '@/auth/AuthContext';
+```
+
+## Thêm màn hình mới
+
+**1. Màn thuộc phân hệ đã có** (vd `modules/ke-toan`):
+
+1. Tạo file `src/modules/ke-toan/PhieuKeToanPage.jsx` (copy `modules/_template/TenManPage.jsx` hoặc màn mẫu
+   đầy đủ `modules/dev/PhieuNhapPage.jsx`). Màn dùng `CyberForm`: code gọi API / xử lý khi mở màn đặt trong `onLoad`.
+2. Thêm 1 dòng vào `src/modules/ke-toan/index.js`, khoá là `Menu_Id` của chức năng trong menu hệ thống:
+   ```js
+   export const screens = {
+     '02.02.01': lazy(() => import('./PhieuKeToanPage')),   // Phiếu kế toán
+   };
+   ```
+3. Đăng nhập, bấm chức năng trong menu là màn mở ra. Chưa khai báo thì mở trang tạm (hiện sẵn Menu_Id cần khai báo).
+
+**2. Phân hệ mới**: copy thư mục `src/modules/_template` thành `src/modules/<ten-phan-he>` (chữ thường, gạch ngang:
+`ke-toan`, `kho`, `ban-hang`, `nhan-su`...) rồi làm như trên. **Không cần sửa `screens/registry.js`** – file này tự nạp.
+
+Quy ước:
+
+- Tên file màn hình: `PascalCase` + đuôi `Page` (`PhieuKeToanPage.jsx`, `DmKhachHangPage.jsx`).
+- CSS riêng của 1 màn đặt cạnh màn đó (`phieu-ke-toan.css`) và đặt tiền tố class riêng để không đè màn khác.
+  Ưu tiên dùng class/biến có sẵn (`cy-btn`, `panel`, `var(--brand)`...) thay vì tự viết màu.
+- Code dùng lại giữa nhiều màn trong 1 phân hệ: để trong `modules/<phân-hệ>/` (vd `components/`, `api.js`);
+  dùng chung nhiều phân hệ thì đưa lên `src/components`, `src/hooks`, `src/utils`.
+- Proc giả để test khi chưa có backend: thêm vào `src/api/mock/index.js` (`procs.Ten_Proc = (params) => ({ Table: [...] })`).
+- Màn chưa có trong menu hệ thống (màn test, màn nội bộ): khai báo thêm `menu` trong `index.js` của phân hệ
+  (xem `modules/dev/index.js`). Ẩn các menu này: `SHOW_DEV_MENU = false` trong `screens/registry.js`.
+- Thông báo: `toast.*` cho báo nhanh (lưu xong, chưa hỗ trợ...), `msgbox.*` khi cần người dùng xác nhận / đọc kỹ lỗi.
 
 ## Gọi API
 
 ```js
-import { callProc } from './api/apiClient';
+import { callProc } from '@/api/apiClient';
 
 const res = await callProc('GetData', [1, 2]);   // Para = "1#2"
 res.table   // bảng đầu tiên
