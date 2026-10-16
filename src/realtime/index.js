@@ -5,3 +5,4 @@ export { socket, socketConfig } from './socket';
 export { useSocketStatus, useSocketEvent, useSocketGroup, useSocketReady } from './useSocket';
 export { default as SocketBridge } from './SocketBridge';
 export { default as SocketStatus } from './SocketStatus';
+export { usePushStatus, initPush, enablePush, disablePush, syncPush, reportVisibility, onOpenChat } from './push';

@@ -6,6 +6,8 @@ import { installErrorReporter } from '@/utils/errorReporter';
 import { cleanLocalStorage } from '@/utils/storage';
 import '@/styles/theme.css';
 import '@/styles/index.css';
+// Thông báo đẩy: nạp sớm để kịp đọc "?chat=<phòng>" khi app được mở từ thông báo (xem realtime/push.js)
+import '@/realtime/push';
 
 // Lỗi API / binding / lỗi JS / console.error -> toast (cấu hình trong utils/errorReporter.js)
 installErrorReporter();

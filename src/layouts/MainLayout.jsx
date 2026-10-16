@@ -16,6 +16,7 @@ import { getMenuRows, markLogoutFx } from "@/auth/authService";
 import { LOCAL_KEYS, localStore } from "@/utils/storage";
 import { ScreenContext } from "@/hooks/screenContext";
 import { clearAllDrafts } from "@/utils/draftStore";
+import { clearPushOnLogout } from "@/realtime/push";
 import { decryptText, encryptText } from "@/auth/tokenVault";
 import { buildMenuTree } from "@/utils/menuTree";
 import {
@@ -40,6 +41,7 @@ import "./main.css";
 const SIDEBAR_KEY = LOCAL_KEYS.SIDEBAR_COLLAPSED;
 const SIDEBAR_W_KEY = LOCAL_KEYS.SIDEBAR_WIDTH;
 const SIDE_DEFAULT = 264;
+const MOBILE_MQ = "(max-width: 800px)"; // khớp @media (max-width: 800px) trong main.css
 const SIDE_MIN = 200;
 const SIDE_MAX = 480;
 const BYE_MS = 620; // thời gian hiệu ứng đăng xuất trước khi về màn login
@@ -215,6 +217,22 @@ export default function MainLayout() {
       return false;
     }
   });
+  // Màn hẹp (mobile): menu trái thành ngăn kéo trượt ra từ trái (☰ mở / chọn chức năng hoặc chạm nền mờ -> đóng)
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia?.(MOBILE_MQ).matches ?? false);
+  const [drawer, setDrawer] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(MOBILE_MQ);
+    if (!mq) return undefined;
+    const onChange = () => { setIsMobile(mq.matches); setDrawer(false); };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  useEffect(() => {
+    if (!drawer) return undefined;
+    const onKey = (e) => { if (e.key === "Escape") setDrawer(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawer]);
   const [ctxMenu, setCtxMenu] = useState(null);
   const [userOpen, setUserOpen] = useState(false);
   const userRef = useRef(null);
@@ -284,8 +302,8 @@ export default function MainLayout() {
     }
   };
   useEffect(() => {
-    if (user?.Title) document.title = user.Title;
-  }, [user?.Title]);
+    document.title = BRAND.webName;
+  }, []);
   useEffect(() => {
     if (!userOpen) return;
     const close = (e) => {
@@ -334,6 +352,8 @@ export default function MainLayout() {
       },
     );
     if (!ok) return;
+    // Thôi nhận thông báo đẩy trên thiết bị này (người sau dùng máy không nhận tin của tài khoản cũ) – lúc này hub còn kết nối
+    clearPushOnLogout();
     // Hiệu ứng đăng xuất: màn chính thu lại, lớp màu phủ kín rồi mới về login (login chạy tiếp hiệu ứng mở ra)
     setBye(true);
     setTimeout(() => {
@@ -469,7 +489,7 @@ export default function MainLayout() {
   return (
     <MainContext.Provider value={ctx}>
       <div
-        className={`mn ${collapsed ? "mn--collapsed" : ""} ${intro ? "mn--intro" : ""} ${resizing ? "mn--resizing" : ""} ${bye ? "mn--bye" : ""}`}
+        className={`mn ${collapsed && !isMobile ? "mn--collapsed" : ""} ${drawer ? "mn--drawer" : ""} ${intro ? "mn--intro" : ""} ${resizing ? "mn--resizing" : ""} ${bye ? "mn--bye" : ""}`}
         style={{ "--side-w-open": `${sideW}px` }}
       >
         {/* ---------- Thanh trên ---------- */}
@@ -477,16 +497,16 @@ export default function MainLayout() {
           <button
             type="button"
             className="mn__burger"
-            title={collapsed ? "Mở menu" : "Thu gọn menu"}
-            onClick={() => setCollapsed((c) => !c)}
+            title={isMobile ? (drawer ? "Đóng menu" : "Mở menu") : collapsed ? "Mở menu" : "Thu gọn menu"}
+            aria-expanded={isMobile ? drawer : undefined}
+            onClick={() => (isMobile ? setDrawer((d) => !d) : setCollapsed((c) => !c))}
           >
             <Icon name="menu" size={20} />
           </button>
           <div className="mn__logo" title={user?.Title}>
-            {/* <b>{BRAND.appName.main}</b>
-            <span>{BRAND.appName.sub}</span> */}
-            <b>Logo</b>
-            <span>version</span>
+            <img className="mn__logo-mark" src="/icons/favicon.svg" alt="" width="30" height="30" />
+            <b>{BRAND.appName.main}</b>
+            <span>{BRAND.appName.sub}</span>
           </div>
           <div className="mn__menu">
             <MenuStrip tree={topTree} onOpen={openMenu} variant="header" />
@@ -667,13 +687,19 @@ export default function MainLayout() {
           <SideMenu
             tree={leftTree}
             activeId={activeKey}
-            collapsed={collapsed}
+            collapsed={collapsed && !isMobile}
             onExpand={() => setCollapsed(false)}
-            onOpen={openMenu}
+            onOpen={(node) => {
+              openMenu(node);
+              if (isMobile && !node?.children?.length) setDrawer(false); // chọn chức năng -> đóng ngăn kéo
+            }}
           />
-          <UnitSwitcher collapsed={collapsed} />
+          <UnitSwitcher collapsed={collapsed && !isMobile} />
         </aside>
-        {!collapsed && (
+        {isMobile && drawer && (
+          <div className="mn__backdrop" aria-hidden="true" onClick={() => setDrawer(false)} />
+        )}
+        {!collapsed && !isMobile && (
           <div
             className="mn__resizer"
             role="separator"

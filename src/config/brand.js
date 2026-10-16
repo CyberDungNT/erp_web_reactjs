@@ -10,8 +10,9 @@ export const BRAND = {
   logoUrl: '',                                   // '' -> dùng logo chữ
   logoText: UNIT_NAME,
   tagline: 'SOFTWARE SOLUTION PROVIDER',
-  product: 'CYBER PLUS 10',                      // dòng nhỏ trên thẻ đăng nhập
-  appName: { main: 'CYBER', sub: 'Plus 10.1' },  // logo trên thanh màn chính
+  webName: 'WebDemo',                            // tiêu đề tab trình duyệt (đổi cả index.html + public/manifest.webmanifest)
+  product: 'WebDemo',                            // dòng nhỏ trên thẻ đăng nhập / hộp "Giới thiệu"
+  appName: { main: 'Web', sub: 'Demo' },         // logo trên thanh màn chính
   version: '4.0.7',
   company: UNIT_NAME,
   copyright: UNIT_NAME,

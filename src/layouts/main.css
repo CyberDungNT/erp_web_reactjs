@@ -44,8 +44,9 @@
 }
 .mn__burger:hover { background: var(--brand-50); color: var(--brand-text); }
 .mn__burger:active { transform: scale(.92); }
-.mn__logo { display: flex; align-items: baseline; gap: 8px; padding: 0 22px 0 14px; flex-shrink: 0; font-size: 23px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
+.mn__logo { display: flex; align-items: baseline; gap: 0; padding: 0 22px 0 14px; flex-shrink: 0; font-size: 23px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
 .mn__logo b { color: var(--brand); }
+.mn__logo-mark { align-self: center; width: 30px; height: 30px; margin-right: 10px; flex-shrink: 0; }
 .mn__logo span { color: var(--accent); }
 .mn__menu { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; }
 .mn__menu .menustrip { height: auto; }
@@ -213,9 +214,6 @@
 /* Thu gọn: chữ mờ đi ngay (không trễ), thẻ tự cắt phần thừa nhờ overflow: hidden */
 .unit--collapsed .unit__text { opacity: 0; transform: translateX(-6px); transition-delay: 0s; pointer-events: none; }
 .unit--collapsed .unit__chev { opacity: 0; transition-delay: 0s; }
-@media (max-width: 800px) { /* màn hẹp: cột menu luôn 64px */
-  .unit__text, .unit__chev { opacity: 0; pointer-events: none; }
-}
 .unit__pop {
   position: fixed; max-height: 60vh; z-index: 3000; display: flex; flex-direction: column;
   background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); overflow: hidden;
@@ -373,9 +371,44 @@
   .mn__user-text { display: none; }
   .mn__logo { font-size: 19px; padding-right: 10px; }
 }
+/* ---------- Mobile (≤ 800px – khớp MOBILE_MQ trong MainLayout) ----------
+   - Thanh trên 2 hàng: [☰ logo ... tài khoản] + hàng menu trên rộng hết màn hình (vuốt ngang)
+   - Menu trái thành ngăn kéo: ☰ mở (.mn--drawer), chạm nền mờ / Esc / chọn chức năng -> đóng */
 @media (max-width: 800px) {
-  .mn { --side-w: 64px; }
+  .mn {
+    height: 100vh; height: 100dvh; /* dvh: không bị thanh địa chỉ trình duyệt điện thoại che mất đáy */
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: 'top' 'work';
+  }
+  .mn__top { flex-wrap: wrap; gap: 4px; padding: env(safe-area-inset-top, 0px) 8px 0; }
+  .mn__burger, .mn__user { height: 56px; display: flex; align-items: center; }
+  .mn__burger { justify-content: center; height: 40px; margin-block: 8px; }
+  .mn__logo { flex: 1; min-width: 0; padding: 0 6px; font-size: 18px; overflow: hidden; }
+  .mn__user { margin-left: 0; }
+  .mn__menu {
+    order: 3; flex: 0 0 calc(100% + 16px); height: 44px; margin: 0 -8px;
+    border-top: 1px solid #eef2f6; padding: 0 4px; box-sizing: border-box;
+  }
+  .mn__menu .menustrip { height: 100%; }
+  .mn__menu .menustrip--header .ms-top { height: 36px; padding: 0 12px; }
+
+  .mn__side {
+    position: fixed; z-index: 1700; top: 0; bottom: 0; left: 0; width: min(300px, 86vw);
+    padding-top: env(safe-area-inset-top, 0px); box-sizing: border-box;
+    border-right: 0; box-shadow: 0 0 40px rgba(8, 20, 32, .25);
+    transform: translateX(-105%); visibility: hidden;
+    transition: transform .3s var(--ease), visibility 0s linear .3s;
+  }
+  .mn--drawer .mn__side { transform: none; visibility: visible; transition: transform .3s var(--ease), visibility 0s; }
+  .mn--intro .mn__side { animation: none; }
+  .mn__side .unit { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .mn__backdrop {
+    position: fixed; inset: 0; z-index: 1690; background: rgba(8, 20, 32, .42);
+    animation: mn-backdrop .25s ease;
+  }
 }
+@keyframes mn-backdrop { from { opacity: 0; } }
 
 /* ===================== HIỆU ỨNG MENU TRÁI ===================== */
 /* Mục gốc hiện ra mềm: mờ + nhoè -> rõ, nổi nhẹ lên (mở trang, mở rộng từ dạng thu gọn) */

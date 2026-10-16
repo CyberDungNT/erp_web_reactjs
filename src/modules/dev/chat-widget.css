@@ -1,6 +1,5 @@
 /* ===== Chat nổi kiểu Zalo (ChatWidget) =====
-   Bong bóng kéo đi đâu cũng được (mặc định góc dưới phải). Thả sát mép trái/phải -> hít mép, nấp bớt nửa,
-   rê chuột vào thì trượt ra. Khung chat mở cạnh bong bóng; chọn 1 cuộc -> giãn 2 cột. */
+   Bong bóng cố định góc dưới phải. Khung chat mở cạnh bong bóng; chọn 1 cuộc -> giãn 2 cột. */
 .cw {
   --zl-blue: #0068ff;          /* xanh Zalo */
   --zl-blue-2: #3d8bff;
@@ -15,7 +14,7 @@
 .cw__bubble {
   /* Lớp: chat nổi nằm DƯỚI hộp thoại (msgbox 6000), popup (2000), dropdown (3000+) – xem chú thích .cw__panel */
   position: fixed; z-index: 1510; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%;
-  display: grid; place-items: center; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  display: grid; place-items: center; cursor: pointer; user-select: none; -webkit-user-select: none;
   color: #fff;
   background:
     radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, .35), transparent 45%),
@@ -31,13 +30,6 @@
 @keyframes cw-pop { from { transform: scale(.3); opacity: 0; } }
 .cw__bubble:hover { box-shadow: 0 1px 0 rgba(255, 255, 255, .35) inset, 0 -2px 6px rgba(0, 40, 120, .25) inset, 0 14px 30px -6px rgba(0, 104, 255, .6), 0 3px 8px rgba(8, 28, 54, .2); }
 .cw__bubble:focus-visible { outline: 3px solid #b3d1ff; outline-offset: 3px; }
-.cw.is-dragging .cw__bubble {
-  cursor: grabbing; transform: scale(1.1); transition: transform .15s, box-shadow .15s;
-  box-shadow: 0 22px 40px -8px rgba(0, 104, 255, .55), 0 6px 14px rgba(8, 28, 54, .2);
-}
-/* Hít mép: nấp bớt nửa khi không rê chuột / không mở / không kéo */
-.cw.dock-right:not(:hover):not(.is-open):not(.is-dragging) .cw__bubble { transform: translateX(42%); opacity: .88; }
-.cw.dock-left:not(:hover):not(.is-open):not(.is-dragging) .cw__bubble { transform: translateX(-42%); opacity: .88; }
 
 .cw__face { display: grid; place-items: center; }
 .cw__face svg { grid-area: 1 / 1; transition: transform .3s cubic-bezier(.34, 1.4, .64, 1), opacity .2s; }
@@ -52,7 +44,6 @@
   background: linear-gradient(180deg, #ff5a5a, #e5262b); color: #fff; font-size: 10.5px; font-weight: 800;
   box-shadow: 0 2px 6px rgba(229, 38, 43, .45); animation: cw-badge .4s cubic-bezier(.34, 1.6, .64, 1);
 }
-.cw.dock-left .cw__badge { right: auto; left: -4px; }
 @keyframes cw-badge { from { transform: scale(.2); } }
 /* có tin chưa đọc: sóng lan quanh bong bóng */
 .cw.has-unread:not(.is-open) .cw__bubble::before,
@@ -98,6 +89,21 @@
 .cw__icon.is-on { color: var(--zl-blue); background: var(--zl-blue-soft); }
 .cw__icon:focus-visible { outline: 2px solid var(--zl-blue); outline-offset: 1px; }
 .cw__body { flex: 1; min-height: 0; }
+.cw__icon:disabled { opacity: .5; cursor: progress; }
+
+/* Gợi ý bật thông báo đẩy – chỉ hiện trên mobile (máy tính đã có nút 🔔 trên đầu khung) */
+.cw__hint { display: none; }
+.cw.is-mobile .cw__hint {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 8px 8px 8px 14px;
+  background: var(--zl-blue-soft); color: var(--zl-ink); font-size: 13px; line-height: 1.4;
+  border-bottom: 1px solid #c7dcfe;
+}
+.cw__hint span { flex: 1; min-width: 0; }
+.cw__hint-btn {
+  flex-shrink: 0; height: 30px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: var(--zl-blue); color: #fff; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.cw__hint-x { flex-shrink: 0; width: 30px; height: 30px; border: 0; background: none; color: var(--zl-muted); font-size: 20px; cursor: pointer; }
 
 /* =====================================================================================
    ChatPage trong khung nổi (chat--compact) – giao diện kiểu Zalo
@@ -173,3 +179,25 @@
   .chat--compact.has-active { grid-template-columns: 1fr; }
   .chat--compact.has-active .chat__side { display: none; }
 }
+
+/* ---------- Mobile: khung chat toàn màn hình (vị trí / chiều cao tính trong ChatWidget.placePanel) ---------- */
+.cw.is-mobile .cw__panel {
+  inset: 0; width: auto; height: auto;
+  border: 0; border-radius: 0; box-shadow: none; transition: none;
+  /* --cw-kb: phần bàn phím đang che (ChatWidget đo bằng visualViewport) -> ô nhập luôn nằm trên bàn phím */
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: var(--cw-kb, 0px); box-sizing: border-box;
+  animation-name: cw-open-mobile;
+}
+.cw.is-mobile .cw__panel.is-closing { animation-name: cw-close-mobile; }
+@keyframes cw-open-mobile { from { opacity: 0; transform: translateY(24px); } }
+@keyframes cw-close-mobile { to { opacity: 0; transform: translateY(24px); } }
+/* đã có nút ✕ trên đầu khung -> ẩn bong bóng để không đè lên ô nhập / nút gửi */
+.cw.is-mobile.is-open .cw__bubble { opacity: 0; pointer-events: none; }
+.cw.is-mobile .cw__head { height: 52px; }
+.cw.is-mobile .cw__icon { width: 40px; height: 40px; }
+/* khoảng an toàn dưới (thanh home iPhone) */
+.cw.is-mobile .chat--compact .chat__composer { padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.cw.is-mobile .chat--compact:not(.has-active) .chat__rooms { padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* chữ < 16px làm iPhone tự phóng to trang khi chạm vào ô nhập */
+.cw.is-mobile .chat__input, .cw.is-mobile .chat__search input { font-size: 16px; }
+.cw.is-mobile .chat--compact .chat__msg { max-width: 85%; }

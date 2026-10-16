@@ -151,11 +151,32 @@
 .cn__progress.is-paused { animation-play-state: paused; }
 @keyframes cn-progress { to { transform: scaleX(0); } }
 
-@media (max-width: 520px) {
-  .cn { right: 8px; left: 8px; width: auto; bottom: 120px; }
+/* ----- Mobile: banner kiểu iOS – trượt từ trên xuống, mới nhất ở trên cùng, vuốt lên để tắt (useSwipeUp) ----- */
+@media (max-width: 640px) {
+  .cn {
+    top: calc(env(safe-area-inset-top, 0px) + 8px); bottom: auto; right: 8px; left: 8px; width: auto;
+    z-index: 1600; max-height: calc(100dvh - 16px); overflow: visible;
+  }
+  .cn__list { flex-direction: column-reverse; gap: 8px; }
+  .cn__head { order: 2; }
+  .cn__card {
+    --cn-bg: rgba(250, 250, 252, .82);
+    border-radius: 22px; transform-origin: 50% 0; touch-action: none;
+    backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8);
+    box-shadow: 0 0 0 .5px rgba(15, 30, 50, .08), 0 12px 32px -8px rgba(15, 30, 50, .35);
+    animation: cn-drop .55s cubic-bezier(.2, 1.25, .35, 1);
+    transition: transform .25s cubic-bezier(.22, 1, .36, 1);
+  }
+  .cn__card.is-leave { animation: cn-lift .3s cubic-bezier(.4, 0, 1, 1) forwards; }
+  .cn__card::before { display: none; }
   .cn__actions, .cn__reply-form { padding-left: 14px; }
   .cn__sent { margin-left: 14px; }
+  .cn__input { font-size: 16px; } /* < 16px: iPhone tự phóng to trang khi chạm vào ô nhập */
+  /* thanh "kéo" nhỏ ở đáy thẻ như banner iOS */
+  .cn__progress { left: 42%; right: 42%; bottom: 6px; height: 4px; background: rgba(15, 30, 50, .18); }
 }
+@keyframes cn-drop { from { opacity: 0; transform: translateY(-120%); } }
+@keyframes cn-lift { to { opacity: 0; transform: translateY(-120%); } }
 @media (prefers-reduced-motion: reduce) {
   .cn__card, .cn__bubble, .cn__count { animation: none; }
   .cn__progress { display: none; }

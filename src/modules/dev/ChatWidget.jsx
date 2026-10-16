@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { SocketStatus } from '@/realtime';
+import { SocketStatus, disablePush, enablePush, usePushStatus } from '@/realtime';
+import { toast } from '@/components/cyber';
 import { useAuth } from '@/auth/AuthContext';
 import ChatPage from './ChatPage';
 import { chatBridge } from './chatBridge';
@@ -11,16 +12,15 @@ const CLOSE_DELAY_MS = 450; // rời chuột bao lâu thì thu lại (nếu khô
 const HIDE_ANIM_MS = 260;   // thời gian hiệu ứng ẩn khung (khớp .cw__panel.is-closing trong chat-widget.css)
 const SIZE = 56;            // đường kính bong bóng
 const GAP = 12;             // khoảng cách bong bóng – khung chat
-const EDGE_SNAP = 48;       // thả cách mép trái/phải < chừng này -> hít vào mép (nấp bớt nửa, không vướng nhập liệu)
+const MARGIN = 20;          // cách mép phải
 const TASKBAR_H = 42;       // thanh TaskBar dưới cùng
-const POS_KEY = 'cyber_chat_bubble'; // sessionStorage (localStorage chỉ dành cho 4 khoá – xem utils/storage.js)
+const MOBILE_MAX_W = 640;   // màn hẹp hơn -> khung chat phủ toàn màn hình (khớp @media trong chat-widget.css)
 
 /**
  * CHAT NỔI – có ở mọi màn hình (khai báo widgets trong modules/dev/index.js).
- *   - KÉO bong bóng đi bất kỳ đâu (mặc định góc dưới phải). Thả gần mép trái/phải -> hít vào mép, nấp bớt nửa
- *     để không vướng khi nhập liệu; rê chuột vào thì trượt ra. Vị trí được nhớ trong tab (sessionStorage).
+ *   - Bong bóng cố định ở góc dưới phải (không kéo đi được).
  *   - Rê chuột vào -> hiện danh sách cuộc trò chuyện; chọn 1 cuộc -> giãn 2 cột kiểu Zalo (trái danh sách, phải nội dung).
- *     Khung tự mở về phía còn trống cạnh bong bóng.
+ *     Khung mở phía trên, bên trái bong bóng.
  *   - Bấm bong bóng -> GHIM mở. Bấm lại / ✕ / Esc / bấm ra ngoài -> đóng. Đang gõ trong khung thì không tự thu.
  *   - Popup tin nhắn mới "Mở chat"/"Trả lời" -> chatBridge.openWidget(room) mở ghim, vào thẳng phòng.
  * Khung chat luôn được giữ (chỉ ẩn) để vẫn đếm tin chưa đọc, giữ cuộc trò chuyện đang mở.
@@ -43,13 +43,10 @@ export default function ChatWidget() {
   const [unread, setUnread] = useState(0);
   const [hasChat, setHasChat] = useState(false); // đang mở 1 cuộc trò chuyện -> khung giãn 2 cột
   const onActiveChange = useCallback((room) => setHasChat(!!room), []);
-  const [pos, setPos] = useState(loadPos);
-  const [dragging, setDragging] = useState(false);
   const [view, setView] = useState(viewport);
   const rootRef = useRef(null);
+  const panelRef = useRef(null);
   const timer = useRef(null);
-  const drag = useRef(null);
-  const skipClick = useRef(false);
   const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
   const show = useCallback((pin = false) => {
@@ -65,12 +62,12 @@ export default function ChatWidget() {
 
   // ----- Hover: vào -> mở sau chút; ra -> thu lại nếu không ghim và không đang gõ trong khung -----
   const onEnter = () => {
-    if (coarse || drag.current) return;
+    if (coarse) return;
     clearTimeout(timer.current);
     if (!open) timer.current = setTimeout(() => setOpen(true), OPEN_DELAY_MS);
   };
   const onLeave = () => {
-    if (coarse || drag.current) return;
+    if (coarse) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       const focusInside = rootRef.current?.contains(document.activeElement) && document.activeElement !== document.body;
@@ -87,6 +84,7 @@ export default function ChatWidget() {
     if (!open) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') hide(); };
     const onDown = (e) => {
+      if (window.innerWidth <= MOBILE_MAX_W) return; // mobile: khung toàn màn hình, chỉ đóng bằng nút ✕
       if (rootRef.current?.contains(e.target)) return;
       if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup, .cy-menu')) return; // popup tin nhắn / toast / hộp thoại / menu chuột phải
       hide();
@@ -99,75 +97,70 @@ export default function ChatWidget() {
     };
   }, [open, hide]);
 
-  // Đổi kích thước cửa sổ -> giữ bong bóng trong màn hình
+  // Đổi kích thước cửa sổ / xoay màn hình -> bong bóng luôn ở góc dưới phải
   useEffect(() => {
-    const onResize = () => { setView(viewport()); setPos((p) => clampPos(p)); };
+    const onResize = () => setView(viewport());
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // ----- Kéo thả bong bóng -----
-  const onPointerDown = (e) => {
-    if (e.button !== 0) return;
-    drag.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, ox: pos.x, oy: pos.y, moved: false };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-  };
-  const onPointerMove = (e) => {
-    const d = drag.current;
-    if (!d || d.id !== e.pointerId) return;
-    const dx = e.clientX - d.sx;
-    const dy = e.clientY - d.sy;
-    if (!d.moved) {
-      if (Math.hypot(dx, dy) < 5) return; // chưa đủ xa -> vẫn coi là bấm
-      d.moved = true;
-      clearTimeout(timer.current);
-      setDragging(true);
-      setOpen(false);
-      setPinned(false);
-    }
-    setPos(clampPos({ x: d.ox + dx, y: d.oy + dy, dock: null }));
-  };
-  const endDrag = (e) => {
-    const d = drag.current;
-    if (!d || d.id !== e.pointerId) return;
-    drag.current = null;
-    if (!d.moved) return;
-    skipClick.current = true; // vừa kéo xong -> không tính là bấm
-    setDragging(false);
-    setPos((p) => {
-      const vw = window.innerWidth;
-      const dock = p.x < EDGE_SNAP ? 'left' : p.x > vw - SIZE - EDGE_SNAP ? 'right' : null;
-      const next = clampPos({ ...p, dock });
-      savePos(next);
-      return next;
-    });
-  };
+  // Mobile: khung phủ kín màn hình bằng CSS (inset: 0) – KHÔNG tính chiều cao theo visualViewport (bàn phím ẩn đi mà
+  // số đo chưa kịp cập nhật -> khung bị lùn, lộ trang phía sau). Chỉ chừa khoảng dưới = phần bàn phím đang che (--cw-kb).
+  const mobile = view.w <= MOBILE_MAX_W;
+  useEffect(() => {
+    if (!mobile || !shown) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const vv = window.visualViewport;
+    let raf = 0;
+    const timers = [];
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+        panelRef.current?.style.setProperty('--cw-kb', `${kb < 60 ? 0 : kb}px`); // < 60px: thanh địa chỉ co giãn, không phải bàn phím
+      });
+    };
+    // bàn phím trượt lên / xuống mất ~300ms, có máy không bắn sự kiện ở cuối -> đo thêm vài lần
+    const measureSoon = () => { measure(); [100, 300, 600].forEach((ms) => timers.push(setTimeout(measure, ms))); };
+    const onFocusOut = () => {
+      measureSoon();
+      // iPhone: bàn phím ẩn mà trang vẫn bị cuộn lệch -> đưa về đầu
+      setTimeout(() => { if (!document.activeElement?.matches?.('input, textarea, [contenteditable]')) window.scrollTo(0, 0); }, 120);
+    };
+    measure();
+    vv?.addEventListener('resize', measure);
+    vv?.addEventListener('scroll', measure);
+    document.addEventListener('focusin', measureSoon);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.body.style.overflow = prev;
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+      vv?.removeEventListener('resize', measure);
+      vv?.removeEventListener('scroll', measure);
+      document.removeEventListener('focusin', measureSoon);
+      document.removeEventListener('focusout', onFocusOut);
+    };
+  }, [mobile, shown]);
+
   const onBubbleClick = () => {
-    if (skipClick.current) { skipClick.current = false; return; }
     if (open && pinned) hide(); else show(true);
   };
-  // Bàn phím: Alt + mũi tên để dời bong bóng
-  const onBubbleKey = (e) => {
-    if (!e.altKey) return;
-    const step = 24;
-    const delta = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
-    if (!delta) return;
-    e.preventDefault();
-    setPos((p) => { const next = clampPos({ x: p.x + delta[0], y: p.y + delta[1], dock: null }); savePos(next); return next; });
-  };
 
+  const pos = bubblePos(view);
   const panelStyle = placePanel(pos, view, hasChat);
-  const side = pos.x + SIZE / 2 > view.w / 2 ? 'right' : 'left';
 
   return createPortal(
     <div ref={rootRef}
-      className={`cw ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''} ${hasChat ? 'has-chat' : ''} ${unread ? 'has-unread' : ''} ${dragging ? 'is-dragging' : ''} ${pos.dock ? `dock-${pos.dock}` : ''} side-${side}`}
+      className={`cw ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''} ${hasChat ? 'has-chat' : ''} ${unread ? 'has-unread' : ''} side-right ${mobile ? 'is-mobile' : ''}`}
       onMouseEnter={onEnter} onMouseLeave={onLeave}>
-      <section className={`cw__panel ${closing ? 'is-closing' : ''}`} hidden={!shown} aria-hidden={closing || undefined} role="dialog" aria-label="Tin nhắn" style={panelStyle}>
+      <section ref={panelRef} className={`cw__panel ${closing ? 'is-closing' : ''}`} hidden={!shown} aria-hidden={closing || undefined} role="dialog" aria-label="Tin nhắn" style={panelStyle}>
         <header className="cw__head">
           <span className="cw__title">Tin nhắn</span>
           <SocketStatus lang={lang} />
           <span className="cw__spacer" />
+          <PushButton />
           <button type="button" className={`cw__icon ${pinned ? 'is-on' : ''}`} onClick={() => setPinned((p) => !p)}
             title={pinned ? 'Bỏ ghim (rời chuột sẽ thu lại)' : 'Ghim mở'} aria-pressed={pinned}>
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -178,6 +171,7 @@ export default function ChatWidget() {
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M7 7l10 10M17 7L7 17" /></svg>
           </button>
         </header>
+        <PushHint />
         <div className="cw__body">
           <ChatPage compact onUnreadChange={setUnread} onActiveChange={onActiveChange} />
         </div>
@@ -185,9 +179,7 @@ export default function ChatWidget() {
 
       <button type="button" className="cw__bubble" style={{ left: pos.x, top: pos.y }} aria-expanded={open}
         aria-label={unread ? `Tin nhắn – ${unread} tin chưa đọc` : 'Tin nhắn'}
-        title={dragging ? '' : 'Tin nhắn · kéo để di chuyển (Alt + mũi tên)'}
-        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}
-        onClick={onBubbleClick} onKeyDown={onBubbleKey}>
+        title="Tin nhắn" onClick={onBubbleClick}>
         <span className="cw__face" aria-hidden="true">
           <svg className="cw__ico-chat" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20.5l1.4-5.1A8.5 8.5 0 1 1 21 11.5z" fill="rgba(255,255,255,.18)" />
@@ -204,36 +196,69 @@ export default function ChatWidget() {
   );
 }
 
+// ----------------------------------------------------------------- thông báo đẩy (realtime/push.js)
+const IOS_HINT = 'iPhone / iPad: mở trang bằng Safari → bấm nút Chia sẻ → "Thêm vào MH chính", rồi mở app từ icon đó và bấm 🔔 để bật thông báo (cần iOS 16.4 trở lên).';
+
+/** Bấm 🔔: bật / tắt thông báo khi app thu nhỏ trên thiết bị này. PHẢI gọi enablePush ngay trong sự kiện bấm (Safari). */
+async function togglePush(status) {
+  if (status === 'install') return toast.info(IOS_HINT, { title: 'Bật thông báo trên iPhone', duration: 12000 });
+  if (status === 'denied') {
+    return toast.warning('Bạn đã chặn thông báo cho trang này. Vào cài đặt trình duyệt / điện thoại → Thông báo để cho phép lại.', { title: 'Thông báo đang bị chặn' });
+  }
+  try {
+    if (status === 'on') {
+      await disablePush();
+      toast.info('Đã tắt thông báo trên thiết bị này.');
+    } else {
+      await enablePush();
+      toast.success('Đã bật – thu nhỏ app vẫn nhận được thông báo tin nhắn mới.', { title: 'Thông báo' });
+    }
+  } catch (err) {
+    toast.error(err.message || 'Không bật được thông báo.');
+  }
+}
+
+function PushButton() {
+  const status = usePushStatus();
+  if (status === 'unsupported') return null;
+  const on = status === 'on';
+  const title = { on: 'Đang bật thông báo khi thu nhỏ app – bấm để tắt', off: 'Bật thông báo khi thu nhỏ app', busy: 'Đang xử lý...',
+    denied: 'Thông báo đang bị chặn', install: 'Bật thông báo (iPhone: cần thêm vào màn hình chính)' }[status];
+  return (
+    <button type="button" className={`cw__icon ${on ? 'is-on' : ''}`} onClick={() => togglePush(status)}
+      disabled={status === 'busy'} title={title} aria-label={title} aria-pressed={on}>
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        {!on && <path d="M3 3l18 18" />}
+      </svg>
+    </button>
+  );
+}
+
+/** Dải gợi ý trên khung chat (chỉ mobile – CSS) khi chưa bật thông báo. Bấm × ẩn tới lần tải trang sau. */
+let hintClosed = false;
+function PushHint() {
+  const status = usePushStatus();
+  const [closed, setClosed] = useState(hintClosed);
+  if (closed || (status !== 'off' && status !== 'install')) return null;
+  const close = () => { hintClosed = true; setClosed(true); };
+  return (
+    <div className="cw__hint" role="note">
+      <span>🔔 {status === 'install' ? 'Thêm app vào màn hình chính để nhận thông báo tin nhắn khi thu nhỏ.' : 'Bật thông báo để nhận tin nhắn khi thu nhỏ app.'}</span>
+      <button type="button" className="cw__hint-btn" onClick={() => togglePush(status)}>{status === 'install' ? 'Cách làm' : 'Bật'}</button>
+      <button type="button" className="cw__hint-x" onClick={close} aria-label="Ẩn gợi ý">×</button>
+    </div>
+  );
+}
+
 // ----------------------------------------------------------------- vị trí
 function viewport() {
   return { w: window.innerWidth, h: window.innerHeight };
 }
 
-/** Mặc định: góc dưới phải, ngay trên thanh TaskBar, hít mép phải */
-function defaultPos() {
-  return clampPos({ x: window.innerWidth - SIZE, y: window.innerHeight - TASKBAR_H - SIZE - 20, dock: 'right' });
-}
-
-function clampPos(p) {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  let x = Math.min(Math.max(p.x, 0), vw - SIZE);
-  const y = Math.min(Math.max(p.y, 8), vh - SIZE - 8);
-  if (p.dock === 'right') x = vw - SIZE;
-  if (p.dock === 'left') x = 0;
-  return { x, y, dock: p.dock || null };
-}
-
-function loadPos() {
-  try {
-    const p = JSON.parse(sessionStorage.getItem(POS_KEY));
-    if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) return clampPos(p);
-  } catch { /* hỏng -> mặc định */ }
-  return defaultPos();
-}
-
-function savePos(p) {
-  try { sessionStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* bị chặn */ }
+/** Cố định góc dưới phải, ngay trên thanh TaskBar */
+function bubblePos(view) {
+  return { x: view.w - SIZE - MARGIN, y: Math.max(8, view.h - TASKBAR_H - SIZE - 20) };
 }
 
 /**
@@ -242,6 +267,8 @@ function savePos(p) {
  *   bong bóng ở nửa dưới -> khung mọc lên trên (neo đáy), ngược lại mọc xuống.
  */
 function placePanel(pos, view, hasChat) {
+  // Mobile: vị trí / kích thước do CSS lo (.cw.is-mobile .cw__panel – phủ kín màn hình)
+  if (view.w <= MOBILE_MAX_W) return undefined;
   const want = hasChat ? 820 : 340;
   const onRight = pos.x + SIZE / 2 > view.w / 2;
   const onBottom = pos.y + SIZE / 2 > view.h / 2;

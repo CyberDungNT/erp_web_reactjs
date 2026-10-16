@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { socket, useSocketEvent, useSocketReady } from '@/realtime';
+import { initPush, onOpenChat, reportVisibility, socket, syncPush, useSocketEvent, useSocketReady } from '@/realtime';
 import { chatBridge, colorOf, initials, isMineMsg, muteStore, rememberSent, sameUser, timeOf } from './chatBridge';
 import { previewText } from './stickers';
 import './chat-notifier.css';
@@ -10,7 +10,7 @@ const SHOW_MS = 8000;  // tự ẩn sau chừng này (rê chuột / đang trả 
 const MAX_CARDS = 4;   // tối đa số thông báo (mỗi phòng 1 thẻ, tin mới cùng phòng gộp vào)
 
 /**
- * THÔNG BÁO TIN NHẮN MỚI ở góc dưới bên phải – chạy suốt trong màn chính (modules/dev/index.js -> widgets).
+ * THÔNG BÁO TIN NHẮN MỚI ở góc dưới bên phải (mobile: banner trượt từ trên xuống kiểu iOS, vuốt lên để tắt) – chạy suốt trong màn chính (modules/dev/index.js -> widgets).
  * - Đăng ký nhận tin mọi phòng ngay khi kết nối (không cần mở màn chat).
  * - Màn chat đang hiển thị -> không bật thông báo.
  * - Nhiều thông báo xếp thành cột; rê chuột vào chỉ TẠM DỪNG đếm giờ, giao diện giữ nguyên.
@@ -36,6 +36,23 @@ export default function ChatNotifier() {
       await socket.invoke('SubscribeRooms', list.map((r) => r.id), socket.silent);
     } catch { /* không có chat (server cũ / lỗi) -> bỏ qua, không làm phiền */ }
   });
+
+  // ----- Thông báo đẩy (realtime/push.js): nhận tin khi đã thu nhỏ / đóng app -----
+  useEffect(() => {
+    initPush();
+    const onVis = () => reportVisibility();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', onVis);
+    // chạm vào thông báo hệ thống -> mở khung chat vào thẳng phòng
+    const offOpen = onOpenChat((room) => chatBridge.openWidget(room));
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', onVis);
+      offOpen();
+    };
+  }, []);
+  // mỗi lần kết nối: báo đang hiện / ẩn + gửi lại đăng ký push của thiết bị (nếu đã bật)
+  useSocketReady(() => { reportVisibility(); syncPush(); });
 
   useSocketEvent('ReceiveMessage', (msg) => {
     if (!msg || isMineMsg(msg, me) || chatBridge.isVisible() || muteStore.isMuted(msg.room)) return;
@@ -140,16 +157,53 @@ function useAutoDismiss(stamp, stopped, onClose) {
   return { leaving, dismiss };
 }
 
+/**
+ * Vuốt thẻ lên để tắt (cảm ứng – banner kiểu iOS trên mobile). Vuốt quá SWIPE_PX -> onDismiss, chưa đủ -> bật về chỗ cũ.
+ * Vừa vuốt xong thì bỏ qua cú click kèm theo (không mở nhầm cuộc trò chuyện).
+ */
+const SWIPE_PX = 40;
+function useSwipeUp(onDismiss) {
+  const st = useRef(null);
+  const reset = (el) => { el.style.transition = ''; el.style.transform = ''; };
+  return {
+    onPointerDown: (e) => {
+      if (e.pointerType !== 'touch' || e.target.closest('input, textarea, form')) return;
+      st.current = { y: e.clientY, dy: 0, moved: false, el: e.currentTarget };
+    },
+    onPointerMove: (e) => {
+      const s = st.current;
+      if (!s) return;
+      const raw = e.clientY - s.y;
+      if (!s.moved && Math.abs(raw) < 6) return;
+      s.moved = true;
+      s.dy = raw < 0 ? raw : raw / 4; // kéo xuống: chỉ nhích nhẹ (cảm giác "dây chun")
+      s.el.style.transition = 'none';
+      s.el.style.transform = `translateY(${s.dy}px)`;
+    },
+    onPointerUp: () => {
+      const s = st.current;
+      st.current = null;
+      if (!s?.moved) return;
+      s.el.dataset.swiped = '1';
+      setTimeout(() => { delete s.el.dataset.swiped; }, 350);
+      if (s.dy < -SWIPE_PX) { s.el.style.transition = ''; onDismiss(); } else reset(s.el);
+    },
+    onPointerCancel: () => { if (st.current) reset(st.current.el); st.current = null; },
+    onClickCapture: (e) => { if (e.currentTarget.dataset.swiped) { e.preventDefault(); e.stopPropagation(); } },
+  };
+}
+
 /** Thẻ "X đã thả ❤️ vào tin nhắn của bạn" (nhiều người -> "X và N người khác ...") */
 function ReactCard({ card, paused, room, onOpen, onClose }) {
   const { actors, preview, stamp } = card;
   const last = actors.at(-1);
   const { leaving, dismiss } = useAutoDismiss(stamp, paused, onClose);
+  const swipe = useSwipeUp(() => dismiss());
   const emojis = [...new Set(actors.map((a) => a.emoji))].join('');
   const people = [...new Set(actors.map((a) => a.name))];
   const who = people.length > 1 ? `${last.name} và ${people.length - 1} người khác` : last.name;
   return (
-    <article className={`cn__card cn__card--react ${leaving ? 'is-leave' : ''}`} style={{ '--c': colorOf(last.user), '--cn-ms': `${SHOW_MS}ms` }}>
+    <article className={`cn__card cn__card--react ${leaving ? 'is-leave' : ''}`} style={{ '--c': colorOf(last.user), '--cn-ms': `${SHOW_MS}ms` }} {...swipe}>
       <header className="cn__bar-top">
         <span className="cn__app cn__app--react" aria-hidden="true">{last.emoji}</span>
         <span className="cn__room">{room?.icon && <i>{room.icon}</i>}{room?.name || card.room}</span>
@@ -200,6 +254,8 @@ function ChatCard({ card, paused, room, onOpen, onClose }) {
     }, delay);
   };
 
+  const swipe = useSwipeUp(() => dismiss());
+
   // Tin mới cùng phòng -> đếm lại từ đầu
   useEffect(() => { remain.current = SHOW_MS; }, [stamp]);
 
@@ -240,6 +296,7 @@ function ChatCard({ card, paused, room, onOpen, onClose }) {
     <article
       className={`cn__card ${leaving ? 'is-leave' : ''}`}
       style={{ '--c': color, '--cn-ms': `${SHOW_MS}ms` }}
+      {...swipe}
     >
       <header className="cn__bar-top">
         <span className="cn__app" aria-hidden="true">
