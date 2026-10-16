@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
 import { socket, useSocketEvent, useSocketReady } from '@/realtime';
-import { chatBridge, colorOf, initials, isMineMsg, rememberSent, sameUser, timeOf } from './chatBridge';
+import { chatBridge, colorOf, initials, isMineMsg, muteStore, rememberSent, sameUser, timeOf } from './chatBridge';
 import { previewText } from './stickers';
 import './chat-notifier.css';
 
@@ -32,12 +32,13 @@ export default function ChatNotifier() {
     try {
       const list = await socket.invoke('GetRooms', socket.silent);
       setRooms(Object.fromEntries(list.map((r) => [r.id, r])));
+      muteStore.fromRooms(list); // phòng nào đang tắt thông báo
       await socket.invoke('SubscribeRooms', list.map((r) => r.id), socket.silent);
     } catch { /* không có chat (server cũ / lỗi) -> bỏ qua, không làm phiền */ }
   });
 
   useSocketEvent('ReceiveMessage', (msg) => {
-    if (!msg || isMineMsg(msg, me) || chatBridge.isVisible()) return;
+    if (!msg || isMineMsg(msg, me) || chatBridge.isVisible() || muteStore.isMuted(msg.room)) return;
     const key = `msg:${msg.room}`;
     setCards((prev) => {
       const old = prev.find((c) => c.key === key);
@@ -56,7 +57,7 @@ export default function ChatNotifier() {
         .filter((c) => c.kind !== 'react' || c.actors.length));
       return;
     }
-    if (chatBridge.isVisible()) return;
+    if (chatBridge.isVisible() || muteStore.isMuted(r.room)) return;
     setCards((prev) => {
       const old = prev.find((c) => c.key === key);
       const actors = [...(old?.actors || []).filter((a) => !(sameUser(a.user, r.actor.user) && a.emoji === r.emoji)),
@@ -64,6 +65,12 @@ export default function ChatNotifier() {
       const card = { kind: 'react', key, room: r.room, messageId: r.messageId, preview: r.preview || '', actors, stamp: Date.now() };
       return [...prev.filter((c) => c.key !== key), card].slice(-MAX_CARDS);
     });
+  });
+
+  // Mình vừa tắt / bật thông báo 1 phòng (tab / thiết bị này hoặc khác) -> cập nhật + dọn thẻ của phòng vừa tắt
+  useSocketEvent('RoomMuteChanged', ({ room, mutedUntil }) => {
+    muteStore.set(room, mutedUntil);
+    if (mutedUntil) setCards((prev) => prev.filter((c) => c.room !== room));
   });
 
   // Màn chat vừa hiện lên -> dọn thông báo (người dùng đã thấy tin trong màn chat)

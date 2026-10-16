@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 /**
  * Cầu nối giữa khung chat nổi (ChatWidget + ChatPage) và popup thông báo tin nhắn (ChatNotifier):
  *   - ChatPage báo khung chat đang HIỂN THỊ hay không -> ChatNotifier quyết định có bật popup.
@@ -60,6 +61,64 @@ export const chatBridge = {
     return () => openSubs.delete(fn);
   },
 };
+
+// ----- Tắt thông báo phòng (riêng từng người – lưu trên server, GetRooms trả mutedUntil) -----
+// Dùng chung cho khung chat (icon chuông gạch, badge xám) và popup thông báo (không báo phòng đang tắt).
+const mutes = new Map(); // room -> thời điểm hết tắt (ms)
+const muteSubs = new Set();
+let muteVersion = 0;
+let muteTimer = null;
+const FOREVER_YEAR = 9999;
+
+function emitMutes() {
+  muteVersion += 1;
+  muteSubs.forEach((fn) => fn());
+  // hẹn giờ tới lúc 1 phòng hết tắt -> vẽ lại (bỏ icon, badge về màu thường)
+  clearTimeout(muteTimer);
+  const now = Date.now();
+  const next = Math.min(...[...mutes.values()].filter((t) => t > now));
+  if (Number.isFinite(next) && next - now < 2 ** 31 - 1) muteTimer = setTimeout(emitMutes, next - now + 500);
+}
+
+export const muteStore = {
+  /** Nạp từ GetRooms: [{ id, mutedUntil }] */
+  fromRooms(rooms = []) {
+    mutes.clear();
+    rooms.forEach((r) => { if (r.mutedUntil) mutes.set(r.id, new Date(r.mutedUntil).getTime()); });
+    emitMutes();
+  },
+  /** Cập nhật 1 phòng (sau SetMute / sự kiện RoomMuteChanged); mutedUntil null = bật lại */
+  set(room, mutedUntil) {
+    if (mutedUntil) mutes.set(room, new Date(mutedUntil).getTime()); else mutes.delete(room);
+    emitMutes();
+  },
+  isMuted: (room) => (mutes.get(room) || 0) > Date.now(),
+  /** Tắt đến lúc nào: Date | 'forever' | null */
+  until(room) {
+    const t = mutes.get(room);
+    if (!t || t <= Date.now()) return null;
+    const d = new Date(t);
+    return d.getUTCFullYear() >= FOREVER_YEAR ? 'forever' : d;
+  },
+  subscribe(fn) { muteSubs.add(fn); return () => muteSubs.delete(fn); },
+  version: () => muteVersion,
+};
+
+/** Hook: vẽ lại khi trạng thái tắt thông báo đổi */
+export function useMutes() {
+  return useSyncExternalStore(muteStore.subscribe, muteStore.version);
+}
+
+/** Chữ hiển thị "đến 15:30" / "đến 15:30 18/10" / "cho đến khi bật lại" */
+export function muteLabel(room) {
+  const u = muteStore.until(room);
+  if (!u) return '';
+  if (u === 'forever') return 'cho đến khi bật lại';
+  const time = u.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  return u.toDateString() === new Date().toDateString()
+    ? `đến ${time}`
+    : `đến ${time} ${u.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}`;
+}
 
 // ----- Nhận diện tin của MÌNH -----
 // So tên không phân biệt hoa thường / khoảng trắng; kèm mã tạm (clientId) của tin vừa gửi từ tab này

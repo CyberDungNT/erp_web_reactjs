@@ -67,6 +67,9 @@ function page(room, beforeSeq) {
 
 const roomGroup = (room) => `chat:${room}`;
 
+// ----- Tắt thông báo: user -> phòng -> hết tắt lúc (ms) (bộ nhớ tab) -----
+const mutes = {};
+
 // ----- Cảm xúc: messageId -> [{ emoji, users: [{ user, name }] }] (bộ nhớ tab) -----
 const reactions = {};
 const ALLOWED_REACTIONS = ['👍', '❤️', '😆', '😮', '😭', '😡', '🙏', '🎉'];
@@ -168,7 +171,18 @@ export const mockHub = {
   },
 
   // ===== Chat =====
-  GetRooms() { return ROOMS; },
+  /** Phòng kèm mutedUntil (đang tắt thông báo) của riêng user */
+  GetRooms(ctx) { return ROOMS.map((r) => (mutes[ctx.user]?.[r.id] > Date.now() ? { ...r, mutedUntil: new Date(mutes[ctx.user][r.id]).toISOString() } : r)); },
+
+  /** Tắt thông báo: minutes > 0 trong chừng ấy phút, -1 đến khi bật lại, 0 bật lại */
+  SetMute(ctx, room, minutes) {
+    const until = minutes === 0 ? null : minutes < 0 ? Date.UTC(9999, 11, 31) : Date.now() + minutes * 60000;
+    mutes[ctx.user] ||= {};
+    if (until) mutes[ctx.user][room] = until; else delete mutes[ctx.user][room];
+    const evt = { room, mutedUntil: until ? new Date(until).toISOString() : null };
+    ctx.publish('RoomMuteChanged', [evt], { to: ctx.user });
+    return evt;
+  },
 
   /** Chỉ nhận tin các phòng (đếm chưa đọc) – không tải lịch sử */
   SubscribeRooms(ctx, rooms = []) {

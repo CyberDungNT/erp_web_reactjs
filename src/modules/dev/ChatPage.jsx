@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useAuth } from '@/auth/AuthContext';
 import { msgbox, toast } from '@/components/cyber';
 import { socket, useSocketEvent, useSocketReady, useSocketStatus, SocketStatus } from '@/realtime';
-import { chatBridge, colorOf, initials, isMineMsg, rememberSent, sameUser, timeOf } from './chatBridge';
+import { chatBridge, colorOf, initials, isMineMsg, muteLabel, muteStore, rememberSent, sameUser, timeOf, useMutes } from './chatBridge';
+import { CyberContextMenu } from '@/components/cyber';
 import ChatPicker from './ChatPicker';
 import { REACTIONS, encodeSticker, isJumboEmoji, parseSticker, previewText, toggleReaction } from './stickers';
 import './chat.css';
@@ -100,6 +101,7 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
     try {
       const list = await socket.invoke('GetRooms');
       setRooms(list);
+      muteStore.fromRooms(list); // phòng nào đang tắt thông báo (riêng mình)
       await socket.invoke('SubscribeRooms', list.map((r) => r.id));
       setReady((n) => n + 1);
       if (!activeRef.current) setLoading(false); // chưa mở phòng nào -> không có lịch sử để tải
@@ -394,6 +396,39 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
   const notifyAll = async () => {
     await socket.invoke('NotifyAll', 'Thông báo hệ thống', `${user?.Comment || me} vừa gửi thông báo tới mọi người.`, 'info').catch(() => {});
   };
+  // ----- Tắt / bật thông báo phòng (riêng mình, lưu trên server) -----
+  useMutes(); // vẽ lại khi trạng thái tắt thông báo đổi / hết hạn
+  useSocketEvent('RoomMuteChanged', ({ room, mutedUntil }) => muteStore.set(room, mutedUntil));
+  const [ctxMenu, setCtxMenu] = useState(null); // menu tắt thông báo { x, y, items }
+  const setMute = async (roomId, minutes) => {
+    try {
+      const r = await socket.invoke('SetMute', roomId, minutes);
+      muteStore.set(roomId, r?.mutedUntil ?? null);
+      const name = rooms.find((x) => x.id === roomId)?.name || '';
+      if (minutes === 0) toast.success(`Đã bật thông báo "${name}".`);
+      else toast.info(`Đã tắt thông báo "${name}" ${muteLabel(roomId)}.`);
+    } catch { /* toast lỗi đã hiện */ }
+  };
+  const muteItems = (roomId) => {
+    const muted = muteStore.isMuted(roomId);
+    return [
+      muted ? { text: `Bật thông báo (đang tắt ${muteLabel(roomId)})`, icon: '🔔', onClick: () => setMute(roomId, 0) } : null,
+      muted ? '-' : null,
+      { text: 'Tắt thông báo trong 1 giờ', icon: '🔕', onClick: () => setMute(roomId, 60) },
+      { text: 'Tắt thông báo trong 8 giờ', icon: '🔕', onClick: () => setMute(roomId, 480) },
+      { text: 'Tắt thông báo trong 24 giờ', icon: '🔕', onClick: () => setMute(roomId, 1440) },
+      { text: 'Tắt cho đến khi bật lại', icon: '🔕', onClick: () => setMute(roomId, -1) },
+    ];
+  };
+  /** Mở menu tắt thông báo dưới 1 nút / tại chỗ chuột phải */
+  const openMuteMenu = (roomId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    const fromButton = e.type === 'click';
+    setCtxMenu({ x: fromButton ? Math.max(4, r.right - 250) : e.clientX, y: fromButton ? r.bottom + 4 : e.clientY, items: muteItems(roomId) });
+  };
+
   const clearHistory = async () => {
     if (!(await msgbox.yesNo(`Xoá toàn bộ tin nhắn của phòng "${room?.name}"?`, { danger: true, lang }))) return;
     await socket.invoke('ClearHistory', active).catch(() => {});
@@ -411,7 +446,8 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
   useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
 
   // Tổng chưa đọc -> bong bóng chat
-  const totalUnread = Object.values(unread).reduce((a, n) => a + n, 0);
+  // phòng đang tắt thông báo không cộng vào số trên bong bóng chat
+  const totalUnread = Object.entries(unread).reduce((a, [roomId, n]) => a + (muteStore.isMuted(roomId) ? 0 : n), 0);
   useEffect(() => { onUnreadChange?.(totalUnread); }, [totalUnread, onUnreadChange]);
 
   // Khung chat vừa hiện lên đang ở 1 phòng -> phòng đó coi như đã đọc (đếm chưa đọc), đặt con trỏ vào ô nhập
@@ -423,6 +459,7 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
 
   return (
     <div className={`chat ${compact ? 'chat--compact' : ''} ${active ? 'has-active' : ''}`} ref={rootRef}>
+      {ctxMenu && <CyberContextMenu {...ctxMenu} onClose={() => setCtxMenu(null)} />}
       {/* ===== Danh sách phòng ===== */}
       <aside className="chat__side">
         {!compact && (
@@ -442,21 +479,24 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
           {rooms.filter((r) => !search || plain(`${r.name} ${r.desc}`).includes(plain(search))).map((r) => {
             const last = (msgs[r.id] || []).at(-1);
             const n = unread[r.id] || 0;
+            const muted = muteStore.isMuted(r.id);
             return (
               <li key={r.id}>
                 <button type="button" role="option" aria-selected={r.id === active}
-                  className={`chat__room ${r.id === active ? 'is-active' : ''}`} onClick={() => openRoom(r.id)}>
+                  className={`chat__room ${r.id === active ? 'is-active' : ''} ${muted ? 'is-muted' : ''}`} onClick={() => openRoom(r.id)}
+                  onContextMenu={(e) => openMuteMenu(r.id, e)} title={muted ? `Đã tắt thông báo ${muteLabel(r.id)} · chuột phải để bật lại` : 'Chuột phải: tắt thông báo'}>
                   <span className="chat__room-icon" style={{ '--c': colorOf(r.id) }}>{r.icon}</span>
                   <span className="chat__room-body">
                     <span className="chat__room-top">
                       <b>{r.name}</b>
+                      {muted && <BellOff className="chat__muted" label={`Đã tắt thông báo ${muteLabel(r.id)}`} />}
                       {last && <time>{timeOf(last.at)}</time>}
                     </span>
                     <span className="chat__room-last">
                       {last ? `${isMineMsg(last, me) ? 'Bạn' : last.name.split(' ').at(-1)}: ${previewText(last.text)}` : r.desc}
                     </span>
                   </span>
-                  {n > 0 && <span className="chat__badge" aria-label={`${n} tin chưa đọc`}>{n > 99 ? '99+' : n}</span>}
+                  {n > 0 && <span className={`chat__badge ${muted ? 'is-muted' : ''}`} aria-label={`${n} tin chưa đọc`}>{n > 99 ? '99+' : n}</span>}
                 </button>
               </li>
             );
@@ -486,7 +526,7 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
           </button>
           <span className="chat__room-icon chat__room-icon--lg" style={{ '--c': colorOf(active) }}>{room?.icon || '#'}</span>
           <div className="chat__head-text">
-            <h3>{room?.name || '...'}</h3>
+            <h3>{room?.name || '...'}{muteStore.isMuted(active) && <BellOff className="chat__muted" label={`Đã tắt thông báo ${muteLabel(active)}`} />}</h3>
             <p>{pres.online.toLocaleString('vi-VN')} người đang xem{pres.large ? ' · phòng lớn' : ''}</p>
           </div>
           <div className="chat__members" aria-label="Thành viên">
@@ -497,6 +537,10 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
               </span>
             ))}
           </div>
+          <button type="button" className={`chat__bell ${muteStore.isMuted(active) ? 'is-muted' : ''}`} onClick={(e) => openMuteMenu(active, e)}
+            title={muteStore.isMuted(active) ? `Đã tắt thông báo ${muteLabel(active)}` : 'Tắt thông báo'} aria-label="Tắt / bật thông báo" aria-haspopup="menu">
+            {muteStore.isMuted(active) ? <BellOff /> : <Bell />}
+          </button>
           {(socket.mode === 'mock' || user?.is_Admin) && (
             <button type="button" className="cy-btn chat__clear" onClick={clearHistory} title="Xoá lịch sử phòng (giả lập)">Xoá lịch sử</button>
           )}
@@ -548,6 +592,24 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
         </>)}
       </section>
     </div>
+  );
+}
+
+function Bell() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" />
+    </svg>
+  );
+}
+/** Chuông gạch chéo = đã tắt thông báo */
+function BellOff({ className = '', label }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" width={className ? 14 : 18} height={className ? 14 : 18} fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      {label && <title>{label}</title>}
+      <path d="M8.5 5.2A6 6 0 0 1 18 11v4.2" /><path d="M6 10.5V16l-1.5 2H16" /><path d="M10 20.5a2.2 2.2 0 0 0 4 0" /><path d="M3 3l18 18" />
+    </svg>
   );
 }
 

@@ -88,7 +88,7 @@ export default function ChatWidget() {
     const onKey = (e) => { if (e.key === 'Escape') hide(); };
     const onDown = (e) => {
       if (rootRef.current?.contains(e.target)) return;
-      if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup')) return; // popup tin nhắn / toast / hộp thoại
+      if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup, .cy-menu')) return; // popup tin nhắn / toast / hộp thoại / menu chuột phải
       hide();
     };
     document.addEventListener('keydown', onKey);
