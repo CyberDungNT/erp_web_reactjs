@@ -171,3 +171,35 @@
 .chat__info.is-mine { align-items: flex-end; margin-left: 0; margin-right: 2px; text-align: right; }
 .chat__info-seen { color: var(--ink-2); font-weight: 600; }
 @keyframes chat-info { from { opacity: 0; transform: translateY(-4px); } }
+
+/* ----- Chưa mở cuộc trò chuyện nào ----- */
+.chat__none {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  padding: 32px 24px; text-align: center; color: var(--muted);
+  background-image: radial-gradient(rgba(15, 47, 71, .045) 1px, transparent 1px); background-size: 18px 18px;
+  animation: chat-info .3s ease;
+}
+.chat__none h3 { margin: 10px 0 0; font-size: 17px; font-weight: 700; color: var(--ink); }
+.chat__none p { margin: 0; max-width: 320px; font-size: 13.5px; line-height: 1.55; }
+.chat__none-art {
+  position: relative; display: grid; place-items: center; width: 88px; height: 88px; border-radius: 28px;
+  background: color-mix(in srgb, var(--brand, #1f5f8b) 10%, #fff); color: var(--brand, #1f5f8b);
+  box-shadow: 0 12px 30px -10px color-mix(in srgb, var(--brand, #1f5f8b) 45%, transparent);
+}
+.chat__none-bubble { position: absolute; border-radius: 10px; background: var(--surface, #fff); box-shadow: 0 4px 12px rgba(15, 47, 71, .12); }
+.chat__none-bubble--a { width: 30px; height: 16px; top: -8px; right: -14px; animation: chat-float 3s ease-in-out infinite; }
+.chat__none-bubble--b { width: 22px; height: 12px; bottom: -6px; left: -12px; animation: chat-float 3s ease-in-out 1.2s infinite; }
+@keyframes chat-float { 50% { transform: translateY(-5px); } }
+.chat__none-unread {
+  margin-top: 6px; padding: 5px 12px; border-radius: 999px; background: #fdeaea; color: #c03030;
+  font-size: 12.5px; font-weight: 600;
+}
+.chat__none-off { margin-top: 4px; font-size: 12.5px; color: #8a5a00; }
+
+/* Nút đóng cuộc trò chuyện (về màn chọn phòng) */
+.chat__back {
+  flex-shrink: 0; display: grid; place-items: center; width: 32px; height: 32px; margin-left: -6px;
+  border: 0; border-radius: 10px; background: none; color: var(--ink-2); cursor: pointer; transition: background-color .15s;
+}
+.chat__back:hover { background: var(--surface-2, #f1f4f7); }
+.chat__back:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }

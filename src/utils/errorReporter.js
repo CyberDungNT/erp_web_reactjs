@@ -51,7 +51,7 @@ const shorten = (s) => {
 /**
  * Bật toast cho 1 lỗi.
  * @param err    Error | chuỗi | bất kỳ
- * @param opts   { title, type: 'error' | 'warning', source: 'api' | 'binding' | 'global' | 'console' | 'manual' }
+ * @param opts   { title (null = không tiêu đề), type: 'error' | 'warning', source: 'api' | 'binding' | 'global' | 'console' | 'manual' }
  */
 export function reportError(err, { title, type = 'error', source = 'manual' } = {}) {
   if (source !== 'manual' && ERROR_TOAST[source] === false) return;
@@ -73,7 +73,8 @@ export function reportError(err, { title, type = 'error', source = 'manual' } = 
     if (reporting) return;
     reporting = true;
     try {
-      (type === 'warning' ? toast.warning : toast.error)(message, { title: title || defaultTitle(source), duration: 6000 });
+      // title: null -> chỉ hiện câu thông báo (không tiêu đề)
+      (type === 'warning' ? toast.warning : toast.error)(message, { title: title === null ? undefined : title || defaultTitle(source), duration: 6000 });
     } finally {
       reporting = false;
     }

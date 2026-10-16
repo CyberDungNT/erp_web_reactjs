@@ -54,7 +54,12 @@ export function createMockTransport({ user, name, onEvent, onStatus, onReconnect
       const fn = mockHub[method];
       if (!fn) throw new Error(`[MOCK] Hub không có hàm '${method}'.`);
       await delay(80 + Math.random() * 120); // giả lập độ trễ mạng
-      return fn(ctx, ...args);
+      try {
+        return fn(ctx, ...args);
+      } catch (err) {
+        err.hub = true; // giống HubException của server thật: hiện nguyên văn
+        throw err;
+      }
     },
 
     /** Giả lập rớt mạng: ngừng nhận/gửi vài giây rồi tự kết nối lại */

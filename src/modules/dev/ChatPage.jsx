@@ -52,7 +52,8 @@ export default function ChatPage() {
 
   const [rooms, setRooms] = useState([]);
   // Mở từ popup tin nhắn -> vào thẳng phòng đó
-  const [active, setActive] = useState(() => chatBridge.peekPendingRoom() || 'chung');
+  // Vào màn chat: CHƯA mở cuộc trò chuyện nào (null) – trừ khi mở từ popup tin nhắn thì vào thẳng phòng đó
+  const [active, setActive] = useState(() => chatBridge.peekPendingRoom() || null);
   useEffect(() => { chatBridge.takePendingRoom(); }, []); // đọc ở trên (StrictMode gọi khởi tạo 2 lần), xoá ở đây
   const [msgs, setMsgs] = useState({});       // room -> danh sách tin
   const [presence, setPresence] = useState({}); // room -> { online, members, large }
@@ -63,6 +64,21 @@ export default function ChatPage() {
   const [readLog, setReadLog] = useState({}); // room -> { user: [{ seq, at }] } – lần lượt xem tới đâu lúc nào (thời gian xem từng tin)
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
+  const inputRef = useRef(null); // ô nhập tin
+
+  // Mở 1 cuộc trò chuyện (bấm phòng / mở từ popup) -> đặt con trỏ vào ô nhập luôn.
+  // Điện thoại / máy tính bảng (màn cảm ứng) thì không, để bàn phím ảo không tự bật che màn hình.
+  useEffect(() => {
+    if (!active || window.matchMedia?.('(pointer: coarse)').matches) return undefined;
+    const id = requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(id);
+  }, [active]);
+
+  // Ô nhập đang bị khoá vì mất kết nối -> có mạng lại thì đặt con trỏ vào lại
+  useEffect(() => {
+    if (status !== 'connected' || !active || window.matchMedia?.('(pointer: coarse)').matches) return;
+    if (document.activeElement === document.body) inputRef.current?.focus({ preventScroll: true });
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
   const activeRef = useRef(active);
   activeRef.current = active;
 
@@ -74,12 +90,13 @@ export default function ChatPage() {
       setRooms(list);
       await socket.invoke('SubscribeRooms', list.map((r) => r.id));
       setReady((n) => n + 1);
+      if (!activeRef.current) setLoading(false); // chưa mở phòng nào -> không có lịch sử để tải
     } catch { setLoading(false); /* lỗi đã hiện toast */ }
   });
 
   // ----- Vào phòng đang xem: 1 trang lịch sử mới nhất + người online. Đổi phòng -> thôi xem phòng cũ -----
   useEffect(() => {
-    if (!ready || socket.status !== 'connected') return undefined;
+    if (!ready || !active || socket.status !== 'connected') return undefined;
     let alive = true;
     const room = active;
     setLoading(true);
@@ -358,7 +375,7 @@ export default function ChatPage() {
               </li>
             );
           })}
-          {loading && [0, 1, 2].map((i) => <li key={i} className="chat__room-skel" />)}
+          {!rooms.length && loading && [0, 1, 2].map((i) => <li key={i} className="chat__room-skel" />)}
         </ul>
         <div className="chat__tools">
           <p className="chat__tools-title">Công cụ demo ({socket.mode})</p>
@@ -374,7 +391,13 @@ export default function ChatPage() {
 
       {/* ===== Khung chat ===== */}
       <section className="chat__main" ref={mainRef} onPointerDown={engage} onFocus={engage}>
+        {!active ? (
+          <ChatEmpty unread={Object.values(unread).reduce((a, n) => a + n, 0)} online={online} status={status} />
+        ) : (<>
         <header className="chat__head">
+          <button type="button" className="chat__back" onClick={() => setActive(null)} title="Đóng cuộc trò chuyện" aria-label="Đóng cuộc trò chuyện">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 6l-6 6 6 6" /></svg>
+          </button>
           <span className="chat__room-icon chat__room-icon--lg" style={{ '--c': colorOf(active) }}>{room?.icon || '#'}</span>
           <div className="chat__head-text">
             <h3>{room?.name || '...'}</h3>
@@ -410,7 +433,7 @@ export default function ChatPage() {
         </div>
 
         <form className="chat__composer" onSubmit={submit}>
-          <AutoTextarea value={text} onChange={onType} onEnter={submit} disabled={!online}
+          <AutoTextarea inputRef={inputRef} value={text} onChange={onType} onEnter={submit} disabled={!online}
             placeholder={online ? `Nhắn tới ${room?.name || ''}... (Enter gửi, Shift+Enter xuống dòng)` : 'Đang chờ kết nối...'} />
           <button type="submit" className="chat__send" disabled={!online || !text.trim()} aria-label="Gửi">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -418,7 +441,27 @@ export default function ChatPage() {
             </svg>
           </button>
         </form>
+        </>)}
       </section>
+    </div>
+  );
+}
+
+/** Khung bên phải khi chưa mở cuộc trò chuyện nào */
+function ChatEmpty({ unread, online, status }) {
+  return (
+    <div className="chat__none">
+      <div className="chat__none-art" aria-hidden="true">
+        <span className="chat__none-bubble chat__none-bubble--a" />
+        <span className="chat__none-bubble chat__none-bubble--b" />
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /><path d="M8.5 11h.01M12 11h.01M15.5 11h.01" />
+        </svg>
+      </div>
+      <h3>Chọn một cuộc trò chuyện</h3>
+      <p>Chọn phòng ở danh sách bên trái để xem tin nhắn và bắt đầu trò chuyện.</p>
+      {unread > 0 && <span className="chat__none-unread">{unread > 99 ? '99+' : unread} tin nhắn chưa đọc</span>}
+      {!online && status !== 'idle' && <span className="chat__none-off">Đang kết nối máy chủ realtime...</span>}
     </div>
   );
 }
@@ -660,8 +703,9 @@ function SeenBy({ readers, msgKey, known }) {
 }
 
 /** Ô nhập tự giãn chiều cao, Enter = gửi, Shift+Enter = xuống dòng */
-function AutoTextarea({ value, onChange, onEnter, ...rest }) {
-  const ref = useRef(null);
+function AutoTextarea({ value, onChange, onEnter, inputRef, ...rest }) {
+  const own = useRef(null);
+  const ref = inputRef || own;
   useLayoutEffect(() => {
     const el = ref.current;
     el.style.height = 'auto';

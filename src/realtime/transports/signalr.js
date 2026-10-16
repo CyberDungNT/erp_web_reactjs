@@ -2,6 +2,19 @@ import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/s
 import { backoffDelay } from '../backoff';
 
 /**
+ * Server throw new HubException("Bạn gửi quá nhanh...") -> thư viện SignalR phía web báo lỗi dạng
+ *   "An unexpected error occurred invoking 'SendMessage' on the server. HubException: Bạn gửi quá nhanh..."
+ * -> bóc lấy đúng câu thông báo của server, đánh dấu hub = true (lỗi nghiệp vụ, hiển thị nguyên văn cho người dùng).
+ */
+function toHubError(err) {
+  const m = /HubException:\s*([\s\S]*)$/.exec(err?.message || '');
+  if (!m) return err;
+  const e = new Error(m[1].trim());
+  e.hub = true;
+  return e;
+}
+
+/**
  * Kết nối hub SignalR thật (ASP.NET Core). Server: project API_App_Demo, thư mục Realtime/ (AppHub.cs)
  * Token gửi qua query ?access_token=... (SignalR tự làm với accessTokenFactory) – server đọc trong AppHub.OnConnectedAsync.
  */
@@ -37,7 +50,7 @@ export function createSignalRTransport({ url, token, user, name, unit, onEvent, 
     stop: () => conn.stop(),
     invoke: (method, ...args) => {
       if (conn.state !== HubConnectionState.Connected) return Promise.reject(new Error('Mất kết nối realtime.'));
-      return conn.invoke(method, ...args);
+      return conn.invoke(method, ...args).catch((err) => { throw toHubError(err); });
     },
   };
 }

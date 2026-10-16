@@ -177,7 +177,14 @@ export const socket = {
       await whenConnected();
       return await transport.invoke(method, ...args);
     } catch (err) {
-      if (!silent) reportError(err, { title: `Lỗi realtime: ${method}`, source: 'api' });
+      if (!silent) {
+        if (err?.hub) {
+          // Lỗi nghiệp vụ server chủ động báo (HubException): "Bạn gửi quá nhanh...", "Tin nhắn trống."...
+          reportError(err, { title: null, type: 'warning', source: 'api' });
+        } else {
+          reportError(err, { title: `Lỗi realtime: ${method}`, source: 'api' });
+        }
+      }
       throw err;
     }
   },
