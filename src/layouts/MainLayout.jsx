@@ -14,6 +14,9 @@ import { useAuth } from "@/auth/AuthContext";
 import { apiConfig } from "@/api/apiClient";
 import { getMenuRows, markLogoutFx } from "@/auth/authService";
 import { LOCAL_KEYS, localStore } from "@/utils/storage";
+import { ScreenContext } from "@/hooks/screenContext";
+import { clearAllDrafts } from "@/utils/draftStore";
+import { decryptText, encryptText } from "@/auth/tokenVault";
 import { buildMenuTree } from "@/utils/menuTree";
 import {
   screens,
@@ -136,7 +139,7 @@ export default function MainLayout() {
   const [bye, setBye] = useState(false); // đang chạy hiệu ứng đăng xuất
   useEffect(() => {
     if (!intro) return undefined;
-    navigate(location.pathname, { replace: true, state: null }); // F5 sau đó không chạy lại hiệu ứng
+    navigate(location.pathname + location.search, { replace: true, state: null }); // F5 sau đó không chạy lại hiệu ứng
     const t = setTimeout(() => setIntro(false), 2000);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -164,8 +167,47 @@ export default function MainLayout() {
     return m;
   }, [leftTree, topTree]);
 
+  // ----- Cửa sổ đang mở nằm trên URL (ĐÃ MÃ HOÁ): /?s=<AES-GCM> -> F5 / phải đăng nhập lại vẫn mở đúng chức năng -----
+  // Nội dung gốc "w=ID1,ID2&f=ID2" được mã hoá bằng khoá của trình duyệt (tokenVault, giống cyber_auth):
+  // nhìn URL không biết đang mở chức năng gì; copy URL sang trình duyệt khác -> không giải mã được -> về trang chủ.
   const [windows, setWindows] = useState([]); // cửa sổ chức năng đang mở [{ key, node }]
   const [activeKey, setActiveKey] = useState(HOME); // HOME = trang chủ (dashboard biểu đồ), còn lại = Menu_Id
+  const urlReady = useRef(false);   // đã đọc xong URL lúc vào trang chưa (trước đó không ghi đè URL)
+  const urlPlain = useRef(null);    // nội dung (chưa mã hoá) đang nằm trên URL
+  const urlSeq = useRef(0);         // chống ghi URL lộn thứ tự (mã hoá là bất đồng bộ)
+  const [urlTick, setUrlTick] = useState(0);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const plain = await decodeWindowsParam(location.search);
+      if (!alive) return;
+      if (plain) {
+        const restored = readWindowsUrl(plain, nodeMap);
+        // trong lúc giải mã người dùng đã kịp mở chức năng khác -> giữ của người dùng
+        setWindows((cur) => (cur.length ? cur : restored.windows));
+        setActiveKey((cur) => (cur !== HOME ? cur : restored.active));
+      }
+      urlReady.current = true;
+      setUrlTick((n) => n + 1);
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!urlReady.current) return;
+    const plain = windowsQuery(windows, activeKey).replace(/^\?/, "");
+    if (plain === urlPlain.current) return;
+    urlPlain.current = plain;
+    const seq = ++urlSeq.current;
+    (async () => {
+      const search = plain ? `?s=${await encryptParam(plain)}` : "";
+      if (seq !== urlSeq.current) return; // đã có thay đổi mới hơn
+      navigate({ pathname: location.pathname, search }, { replace: true, state: null });
+    })().catch(() => { /* không mã hoá được (trình duyệt chặn IndexedDB): bỏ qua, chỉ là không nhớ cửa sổ khi F5 */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windows, activeKey, urlTick]);
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStore.get(SIDEBAR_KEY) === "1";
@@ -296,6 +338,7 @@ export default function MainLayout() {
     setBye(true);
     setTimeout(() => {
       markLogoutFx();
+      clearAllDrafts(); // đăng xuất chủ động: không giữ dữ liệu nhập dở của tài khoản này trên tab
       logout();
     }, BYE_MS);
   }, [logout, lang]);
@@ -658,11 +701,13 @@ export default function MainLayout() {
             {/* Trang chủ: 1 dashboard biểu đồ duy nhất (registry.HomePage) */}
             <div className="mn__pane" hidden={activeKey !== HOME}>
               <PaneBoundary>
-                <Suspense
-                  fallback={<div className="mn__loading">Đang tải...</div>}
-                >
-                  <HomePage />
-                </Suspense>
+                <ScreenContext.Provider value={HOME_SCREEN}>
+                  <Suspense
+                    fallback={<div className="mn__loading">Đang tải...</div>}
+                  >
+                    <HomePage />
+                  </Suspense>
+                </ScreenContext.Provider>
               </PaneBoundary>
             </div>
             {windows.map((w) => {
@@ -679,7 +724,9 @@ export default function MainLayout() {
                         <div className="mn__loading">Đang tải màn hình...</div>
                       }
                     >
-                      <Screen menu={nodeMap.get(w.key) || w.node} />
+                      <ScreenContext.Provider value={screenCtx(w.key)}>
+                        <Screen menu={nodeMap.get(w.key) || w.node} />
+                      </ScreenContext.Provider>
                     </Suspense>
                   </PaneBoundary>
                 </div>
@@ -725,6 +772,55 @@ export default function MainLayout() {
       )}
     </MainContext.Provider>
   );
+}
+
+// ----- URL <-> cửa sổ đang mở -----
+const HOME_SCREEN = { id: HOME };
+const screenCtxCache = new Map();
+/** Giá trị ScreenContext ổn định theo Menu_Id (không tạo object mới mỗi lần render) */
+function screenCtx(id) {
+  if (!screenCtxCache.has(id)) screenCtxCache.set(id, { id });
+  return screenCtxCache.get(id);
+}
+
+/** "?w=A,B&f=B" -> { windows: [{ key, node }], active } – bỏ Menu_Id không còn trong menu (mất quyền / đổi menu) */
+function readWindowsUrl(search, nodeMap) {
+  const p = new URLSearchParams(search);
+  const ids = [...new Set((p.get("w") || "").split(",").map((s) => s.trim()).filter(Boolean))];
+  const windows = ids
+    .filter((id) => nodeMap.has(id))
+    .map((id) => ({ key: id, node: nodeMap.get(id) }));
+  const f = p.get("f");
+  return { windows, active: windows.some((w) => w.key === f) ? f : HOME };
+}
+
+/** Mã hoá chuỗi để đặt lên URL: AES-GCM (tokenVault) -> base64url (không có + / =) */
+async function encryptParam(plain) {
+  const b64 = await encryptText(plain);
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** URL lúc vào trang -> nội dung gốc "w=..&f=.." (giải mã ?s=...; hỗ trợ cả URL cũ dạng ?w=...). Lỗi -> "" */
+async function decodeWindowsParam(search) {
+  const p = new URLSearchParams(search);
+  const s = p.get("s");
+  if (s) {
+    try {
+      let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+      while (b64.length % 4) b64 += "=";
+      return await decryptText(b64);
+    } catch {
+      return ""; // mã hoá ở trình duyệt khác / bị sửa -> về trang chủ
+    }
+  }
+  return p.get("w") ? search.replace(/^\?/, "") : "";
+}
+
+/** Cửa sổ đang mở -> "?w=A,B&f=B" (không mở gì -> "") */
+function windowsQuery(windows, active) {
+  if (!windows.length) return "";
+  const ids = windows.map((w) => encodeURIComponent(w.key)).join(",");
+  return `?w=${ids}${active && active !== HOME ? `&f=${encodeURIComponent(active)}` : ""}`;
 }
 
 /** Lỗi trong 1 màn hình chỉ làm hỏng màn đó, không sập cả app */

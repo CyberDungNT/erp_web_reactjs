@@ -152,7 +152,7 @@ Quy ước:
 ## Realtime (socket)
 
 Một kết nối dùng chung cho cả app (`src/realtime`): tự mở sau khi đăng nhập (gửi `TokenKey`), tự đóng khi đăng xuất,
-mất mạng tự kết nối lại và vào lại các nhóm. Màn mẫu: **Công cụ phát triển → Chat realtime** (`modules/dev/ChatPage.jsx`).
+mất mạng tự kết nối lại và vào lại các nhóm. Mẫu: **bong bóng chat ở góc dưới phải** mọi màn hình (`modules/dev/ChatWidget.jsx` + `ChatPage.jsx`).
 
 ```jsx
 import { socket, useSocketEvent, useSocketGroup, useSocketReady, useSocketStatus, SocketStatus } from '@/realtime';
@@ -224,6 +224,7 @@ Mọi control cũng dùng được kiểu thường: `value={x} onChange={setX}`
 | CyberCombobox | `dataSource` hoặc `procName para`, `valueField displayField showValue allowEmpty`, `onChange(value,row)` |
 | CyberTable | `head data onRowClick onRowDoubleClick onSelectionChange contextMenu height showSearch sortable rowClassName frozenColumns frozenRightColumns frozenRows isRowFrozen` |
 | CyberPopup | `open onClose title width height footer closeOnBackdrop closeOnEsc draggable maximizable` |
+| CyberFileUpload | `accept multiple maxSize(MB) maxFiles user deleteOnRemove onUploaded onRemove` – kéo thả / chọn / dán file, tải lên `api/File/upload`; giá trị = mảng file đã lưu `[{ id, name, size, contentType, url }]` (lưu `id` vào DB). Gọi API trực tiếp: `src/api/fileApi.js` (`uploadFile`, `deleteFile`, `fileUrl`) |
 
 Props chung cho control nhập liệu: `label labelWidth layout('horizontal'|'vertical') required error width disabled`.
 

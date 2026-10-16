@@ -19,10 +19,11 @@ function toHubError(err) {
  * Token gửi qua query ?access_token=... (SignalR tự làm với accessTokenFactory) – server đọc trong AppHub.OnConnectedAsync.
  */
 export function createSignalRTransport({ url, token, user, name, unit, onEvent, onStatus, onReconnected, events }) {
-  // u / n / dv chỉ được server dùng khi bật Realtime:DevBypassToken (dev). Bình thường server lấy user từ TokenKey.
-  const qs = new URLSearchParams({ u: user || '', n: name || '', dv: unit || '' }).toString();
+  // u / n / dv: CHỈ gửi khi chạy dev – server bật Realtime:DevBypassToken (không kiểm tra token) lấy user từ đây.
+  // Bản build production KHÔNG gửi: server lấy user từ TokenKey (proc CP_RT_ValidateToken).
+  const devInfo = import.meta.env.DEV ? new URLSearchParams({ u: user || '', n: name || '', dv: unit || '' }).toString() : '';
   const conn = new HubConnectionBuilder()
-    .withUrl(`${url}${url.includes('?') ? '&' : '?'}${qs}`, { accessTokenFactory: () => token })
+    .withUrl(devInfo ? `${url}${url.includes('?') ? '&' : '?'}${devInfo}` : url, { accessTokenFactory: () => token })
     // Kết nối lại có ngẫu nhiên (xem backoff.js). Sau 2 phút vẫn không được -> trả null để đóng hẳn,
     // socket.js tiếp tục thử theo chu kỳ dài hơn (cũng có ngẫu nhiên).
     .withAutomaticReconnect({

@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useAuth } from '@/auth/AuthContext';
 import { msgbox, toast } from '@/components/cyber';
 import { socket, useSocketEvent, useSocketReady, useSocketStatus, SocketStatus } from '@/realtime';
-import { chatBridge, colorOf, initials, timeOf } from './chatBridge';
+import { chatBridge, colorOf, initials, isMineMsg, rememberSent, sameUser, timeOf } from './chatBridge';
 import './chat.css';
 
 /**
@@ -42,9 +42,18 @@ function mergeHistory(cur = [], history = []) {
 
 const maxSeq = (list = []) => list.reduce((a, x) => Math.max(a, x.seq || 0), 0);
 
+/** Bỏ dấu + chữ thường để tìm kiếm tiếng Việt */
+const plain = (s = '') => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+
 const newClientId = () => `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-export default function ChatPage() {
+/**
+ * compact = true: chạy trong khung chat nổi (ChatWidget) – kiểu Zalo: chưa chọn thì chỉ có danh sách cuộc trò chuyện (có ô tìm),
+ *   chọn 1 cuộc -> 2 cột: trái danh sách, phải nội dung (nút ‹ đóng cuộc trò chuyện).
+ * onUnreadChange(total): báo tổng số tin chưa đọc (bong bóng chat hiện số).
+ * onActiveChange(roomId | null): báo đang mở cuộc trò chuyện nào (khung nổi giãn rộng thành 2 cột).
+ */
+export default function ChatPage({ compact = false, onUnreadChange, onActiveChange }) {
   const { user, lang } = useAuth();
   const me = user?.User_name || '';
   const status = useSocketStatus();
@@ -64,6 +73,7 @@ export default function ChatPage() {
   const [readLog, setReadLog] = useState({}); // room -> { user: [{ seq, at }] } – lần lượt xem tới đâu lúc nào (thời gian xem từng tin)
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
+  const [search, setSearch] = useState(''); // ô tìm cuộc trò chuyện (khung nổi)
   const inputRef = useRef(null); // ô nhập tin
 
   // Mở 1 cuộc trò chuyện (bấm phòng / mở từ popup) -> đặt con trỏ vào ô nhập luôn.
@@ -115,7 +125,7 @@ export default function ChatPage() {
         }
         return { ...l, [room]: next };
       });
-      const mine = (j.reads || []).find((x) => x.user === me);
+      const mine = (j.reads || []).find((x) => sameUser(x.user, me));
       if (mine) lastMarked.current[room] = Math.max(lastMarked.current[room] || 0, mine.seq);
       markSeen(); // chỉ có tác dụng nếu người dùng vừa bấm mở phòng này
     }).catch(() => {}).finally(() => alive && setLoading(false));
@@ -227,13 +237,13 @@ export default function ChatPage() {
       const { [msg.user]: _, ...rest } = prev[msg.room];
       return { ...prev, [msg.room]: rest };
     });
-    if (msg.room !== activeRef.current && msg.user !== me) {
+    if (!isMineMsg(msg, me) && (msg.room !== activeRef.current || !chatBridge.isVisible())) {
       setUnread((u) => ({ ...u, [msg.room]: (u[msg.room] || 0) + 1 }));
     }
   });
 
   useSocketEvent('UserTyping', ({ room, user: u, name }) => {
-    if (u === me) return;
+    if (sameUser(u, me)) return;
     setTyping((prev) => ({ ...prev, [room]: { ...(prev[room] || {}), [u]: { name, until: Date.now() + TYPING_SHOW_MS } } }));
   });
 
@@ -302,6 +312,7 @@ export default function ChatPage() {
   };
 
   const sendMsg = async (room, body, clientId = newClientId()) => {
+    rememberSent(clientId);
     const local = { id: clientId, clientId, room, user: me, name: user?.Comment || me, text: body, at: new Date().toISOString(), pending: true };
     setMsgs((prev) => ({ ...prev, [room]: [...(prev[room] || []).filter((m) => m.clientId !== clientId), local] }));
     try {
@@ -341,19 +352,42 @@ export default function ChatPage() {
   const list = msgs[active] || [];
   const typingNames = Object.values(typing[active] || {}).map((t) => t.name);
   const pres = presence[active] || { online: 0, members: [], large: false };
-  const readers = Object.values(reads[active] || {}).filter((r) => r.user !== me);
+  const readers = Object.values(reads[active] || {}).filter((r) => !sameUser(r.user, me));
   const roomMembers = pres.members;
 
+  // Đang mở cuộc trò chuyện nào -> khung nổi giãn 2 cột / thu về danh sách
+  useEffect(() => { onActiveChange?.(active); }, [active, onActiveChange]);
+
+  // Tổng chưa đọc -> bong bóng chat
+  const totalUnread = Object.values(unread).reduce((a, n) => a + n, 0);
+  useEffect(() => { onUnreadChange?.(totalUnread); }, [totalUnread, onUnreadChange]);
+
+  // Khung chat vừa hiện lên đang ở 1 phòng -> phòng đó coi như đã đọc (đếm chưa đọc), đặt con trỏ vào ô nhập
+  useEffect(() => chatBridge.onVisible((v) => {
+    if (!v || !activeRef.current) return;
+    setUnread((u) => ({ ...u, [activeRef.current]: 0 }));
+    if (!window.matchMedia?.('(pointer: coarse)').matches) requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
+  }), []);
+
   return (
-    <div className="chat" ref={rootRef}>
+    <div className={`chat ${compact ? 'chat--compact' : ''} ${active ? 'has-active' : ''}`} ref={rootRef}>
       {/* ===== Danh sách phòng ===== */}
       <aside className="chat__side">
-        <div className="chat__side-head">
-          <h2>Tin nhắn</h2>
-          <SocketStatus lang={lang} />
-        </div>
+        {!compact && (
+          <div className="chat__side-head">
+            <h2>Tin nhắn</h2>
+            <SocketStatus lang={lang} />
+          </div>
+        )}
+        {compact && (
+          <div className="chat__search">
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4-4" /></svg>
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm kiếm cuộc trò chuyện" aria-label="Tìm kiếm cuộc trò chuyện" />
+            {search && <button type="button" onClick={() => setSearch('')} aria-label="Xoá tìm kiếm">✕</button>}
+          </div>
+        )}
         <ul className="chat__rooms" role="listbox" aria-label="Phòng chat">
-          {rooms.map((r) => {
+          {rooms.filter((r) => !search || plain(`${r.name} ${r.desc}`).includes(plain(search))).map((r) => {
             const last = (msgs[r.id] || []).at(-1);
             const n = unread[r.id] || 0;
             return (
@@ -367,7 +401,7 @@ export default function ChatPage() {
                       {last && <time>{timeOf(last.at)}</time>}
                     </span>
                     <span className="chat__room-last">
-                      {last ? `${last.user === me ? 'Bạn' : last.name.split(' ').at(-1)}: ${last.text}` : r.desc}
+                      {last ? `${isMineMsg(last, me) ? 'Bạn' : last.name.split(' ').at(-1)}: ${last.text}` : r.desc}
                     </span>
                   </span>
                   {n > 0 && <span className="chat__badge" aria-label={`${n} tin chưa đọc`}>{n > 99 ? '99+' : n}</span>}
@@ -377,7 +411,7 @@ export default function ChatPage() {
           })}
           {!rooms.length && loading && [0, 1, 2].map((i) => <li key={i} className="chat__room-skel" />)}
         </ul>
-        <div className="chat__tools">
+        {!compact && <div className="chat__tools">
           <p className="chat__tools-title">Công cụ demo ({socket.mode})</p>
           <button type="button" className="cy-btn" onClick={notifyAll} disabled={!online}>📣 Gửi thông báo (toast) tới mọi tab</button>
           {socket.mode === 'mock' && (
@@ -386,7 +420,7 @@ export default function ChatPage() {
               <button type="button" className="cy-btn" onClick={() => window.open(window.location.href, '_blank')}>🗗 Mở thêm 1 tab để chat qua lại</button>
             </>
           )}
-        </div>
+        </div>}
       </aside>
 
       {/* ===== Khung chat ===== */}
@@ -406,7 +440,7 @@ export default function ChatPage() {
           <div className="chat__members" aria-label="Thành viên">
             {roomMembers.slice(0, 5).map((m) => (
               <span key={m.user} className={`chat__avatar chat__avatar--sm ${m.online ? 'is-online' : ''}`}
-                style={{ '--c': colorOf(m.user) }} title={`${m.name}${m.me || m.user === me ? ' (bạn)' : ''} – ${m.online ? 'đang hoạt động' : 'ngoại tuyến'}`}>
+                style={{ '--c': colorOf(m.user) }} title={`${m.name}${m.me || sameUser(m.user, me) ? ' (bạn)' : ''} – ${m.online ? 'đang hoạt động' : 'ngoại tuyến'}`}>
                 {initials(m.name)}
               </span>
             ))}
@@ -507,7 +541,7 @@ function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, readers 
   }, [list, readers]);
 
   // Tin cuối cùng của mình: chưa ai xem -> hiện biểu tượng trạng thái (đang gửi / đã gửi) ở mép phải
-  const lastMine = useMemo(() => [...list].reverse().find((x) => x.user === me && !x.failed), [list, me]);
+  const lastMine = useMemo(() => [...list].reverse().find((x) => isMineMsg(x, me) && !x.failed), [list, me]);
   const lastMineKey = lastMine ? lastMine.clientId || lastMine.id : null;
   const lastMineSeen = !!lastMine?.seq && lastMine.seq <= maxRead;
 
@@ -556,7 +590,7 @@ function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, readers 
       return;
     }
     if (!appended) return;
-    if (atBottom.current || last?.user === me) {
+    if (atBottom.current || isMineMsg(last, me)) {
       el.scrollTop = el.scrollHeight;
       setNewBelow(false);
       setBottom(true);
@@ -588,9 +622,9 @@ function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, readers 
           <div key={r.key} className="chat__day"><span>{r.day}</span></div>
         ) : (
           <Fragment key={r.key}>
-            <Message m={r.m} mine={r.m.user === me} first={r.first} onRetry={onRetry}
+            <Message m={r.m} mine={isMineMsg(r.m, me)} first={r.first} onRetry={onRetry}
               open={openKey === r.key} onToggle={() => setOpenKey((k) => (k === r.key ? null : r.key))} />
-            {openKey === r.key && <MessageInfo m={r.m} mine={r.m.user === me} readers={readers} readLog={readLog} />}
+            {openKey === r.key && <MessageInfo m={r.m} mine={isMineMsg(r.m, me)} readers={readers} readLog={readLog} />}
             {seenAt.has(r.key) ? (
               <SeenBy readers={seenAt.get(r.key)} msgKey={r.key} known={readerPos.current} />
             ) : r.key === lastMineKey && !lastMineSeen ? (
@@ -706,11 +740,27 @@ function SeenBy({ readers, msgKey, known }) {
 function AutoTextarea({ value, onChange, onEnter, inputRef, ...rest }) {
   const own = useRef(null);
   const ref = inputRef || own;
-  useLayoutEffect(() => {
+  const fit = useCallback(() => {
     const el = ref.current;
+    if (!el || !el.offsetWidth) return; // đang ẩn (display: none) -> đo sai, đợi hiện ra
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
-  }, [value]);
+  }, [ref]);
+  useLayoutEffect(fit, [value, rest.placeholder, fit]);
+  // Bề rộng đổi (khung chat nổi đang giãn ra 2 cột, đổi kích thước cửa sổ...) -> đo lại chiều cao.
+  // Không đo lại thì lúc khung còn hẹp câu gợi ý xuống nhiều dòng -> ô nhập cao bất thường, để lại khoảng trắng.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    let w = el.offsetWidth;
+    const ro = new ResizeObserver(() => {
+      if (el.offsetWidth === w) return;
+      w = el.offsetWidth;
+      fit();
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref, fit]);
   return (
     <textarea ref={ref} rows={1} className="chat__input" value={value} {...rest}
       onChange={(e) => onChange(e.target.value)}

@@ -4,6 +4,7 @@ import MainLayout from '@/layouts/MainLayout';
 import LoginPage from '@/pages/login/LoginPage';
 import { CyberMsgBoxHost, CyberToastHost } from '@/components/cyber';
 import { SocketBridge } from '@/realtime';
+import NetworkStatus from '@/components/NetworkStatus';
 
 /**
  * /login  -> màn đăng nhập
@@ -22,6 +23,8 @@ export default function App() {
       <CyberToastHost />
       {/* Realtime: tự kết nối khi đăng nhập, ngắt khi đăng xuất */}
       <SocketBridge />
+      {/* Mất mạng / có mạng lại -> thông báo (dữ liệu đang nhập được giữ: bản nháp trong useCyberForm) */}
+      <NetworkStatus />
     </AuthProvider>
   );
 }

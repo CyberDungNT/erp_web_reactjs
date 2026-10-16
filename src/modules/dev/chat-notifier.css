@@ -6,7 +6,8 @@
   --cn-muted: #8a909c;
   --cn-line: rgba(15, 30, 50, .08);
   --cn-brand: var(--brand, #1f5f8b);
-  position: fixed; right: 18px; bottom: 58px; z-index: 9000;
+  /* nằm bên trái bong bóng chat (ChatWidget) */
+  position: fixed; right: 90px; bottom: 58px; z-index: 1600; /* trên chat nổi (1500), dưới popup / msgbox / toast */
   width: min(372px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px;
   font-family: inherit; pointer-events: none;
 }
@@ -151,7 +152,7 @@
 @keyframes cn-progress { to { transform: scaleX(0); } }
 
 @media (max-width: 520px) {
-  .cn { right: 8px; left: 8px; width: auto; bottom: 52px; }
+  .cn { right: 8px; left: 8px; width: auto; bottom: 120px; }
   .cn__actions, .cn__reply-form { padding-left: 14px; }
   .cn__sent { margin-left: 14px; }
 }

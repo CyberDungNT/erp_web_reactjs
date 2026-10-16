@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   CyberTextBox, CyberNumeric, CyberLookup, CyberDate, CyberCheckBox,
-  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox, toast,
+  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox, toast, CyberFileUpload,
 } from '@/components/cyber';
 import { useCyberForm } from '@/hooks/useCyberForm';
 import { useProc } from '@/hooks/useProc';
@@ -207,6 +207,9 @@ export default function DemoControlsPage() {
   };
   // Dạng component (tự quản lý state open)
   const [declOpen, setDeclOpen] = useState(false);
+
+  // ===== CyberFileUpload =====
+  const up = useCyberForm({ DinhKem: [], AnhDaiDien: [], BaoCao: [] });
 
   // ===== CyberToast =====
   const ts = useCyberForm({
@@ -416,6 +419,25 @@ export default function DemoControlsPage() {
             <CyberMsgBox open={declOpen} type={mb.data.Type} title={mb.data.Title || undefined} message={mb.data.Message}
               detail={mb.data.Detail || undefined} lang={mb.data.Lang} danger={!!mb.data.Danger}
               onClose={(r) => { setDeclOpen(false); addLog(`<CyberMsgBox type="${mb.data.Type}"> onClose(${r})`); }} />
+          </section>
+
+          <section className="panel">
+            <h3 className="panel__title">CyberFileUpload – kéo thả file, tải lên api/File/upload</h3>
+            <CyberFileUpload {...up.bind('DinhKem')} label="Đính kèm chứng từ" layout="vertical" maxSize={20} maxFiles={5}
+              onUploaded={(file) => addLog(`Đã tải lên: ${file.name} (id ${file.id})`)}
+              onRemove={(file) => addLog(`Bỏ file: ${file.name}`)} />
+            <div className="grid grid--2" style={{ marginTop: 12 }}>
+              <CyberFileUpload {...up.bind('AnhDaiDien')} label="Ảnh đại diện (1 ảnh, xoá trên server khi bỏ)" layout="vertical"
+                accept="image/*" multiple={false} maxSize={5} deleteOnRemove />
+              <CyberFileUpload {...up.bind('BaoCao')} label="Chỉ PDF / Excel" layout="vertical" accept=".pdf,.xls,.xlsx" maxFiles={3} />
+            </div>
+            <p className="hint" style={{ marginTop: 10 }}>
+              Giá trị bind (lưu các <code>id</code> vào DB cùng chứng từ, mở lại thì gán mảng này vào form để hiện lại):
+            </p>
+            <pre className="json-view">{JSON.stringify(up.data, null, 2)}</pre>
+            <div className="page__actions">
+              <button className="cy-btn" onClick={() => { up.reset(); addLog('Xoá danh sách file (không xoá trên server)'); }}>Làm trống</button>
+            </div>
           </section>
 
           <section className="panel">

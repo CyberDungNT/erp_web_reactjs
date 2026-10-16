@@ -16,3 +16,4 @@ export { default as CyberPopup } from './CyberPopup';
 export { default as CyberMsgBox, msgbox, CyberMsgBoxHost } from './CyberMsgBox';
 export { default as CyberForm } from './CyberForm';
 export { toast, CyberToastHost } from './CyberToast';
+export { default as CyberFileUpload, formatSize } from './CyberFileUpload';

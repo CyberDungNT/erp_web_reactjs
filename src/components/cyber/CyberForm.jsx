@@ -31,6 +31,9 @@ import { msgbox } from './CyberMsgBox';
  *   title        tiêu đề (mặc định menu.text); subtitle: dòng phụ (mặc định mã menu)
  *   initialData  dữ liệu ban đầu của form -> f.form (useCyberForm)
  *   onLoad(f)    async – gọi API / xử lý logic khi vào trang. Lỗi (throw) -> hiện màn báo lỗi + nút Thử lại
+ *   draftVars    ['lines'] – lưu kèm các f.vars này vào bản nháp (mặc định chỉ lưu dữ liệu form)
+ *   draft=false  tắt bản nháp; draftKey: tên riêng khi 1 màn có 2 CyberForm trùng danh sách field
+ *                (bản nháp: dữ liệu đang nhập được giữ qua F5 / mất mạng / đăng nhập lại – xem hooks/useCyberForm.js)
  *   actions(f)   mảng nút trên thanh tiêu đề:
  *                { key, text, icon, onClick(f), primary, danger, disabled, hidden, shortcut: 'Ctrl+S' | 'F2' ... }
  *                onClick async được bọc f.run(): tự hiện đang xử lý, lỗi -> msgbox.failed
@@ -51,10 +54,16 @@ import { msgbox } from './CyberMsgBox';
  */
 export default function CyberForm({
   menu, title, subtitle, initialData = {}, onLoad, actions, footer, reloadable = true, headless = false, className = '', children,
+  draft = true, draftVars, draftKey,
 }) {
   const { user, lang } = useAuth();
-  const form = useCyberForm(initialData);
   const [vars, setVarsState] = useState({});
+  // Bản nháp: dữ liệu form + các vars khai báo ở draftVars (vd ['lines'] – dòng chi tiết chứng từ)
+  const draftExtra = draftVars?.length ? Object.fromEntries(draftVars.map((k) => [k, vars[k] ?? null])) : undefined;
+  const form = useCyberForm(initialData, {
+    draft, draftKey, deferRestore: true, extra: draftExtra,
+    onRestoreExtra: (o) => setVarsState((s) => ({ ...s, ...o })),
+  });
   const [phase, setPhase] = useState(onLoad ? 'loading' : 'ready'); // loading | ready | error
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(0);
@@ -108,11 +117,20 @@ export default function CyberForm({
 
   // Vào trang -> load 1 lần (StrictMode chạy effect 2 lần -> chặn gọi API trùng)
   const started = useRef(false);
+  const [loadedOnce, setLoadedOnce] = useState(false);
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    reload();
+    reload().finally(() => setLoadedOnce(true));
   }, [reload]);
+
+  // Lần tải đầu xong (đã render dữ liệu mới) -> coi là dữ liệu sạch, rồi khôi phục bản nháp đang nhập dở (nếu có)
+  useEffect(() => {
+    if (!loadedOnce) return;
+    form.markClean();
+    form.restoreDraft();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedOnce]);
 
   // ----- Nút lệnh + phím tắt -----
   const list = useMemo(() => {

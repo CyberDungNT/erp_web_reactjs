@@ -1,0 +1,175 @@
+/* ===== Chat nổi kiểu Zalo (ChatWidget) =====
+   Bong bóng kéo đi đâu cũng được (mặc định góc dưới phải). Thả sát mép trái/phải -> hít mép, nấp bớt nửa,
+   rê chuột vào thì trượt ra. Khung chat mở cạnh bong bóng; chọn 1 cuộc -> giãn 2 cột. */
+.cw {
+  --zl-blue: #0068ff;          /* xanh Zalo */
+  --zl-blue-2: #3d8bff;
+  --zl-blue-soft: #e5efff;     /* nền tin của mình / mục đang chọn */
+  --zl-ink: #081c36;
+  --zl-muted: #7589a3;
+  --zl-line: #e1e4ea;
+  --zl-chat-bg: #eef0f1;       /* nền vùng tin nhắn */
+}
+
+/* ---------- Bong bóng ---------- */
+.cw__bubble {
+  /* Lớp: chat nổi nằm DƯỚI hộp thoại (msgbox 6000), popup (2000), dropdown (3000+) – xem chú thích .cw__panel */
+  position: fixed; z-index: 1510; width: 56px; height: 56px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  color: #fff;
+  background:
+    radial-gradient(120% 120% at 30% 20%, rgba(255, 255, 255, .35), transparent 45%),
+    linear-gradient(145deg, var(--zl-blue-2), var(--zl-blue) 55%, #0050c8);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, .35) inset,
+    0 -2px 6px rgba(0, 40, 120, .25) inset,
+    0 10px 24px -6px rgba(0, 104, 255, .55),
+    0 3px 8px rgba(8, 28, 54, .18);
+  transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .2s, opacity .2s;
+  animation: cw-pop .5s cubic-bezier(.34, 1.5, .64, 1) backwards; /* backwards: chạy xong trả transform cho hover / nấp mép / kéo */
+}
+@keyframes cw-pop { from { transform: scale(.3); opacity: 0; } }
+.cw__bubble:hover { box-shadow: 0 1px 0 rgba(255, 255, 255, .35) inset, 0 -2px 6px rgba(0, 40, 120, .25) inset, 0 14px 30px -6px rgba(0, 104, 255, .6), 0 3px 8px rgba(8, 28, 54, .2); }
+.cw__bubble:focus-visible { outline: 3px solid #b3d1ff; outline-offset: 3px; }
+.cw.is-dragging .cw__bubble {
+  cursor: grabbing; transform: scale(1.1); transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 22px 40px -8px rgba(0, 104, 255, .55), 0 6px 14px rgba(8, 28, 54, .2);
+}
+/* Hít mép: nấp bớt nửa khi không rê chuột / không mở / không kéo */
+.cw.dock-right:not(:hover):not(.is-open):not(.is-dragging) .cw__bubble { transform: translateX(42%); opacity: .88; }
+.cw.dock-left:not(:hover):not(.is-open):not(.is-dragging) .cw__bubble { transform: translateX(-42%); opacity: .88; }
+
+.cw__face { display: grid; place-items: center; }
+.cw__face svg { grid-area: 1 / 1; transition: transform .3s cubic-bezier(.34, 1.4, .64, 1), opacity .2s; }
+.cw__ico-close { opacity: 0; transform: rotate(-90deg) scale(.5); }
+.cw.is-open .cw__ico-chat { opacity: 0; transform: rotate(90deg) scale(.5); }
+.cw.is-open .cw__ico-close { opacity: 1; transform: none; }
+.cw__bubble:hover .cw__ico-chat { transform: rotate(-8deg) scale(1.06); }
+
+.cw__badge {
+  position: absolute; top: -4px; right: -4px; min-width: 21px; height: 21px; padding: 0 5px; box-sizing: border-box;
+  display: grid; place-items: center; border-radius: 999px; border: 2px solid #fff;
+  background: linear-gradient(180deg, #ff5a5a, #e5262b); color: #fff; font-size: 10.5px; font-weight: 800;
+  box-shadow: 0 2px 6px rgba(229, 38, 43, .45); animation: cw-badge .4s cubic-bezier(.34, 1.6, .64, 1);
+}
+.cw.dock-left .cw__badge { right: auto; left: -4px; }
+@keyframes cw-badge { from { transform: scale(.2); } }
+/* có tin chưa đọc: sóng lan quanh bong bóng */
+.cw.has-unread:not(.is-open) .cw__bubble::before,
+.cw.has-unread:not(.is-open) .cw__bubble::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--zl-blue);
+  animation: cw-wave 2.2s cubic-bezier(.22, .61, .36, 1) infinite; pointer-events: none;
+}
+.cw.has-unread:not(.is-open) .cw__bubble::after { animation-delay: 1.1s; }
+@keyframes cw-wave { from { transform: scale(1); opacity: .55; } to { transform: scale(1.7); opacity: 0; } }
+
+/* ---------- Khung (vị trí / kích thước tính trong ChatWidget.placePanel) ---------- */
+.cw__panel {
+  /* z-index 1500: trên nội dung trang, DƯỚI popup (2000), dropdown/menu (3000-5000), msgbox (6000), toast (10000)
+     -> "Xoá lịch sử" mở msgbox thì hộp hỏi nằm TRÊN khung chat */
+  position: fixed; z-index: 1500; display: flex; flex-direction: column; overflow: hidden;
+  background: #fff; border: 1px solid var(--zl-line); border-radius: 14px;
+  box-shadow: 0 20px 50px -12px rgba(8, 28, 54, .35), 0 4px 14px rgba(8, 28, 54, .1);
+  transition: width .32s cubic-bezier(.22, 1, .36, 1);
+  animation: cw-open .26s cubic-bezier(.22, 1, .36, 1);
+}
+.cw.side-right .cw__panel { transform-origin: 100% 100%; }
+.cw.side-left .cw__panel { transform-origin: 0 100%; }
+.cw__panel[hidden] { display: none; }
+@keyframes cw-open { from { opacity: 0; transform: scale(.95); } }
+/* Ẩn: thu nhỏ + mờ dần về phía bong bóng (transform-origin theo side-left / side-right) */
+/* cùng thời lượng + kiểu chuyển động + độ thu như lúc mở (cw-open), chỉ chạy ngược lại */
+.cw__panel.is-closing { animation: cw-close .26s cubic-bezier(.22, 1, .36, 1) forwards; pointer-events: none; }
+@keyframes cw-close { to { opacity: 0; transform: scale(.95); } }
+@media (prefers-reduced-motion: reduce) { .cw__panel, .cw__panel.is-closing { animation-duration: 1ms; } }
+.cw.is-pinned .cw__panel { border-color: #b3d1ff; }
+
+.cw__head {
+  display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 8px 0 16px; flex-shrink: 0;
+  background: #fff; border-bottom: 1px solid var(--zl-line);
+}
+.cw__title { font-size: 15px; font-weight: 700; color: var(--zl-ink); }
+.cw__spacer { flex: 1; }
+.cw__icon {
+  display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none;
+  color: var(--zl-muted); cursor: pointer; transition: background-color .15s, color .15s;
+}
+.cw__icon:hover { background: #f1f3f6; color: var(--zl-ink); }
+.cw__icon.is-on { color: var(--zl-blue); background: var(--zl-blue-soft); }
+.cw__icon:focus-visible { outline: 2px solid var(--zl-blue); outline-offset: 1px; }
+.cw__body { flex: 1; min-height: 0; }
+
+/* =====================================================================================
+   ChatPage trong khung nổi (chat--compact) – giao diện kiểu Zalo
+   ===================================================================================== */
+.chat.chat--compact {
+  grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); min-height: 0; height: 100%;
+  --chat-mine: var(--zl-blue);
+}
+.chat--compact.has-active { grid-template-columns: 300px minmax(0, 1fr); }
+.chat--compact:not(.has-active) .chat__main { display: none; }
+
+/* --- Danh sách cuộc trò chuyện --- */
+.chat--compact .chat__side { border-right: 1px solid var(--zl-line); border-bottom: 0; background: #fff; min-width: 0; }
+.chat__search {
+  display: flex; align-items: center; gap: 8px; margin: 10px 12px 6px; padding: 0 10px; height: 34px;
+  border-radius: 8px; background: #eaedf0; color: var(--zl-muted);
+}
+.chat__search:focus-within { background: #fff; box-shadow: 0 0 0 1px var(--zl-blue); }
+.chat__search input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 13px; color: var(--zl-ink); }
+.chat__search button { border: 0; background: none; color: var(--zl-muted); cursor: pointer; font-size: 11px; padding: 2px; }
+.chat--compact .chat__rooms { flex-direction: column; overflow-y: auto; padding: 4px 0; gap: 0; }
+.chat--compact .chat__room {
+  width: 100%; min-width: 0; padding: 10px 14px; border-radius: 0; gap: 12px;
+  transition: background-color .12s;
+}
+.chat--compact .chat__room:hover { background: #f3f5f6; }
+.chat--compact .chat__room.is-active { background: var(--zl-blue-soft); box-shadow: none; }
+.chat--compact .chat__room-icon { width: 46px; height: 46px; border-radius: 50%; font-size: 18px; }
+.chat--compact .chat__room-top b { font-size: 14.5px; font-weight: 600; color: var(--zl-ink); }
+.chat--compact .chat__room-top time { color: var(--zl-muted); font-size: 11.5px; }
+.chat--compact .chat__room-last { color: var(--zl-muted); font-size: 13px; }
+.chat--compact .chat__room:has(.chat__badge) .chat__room-top b,
+.chat--compact .chat__room:has(.chat__badge) .chat__room-last { color: var(--zl-ink); font-weight: 600; }
+.chat--compact .chat__badge { background: #f33a3a; }
+
+/* --- Nội dung cuộc trò chuyện --- */
+.chat--compact .chat__main { background: var(--zl-chat-bg); }
+.chat--compact .chat__head { height: 64px; padding: 0 12px; gap: 10px; background: #fff; border-bottom: 1px solid var(--zl-line); }
+.chat--compact .chat__room-icon--lg { width: 42px; height: 42px; border-radius: 50%; font-size: 16px; }
+.chat--compact .chat__head-text h3 { font-size: 15.5px; font-weight: 600; color: var(--zl-ink); }
+.chat--compact .chat__head-text p { color: var(--zl-muted); }
+.chat--compact .chat__members { display: none; }
+.chat--compact .chat__clear { padding: 0 8px; font-size: 11.5px; }
+.chat--compact .chat__list { background: var(--zl-chat-bg); background-image: none; padding: 14px 16px 6px; }
+.chat--compact .chat__day span { background: rgba(8, 28, 54, .08); color: var(--zl-ink); }
+.chat--compact .chat__msg { max-width: 78%; }
+.chat--compact .chat__bubble {
+  border: 0; border-radius: 10px; background: #fff; color: var(--zl-ink);
+  box-shadow: 0 1px 1px rgba(8, 28, 54, .08); padding: 8px 12px;
+}
+.chat--compact .chat__msg:not(.is-mine) .chat__bubble { border-bottom-left-radius: 10px; }
+.chat--compact .chat__msg.is-mine .chat__bubble {
+  background: var(--zl-blue-soft); color: var(--zl-ink); border-bottom-right-radius: 10px;
+  border: 1px solid #c7dcfe;
+}
+.chat--compact .chat__msg.is-mine .chat__bubble.is-open { filter: brightness(.97); }
+.chat--compact .chat__name { color: var(--zl-muted); font-weight: 500; }
+.chat--compact .chat__info-seen { color: var(--zl-ink); }
+.chat--compact .chat__state.is-sent { color: var(--zl-blue); }
+.chat--compact .chat__typing { padding: 0 16px; background: var(--zl-chat-bg); }
+.chat--compact .chat__composer { padding: 10px 12px; gap: 8px; background: #fff; border-top: 1px solid var(--zl-line); }
+.chat--compact .chat__input {
+  border: 0; border-radius: 8px; background: #fff; min-height: 40px; padding: 10px 6px; box-shadow: none;
+}
+.chat--compact .chat__input:focus { background: #fff; box-shadow: none; }
+.chat--compact .chat__send { width: 40px; height: 40px; border-radius: 10px; background: none; color: var(--zl-blue); }
+.chat--compact .chat__send:hover:not(:disabled) { background: var(--zl-blue-soft); filter: none; transform: none; }
+.chat--compact .chat__send:disabled { color: #a8b5c4; opacity: 1; }
+.chat--compact .chat__new { background: var(--zl-blue); }
+
+/* Màn hẹp: không đủ 2 cột -> chỉ hiện cuộc trò chuyện (nút ‹ để về danh sách) */
+@media (max-width: 640px) {
+  .chat--compact.has-active { grid-template-columns: 1fr; }
+  .chat--compact.has-active .chat__side { display: none; }
+}

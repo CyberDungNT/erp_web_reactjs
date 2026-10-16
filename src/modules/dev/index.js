@@ -11,14 +11,14 @@ export const screens = {
   'DEV.HANGHOA': lazy(() => import('./HangHoaPage')),
   'DEV.PHIEUNHAP': lazy(() => import('./PhieuNhapPage')),
   'DEV.PROC': lazy(() => import('./ProcTesterPage')),
-  'DEV.CHAT': lazy(() => import('./ChatPage')),
 };
 
 /**
  * Thành phần chạy NỀN trong màn chính (không phải màn hình) – MainLayout tự gắn khi đăng nhập.
- * ChatNotifier: popup tin nhắn mới ở góc dưới phải khi không mở màn chat.
+ * ChatWidget  : bong bóng chat ở góc dưới phải, có ở mọi màn hình (rê chuột vào -> mở khung chat).
+ * ChatNotifier: popup tin nhắn mới khi khung chat đang đóng.
  */
-export const widgets = [lazy(() => import('./ChatNotifier'))];
+export const widgets = [lazy(() => import('./ChatWidget')), lazy(() => import('./ChatNotifier'))];
 
 /**
  * Menu thêm vào cuối menu trái (chỉ dùng cho màn KHÔNG có trong menu hệ thống trả về từ CP_SysLogin).
@@ -33,7 +33,6 @@ export const menu = [
       { id: 'DEV.HANGHOA', parentId: 'DEV', text: 'Danh mục hàng hoá (mẫu)', icon: '', separator: false, children: [] },
       { id: 'DEV.PHIEUNHAP', parentId: 'DEV', text: 'Phiếu nhập kho (mẫu CyberForm)', icon: '', separator: false, children: [] },
       { id: 'DEV.PROC', parentId: 'DEV', text: 'Gọi proc tuỳ ý', icon: '', separator: false, children: [] },
-      { id: 'DEV.CHAT', parentId: 'DEV', text: 'Chat realtime (mẫu socket)', icon: '', separator: false, children: [] },
     ],
   },
 ];

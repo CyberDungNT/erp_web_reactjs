@@ -447,3 +447,66 @@ textarea.cy-input { height: auto; padding: 6px 8px; resize: vertical; }
 }
 .cy-toast:hover .cy-toast__bar { animation-play-state: paused; }
 @keyframes cy-toast-bar { to { transform: scaleX(0); } }
+
+/* ===== CyberFileUpload: kéo thả file ===== */
+.cy-upload { display: flex; flex-direction: column; gap: 10px; width: 100%; min-width: 0; }
+.cy-upload__zone {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  min-height: 112px; padding: 18px 16px; box-sizing: border-box; text-align: center; cursor: pointer;
+  border: 1.5px dashed var(--line-2, #c9d4dd); border-radius: 12px; background: var(--surface-2, #f7f9fb);
+  color: var(--ink-2); outline: none; transition: border-color .15s, background-color .15s, box-shadow .15s, transform .15s;
+}
+.cy-upload__zone:hover { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 4%, #fff); }
+.cy-upload__zone:focus-visible { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-100, #d9eaf2); }
+.cy-upload__zone.is-over {
+  border-style: solid; border-color: var(--brand); background: color-mix(in srgb, var(--brand) 9%, #fff);
+  box-shadow: 0 0 0 4px var(--brand-100, #d9eaf2); transform: scale(1.01);
+}
+.cy-upload__zone.is-full { cursor: default; opacity: .7; }
+.cy-upload.is-disabled .cy-upload__zone { cursor: not-allowed; opacity: .55; }
+.cy-upload__icon {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; margin-bottom: 4px;
+  background: color-mix(in srgb, var(--brand) 12%, #fff); color: var(--brand); transition: transform .2s;
+}
+.cy-upload__zone.is-over .cy-upload__icon { transform: translateY(-3px) scale(1.08); animation: cy-upload-bob .9s ease-in-out infinite; }
+@keyframes cy-upload-bob { 50% { transform: translateY(-7px) scale(1.08); } }
+.cy-upload__title { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.cy-upload__title u { color: var(--brand); text-underline-offset: 2px; }
+.cy-upload__hint { font-size: 12px; color: var(--muted); }
+
+.cy-upload__list { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cy-upload__item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 10px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface, #fff); animation: cy-upload-in .25s ease;
+}
+@keyframes cy-upload-in { from { opacity: 0; transform: translateY(-4px); } }
+.cy-upload__item.is-error, .cy-upload__item.is-invalid { border-color: #f3b9b9; background: #fff7f7; }
+.cy-upload__thumb {
+  flex-shrink: 0; display: grid; place-items: center; width: 38px; height: 38px; overflow: hidden; border-radius: 8px;
+  background: #eef2f6; color: #5b6b7a; font-size: 10px; font-weight: 800; letter-spacing: .02em;
+}
+.cy-upload__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cy-upload__thumb--pdf { background: #fdecea; color: #c5322a; }
+.cy-upload__thumb--sheet { background: #e6f5ec; color: #17844a; }
+.cy-upload__thumb--doc { background: #e8f0fd; color: #2a5bc7; }
+.cy-upload__thumb--zip { background: #fff4dc; color: #a16a00; }
+.cy-upload__info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cy-upload__name {
+  font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+a.cy-upload__name:hover { color: var(--brand); text-decoration: underline; }
+.cy-upload__meta { font-size: 11.5px; color: var(--muted); }
+.cy-upload__ok { color: #17844a; }
+.cy-upload__err { color: #c03030; font-weight: 600; }
+.cy-upload__bar { display: block; height: 4px; margin-top: 3px; border-radius: 4px; background: #e6ecf1; overflow: hidden; }
+.cy-upload__bar i { display: block; height: 100%; border-radius: 4px; background: var(--brand); transition: width .2s ease; }
+.cy-upload__actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.cy-upload__btn {
+  display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: none;
+  color: var(--muted); font-size: 15px; cursor: pointer; text-decoration: none; transition: background-color .15s, color .15s;
+}
+.cy-upload__btn:hover { background: var(--surface-2, #f1f4f7); color: var(--ink); }
+.cy-upload__btn--x:hover { background: #fdeaea; color: #c03030; }
+.cy-upload__btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.cy-upload__busy { font-size: 12px; color: var(--muted); }

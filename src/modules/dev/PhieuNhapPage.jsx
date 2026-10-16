@@ -100,6 +100,7 @@ export default function PhieuNhapPage({ menu }) {
       menu={menu}
       title="Phiếu nhập kho"
       initialData={EMPTY}
+      draftVars={['lines']} // F5 / mất mạng: giữ cả các dòng hàng đang nhập
       onLoad={onLoad}
       actions={(f) => [
         { key: 'new', text: 'Thêm mới', icon: 'file', shortcut: 'F2', onClick: newDoc },

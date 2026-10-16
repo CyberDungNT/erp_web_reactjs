@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/auth/AuthContext';
-import { useMain } from '@/layouts/MainLayout';
 import { socket, useSocketEvent, useSocketReady } from '@/realtime';
-import { CHAT_MENU_ID, chatBridge, colorOf, initials, timeOf } from './chatBridge';
+import { chatBridge, colorOf, initials, isMineMsg, rememberSent, timeOf } from './chatBridge';
 import './chat-notifier.css';
 
 const SHOW_MS = 8000;  // tự ẩn sau chừng này (rê chuột / đang trả lời thì dừng)
@@ -17,7 +16,6 @@ const MAX_CARDS = 4;   // tối đa số thông báo (mỗi phòng 1 thẻ, tin 
  * - Trả lời nhanh ngay trên thẻ, hoặc "Mở chat" để vào đúng phòng.
  */
 export default function ChatNotifier() {
-  const { openMenu, nodeMap } = useMain();
   const { user } = useAuth();
   const me = user?.User_name || '';
   const [rooms, setRooms] = useState({}); // id -> phòng (tên, biểu tượng)
@@ -36,7 +34,7 @@ export default function ChatNotifier() {
   });
 
   useSocketEvent('ReceiveMessage', (msg) => {
-    if (!msg || msg.user === me || chatBridge.isVisible()) return;
+    if (!msg || isMineMsg(msg, me) || chatBridge.isVisible()) return;
     setCards((prev) => {
       const old = prev.find((c) => c.room === msg.room);
       const card = { room: msg.room, msgs: [...(old?.msgs || []), msg].slice(-3), count: (old?.count || 0) + 1, stamp: Date.now() };
@@ -51,8 +49,7 @@ export default function ChatNotifier() {
   const close = (room) => setCards((prev) => prev.filter((c) => c.room !== room));
   const open = (room) => {
     setCards([]);
-    chatBridge.requestRoom(room);
-    openMenu(nodeMap.get(CHAT_MENU_ID) || { id: CHAT_MENU_ID, text: 'Chat realtime', children: [] });
+    chatBridge.openWidget(room); // mở khung chat nổi ở góc dưới phải, vào thẳng phòng
   };
 
   if (!cards.length) return null;
@@ -130,7 +127,9 @@ function ChatCard({ card, paused, room, onOpen, onClose }) {
     if (!body || sending) return;
     setSending(true);
     try {
-      await socket.invoke('SendMessage', card.room, body, `q${Date.now().toString(36)}`);
+      const clientId = `q${Date.now().toString(36)}`;
+      rememberSent(clientId);
+      await socket.invoke('SendMessage', card.room, body, clientId);
       setSent(true);
       setText('');
       dismiss(1400);

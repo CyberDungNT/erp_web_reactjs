@@ -115,6 +115,8 @@ export function RequireAuth({ children }) {
   const { session, restoring } = useAuth();
   const location = useLocation();
   if (restoring) return <AuthSplash />;
-  if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // Phiên hết hạn / F5 không ghi nhớ đăng nhập -> đăng nhập lại quay về đúng chức năng đang mở (?w=..&f=..)
+  // Chủ động bấm Đăng xuất -> về trang chủ
+  if (!session) return <Navigate to="/login" replace state={{ from: auth.isLogoutFx() ? '/' : location.pathname + location.search }} />;
   return children;
 }
