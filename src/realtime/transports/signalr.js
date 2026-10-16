@@ -1,0 +1,43 @@
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { backoffDelay } from '../backoff';
+
+/**
+ * Kết nối hub SignalR thật (ASP.NET Core). Server: project API_App_Demo, thư mục Realtime/ (AppHub.cs)
+ * Token gửi qua query ?access_token=... (SignalR tự làm với accessTokenFactory) – server đọc trong AppHub.OnConnectedAsync.
+ */
+export function createSignalRTransport({ url, token, user, name, unit, onEvent, onStatus, onReconnected, events }) {
+  // u / n / dv chỉ được server dùng khi bật Realtime:DevBypassToken (dev). Bình thường server lấy user từ TokenKey.
+  const qs = new URLSearchParams({ u: user || '', n: name || '', dv: unit || '' }).toString();
+  const conn = new HubConnectionBuilder()
+    .withUrl(`${url}${url.includes('?') ? '&' : '?'}${qs}`, { accessTokenFactory: () => token })
+    // Kết nối lại có ngẫu nhiên (xem backoff.js). Sau 2 phút vẫn không được -> trả null để đóng hẳn,
+    // socket.js tiếp tục thử theo chu kỳ dài hơn (cũng có ngẫu nhiên).
+    .withAutomaticReconnect({
+      nextRetryDelayInMilliseconds: (ctx) => (ctx.elapsedMilliseconds > 120000 ? null : backoffDelay(ctx.previousRetryCount)),
+    })
+    .configureLogging(LogLevel.None) // lỗi đã được socket.js báo bằng toast, không in thêm ra console
+    .build();
+
+  const registered = new Set();
+  const listen = (event) => {
+    if (registered.has(event)) return;
+    registered.add(event);
+    conn.on(event, (...args) => onEvent(event, args));
+  };
+  events().forEach(listen);
+
+  conn.onreconnecting(() => onStatus('reconnecting'));
+  conn.onreconnected(() => { onStatus('connected'); onReconnected(); });
+  conn.onclose(() => onStatus('disconnected'));
+
+  return {
+    get connectionId() { return conn.connectionId; },
+    listen,
+    start: () => conn.start(),
+    stop: () => conn.stop(),
+    invoke: (method, ...args) => {
+      if (conn.state !== HubConnectionState.Connected) return Promise.reject(new Error('Mất kết nối realtime.'));
+      return conn.invoke(method, ...args);
+    },
+  };
+}

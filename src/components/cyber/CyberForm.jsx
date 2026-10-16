@@ -78,7 +78,8 @@ export default function CyberForm({
     try {
       return await track(Promise.resolve().then(() => fn(ctxRef.current)));
     } catch (err) {
-      await msgbox.failed(errorTitle || (E ? 'An error occurred' : 'Có lỗi xảy ra'), { detail: err?.message || String(err), lang });
+      // Lỗi API đã bật toast (err.reported) -> không hiện thêm hộp thông báo trùng
+      if (!err?.reported) await msgbox.failed(errorTitle || (E ? 'An error occurred' : 'Có lỗi xảy ra'), { detail: err?.message || String(err), lang });
       return undefined;
     }
   }, [track, E, lang]);

@@ -3,6 +3,7 @@ import { AuthProvider, RequireAuth } from '@/auth/AuthContext';
 import MainLayout from '@/layouts/MainLayout';
 import LoginPage from '@/pages/login/LoginPage';
 import { CyberMsgBoxHost, CyberToastHost } from '@/components/cyber';
+import { SocketBridge } from '@/realtime';
 
 /**
  * /login  -> màn đăng nhập
@@ -19,6 +20,8 @@ export default function App() {
       </Routes>
       <CyberMsgBoxHost />
       <CyberToastHost />
+      {/* Realtime: tự kết nối khi đăng nhập, ngắt khi đăng xuất */}
+      <SocketBridge />
     </AuthProvider>
   );
 }

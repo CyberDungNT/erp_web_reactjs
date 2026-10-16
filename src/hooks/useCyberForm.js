@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { reportError } from '@/utils/errorReporter';
 
 /**
  * Quản lý dữ liệu form + two-way binding cho các control Cyber*.
@@ -20,8 +21,15 @@ export function useCyberForm(initial = {}) {
   }, []);
 
   const bind = useCallback(
-    (field, extra = {}) => ({ data, setData, field, ...extra }),
-    [data]
+    (field, extra = {}) => {
+      // Dev: bind tới field không có trong dữ liệu form -> thường là gõ sai tên field
+      if (import.meta.env.DEV && (!field || (data && Object.keys(data).length && !(field in data) && !(field in initialData)))) {
+        reportError(field ? `form.bind('${field}'): field không có trong dữ liệu form (sai tên hoặc chưa khai báo giá trị ban đầu).` : 'form.bind() thiếu tên field.',
+          { source: 'binding', type: 'warning' });
+      }
+      return { data, setData, field, ...extra };
+    },
+    [data, initialData]
   );
 
   const reset = useCallback(() => setData(initialData), [initialData]);

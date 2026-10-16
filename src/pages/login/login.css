@@ -18,13 +18,13 @@
   --cy-primary-soft: var(--lg-accent-soft);
   --cy-primary-text: var(--lg-accent-dark);
 
-  position: relative; min-height: 100vh; display: flex; flex-wrap: wrap;
+  position: relative; min-height: 100vh; min-height: 100dvh; display: flex;
   font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--lg-ink); background: #F3F2EE;
 }
 
 /* ---------- Bên trái: panel thương hiệu ---------- */
 .lg__left {
-  position: relative; overflow: hidden; flex: 1 1 460px; min-height: 420px; box-sizing: border-box;
+  position: relative; overflow: hidden; flex: 1 1 400px; min-height: 420px; box-sizing: border-box;
   display: flex; flex-direction: column; justify-content: space-between; gap: 48px; padding: 48px 56px;
   color: #F3F4F8; background-color: var(--lg-panel);
   background-image: linear-gradient(rgba(255, 255, 255, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .05) 1px, transparent 1px);
@@ -58,7 +58,7 @@
 
 /* ---------- Bên phải: thẻ đăng nhập ---------- */
 .lg__right {
-  flex: 1.25 1 520px; min-width: 0; box-sizing: border-box; padding: 48px 32px;
+  flex: 1.25 1 480px; min-width: 0; box-sizing: border-box; padding: 48px 32px;
   display: flex; align-items: center; justify-content: center;
   background-image: radial-gradient(rgba(18, 22, 31, .07) 1px, transparent 1px); background-size: 22px 22px;
 }
@@ -218,16 +218,62 @@
 .lg__reveal-sub { margin-top: 6px; font-size: 14px; color: #DCE0EA; animation: lg-rise .5s ease .62s both; }
 
 /* ---------- Màn hẹp: panel thương hiệu thu gọn phía trên ---------- */
-@media (max-width: 760px) {
-  .lg__left { min-height: 0; padding: 28px 24px 32px; gap: 28px; }
-  .lg__headline { font-size: 32px; }
-  .lg__desc { font-size: 15px; }
+/* ---------- Máy tính bảng / điện thoại: header tối gọn phía trên + thẻ đăng nhập dạng "sheet" trắng trồi lên ---------- */
+@media (max-width: 880px) {
+  .lg { flex-direction: column; background: var(--lg-panel); }
+  .lg__left {
+    flex: 0 0 auto; min-height: 0; gap: 26px; justify-content: flex-start;
+    padding: calc(24px + env(safe-area-inset-top)) 28px 72px; background-size: 36px 36px;
+  }
+  .lg__rings { top: -330px; right: -330px; bottom: auto; opacity: .85; }
+  .lg__hero { gap: 12px; max-width: 520px; }
+  .lg__badge { padding: 5px 10px; font-size: 12px; }
+  .lg__headline { font-size: clamp(26px, 6.4vw, 36px); line-height: 1.12; }
+  .lg__desc {
+    font-size: 14.5px; line-height: 1.55;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
   .lg__copy { display: none; }
-  .lg__right { padding: 24px 16px 40px; }
-  .lg__card { padding: 28px 22px; border-radius: 20px; }
-  .lg__title { font-size: 26px; }
+
+  .lg__right {
+    position: relative; z-index: 1; flex: 1 0 auto; margin-top: -36px; padding: 0;
+    align-items: flex-start; background: #FFFFFF; border-radius: 28px 28px 0 0;
+    box-shadow: 0 -10px 30px rgba(6, 12, 24, .25);
+    animation: lg-sheet .6s cubic-bezier(.22, .61, .36, 1) both;
+  }
+  .lg__card {
+    max-width: 560px; margin: 0 auto; border: 0; border-radius: 28px 28px 0 0; box-shadow: none; background: transparent;
+    padding: 14px 24px calc(28px + env(safe-area-inset-bottom)); gap: 20px; animation: lg-rise .5s ease .2s both;
+  }
+  /* tay nắm của sheet */
+  .lg__card::before { content: ''; align-self: center; width: 40px; height: 4px; border-radius: 4px; background: #DADCE1; margin-bottom: 4px; }
+  .lg__card.is-shake { animation: lg-shake .45s ease; }
+  .lg__title { font-size: 24px; }
+  .lg__sub { font-size: 14px; }
+  .lg__foot { margin-top: 4px; }
 }
-@media (max-width: 420px) {
+@keyframes lg-sheet { from { transform: translateY(48px); opacity: 0; } }
+
+/* Điện thoại */
+@media (max-width: 520px) {
+  .lg__left { padding: calc(18px + env(safe-area-inset-top)) 20px 64px; gap: 20px; }
+  .lg__mark { width: 34px; height: 34px; border-radius: 10px; }
+  .lg__mark svg { width: 19px; height: 19px; }
+  .lg__brand-name { font-size: 16px; }
+  .lg__desc { display: none; }
+  .lg__card { padding: 12px 18px calc(24px + env(safe-area-inset-bottom)); gap: 18px; }
+  .lg__card-top { gap: 10px; }
+  .lg__title { font-size: 22px; }
+  .lg__sub { font-size: 13.5px; }
+  .lg__lang button { padding: 0 8px 0 5px; font-size: 12px; }
+  /* chữ 16px để iPhone không tự phóng to khi chạm vào ô nhập */
+  .lg__card .cy-input, .lg__card .cy-select { font-size: 16px; }
+  .lg__submit { height: 50px; }
+  .lg__social { gap: 10px; }
+  .lg__social-btn { height: 48px; }
+}
+@media (max-width: 340px) {
+  .lg__card-top { flex-direction: column-reverse; align-items: flex-start; }
   .lg__social { grid-template-columns: 1fr; }
 }
 

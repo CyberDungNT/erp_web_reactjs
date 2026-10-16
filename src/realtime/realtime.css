@@ -1,0 +1,20 @@
+/* ===== Nhãn trạng thái kết nối realtime ===== */
+.rt-status {
+  --rt: #9AA1B2;
+  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px 0 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--rt) 12%, transparent); color: var(--ink-2, #3A3F49);
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+}
+.rt-status i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--rt); flex-shrink: 0; }
+.rt-status--connected { --rt: #1baf7a; }
+.rt-status--connecting, .rt-status--reconnecting { --rt: #eda100; }
+.rt-status--disconnected { --rt: #d23b3b; }
+.rt-status--connected i::after,
+.rt-status--connecting i::after,
+.rt-status--reconnecting i::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--rt);
+  animation: rt-ping 1.6s cubic-bezier(0, 0, .2, 1) infinite;
+}
+.rt-status--connected i::after { animation-duration: 2.4s; }
+@keyframes rt-ping { 75%, 100% { transform: scale(2.4); opacity: 0; } }
+.rt-status--compact { width: 18px; height: 18px; padding: 0; justify-content: center; background: none; }

@@ -95,6 +95,7 @@ src/
   auth/                   đăng nhập, lưu token mã hoá, useAuth(), RequireAuth
   hooks/                  useCyberForm (binding), useProc, useBinding (nội bộ control)
   utils/                  hàm tiện ích (dựng cây menu...)
+  realtime/               SOCKET dùng chung: socket, useSocketEvent, SocketStatus (xem mục Realtime)
   components/
     cyber/                BỘ CONTROL dùng chung: CyberForm, CyberTextBox, CyberTable, msgbox, toast...
     charts/               biểu đồ SVG (LineChart, BarList, StackBar, Sparkline)
@@ -147,6 +148,38 @@ Quy ước:
 - Màn chưa có trong menu hệ thống (màn test, màn nội bộ): khai báo thêm `menu` trong `index.js` của phân hệ
   (xem `modules/dev/index.js`). Ẩn các menu này: `SHOW_DEV_MENU = false` trong `screens/registry.js`.
 - Thông báo: `toast.*` cho báo nhanh (lưu xong, chưa hỗ trợ...), `msgbox.*` khi cần người dùng xác nhận / đọc kỹ lỗi.
+
+## Realtime (socket)
+
+Một kết nối dùng chung cho cả app (`src/realtime`): tự mở sau khi đăng nhập (gửi `TokenKey`), tự đóng khi đăng xuất,
+mất mạng tự kết nối lại và vào lại các nhóm. Màn mẫu: **Công cụ phát triển → Chat realtime** (`modules/dev/ChatPage.jsx`).
+
+```jsx
+import { socket, useSocketEvent, useSocketGroup, useSocketReady, useSocketStatus, SocketStatus } from '@/realtime';
+
+// Nghe sự kiện server đẩy xuống (tự huỷ khi đóng màn)
+useSocketEvent('ChungTuDaDuyet', (ct) => { toast.success(`Đã duyệt ${ct.SoCT}`); f.reload(); });
+
+// Vào nhóm khi mở màn, rời khi đóng (server gửi theo nhóm: đơn vị, chứng từ, phòng chat...)
+useSocketGroup(`donvi:${user.Ma_TTCP}`);
+
+// Mỗi lần kết nối xong (cả sau khi mất mạng) -> tải lại dữ liệu có thể bị lỡ
+useSocketReady(() => f.reload());
+
+// Gọi hàm trên hub, có kết quả trả về. Lỗi -> toast + throw; thêm socket.silent ở cuối để không toast
+const msg = await socket.invoke('SendMessage', 'chung', 'Xin chào', clientId);
+
+<SocketStatus />   // nhãn trạng thái: Trực tuyến / Đang kết nối lại / Mất kết nối
+```
+
+- Sự kiện dùng chung toàn app: `Notify { title, message, type }` → bật toast (xử lý sẵn trong `SocketBridge`).
+- Chế độ trong `.env`: `VITE_SOCKET_MODE=mock` (giả lập trong trình duyệt, **mở 2 tab** để thấy chat qua lại),
+  `signalr` (hub thật tại `VITE_SOCKET_HUB`, mặc định `/hubs/app`, dev đi qua proxy `/hubs` có WebSocket), `off` (tắt).
+- Backend: đã gộp vào project API `API_App_Demo` (thư mục `Realtime/`, hub `/hubs/app`, script SQL `Sql/realtime.sql`,
+  hướng dẫn `Realtime/README.md`). Web: `VITE_SOCKET_MODE=signalr`, để trống `VITE_SOCKET_TARGET` (đi chung proxy với API).
+  Tên hàm & sự kiện trùng bản giả lập `src/realtime/transports/mockHub.js`.
+- Thêm chức năng realtime mới: thêm hàm vào `API_App_Demo/Realtime/AppHub.cs` (hoặc đẩy sự kiện bằng `IRealtimeNotifier`) (và `mockHub.js` nếu muốn test không cần backend),
+  trong màn hình dùng `useSocketEvent` / `socket.invoke`. Không cần sửa `socket.js`.
 
 ## Gọi API
 

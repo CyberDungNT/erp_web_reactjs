@@ -1,0 +1,171 @@
+/**
+ * "SERVER" GIẢ LẬP – các hàm web gọi bằng socket.invoke('Ten', ...). Tên & tham số trùng hub thật (API_App_Demo/Realtime/AppHub.cs)
+ * để đổi sang server thật không phải sửa màn hình.
+ * ctx: { connectionId, user, name, groups, publish(event, args, { group, except, to }) }
+ */
+
+const STORE_KEY = 'cyber_mock_chat_v2';
+const HISTORY_MAX = 500;
+const PAGE = 30; // số tin mỗi trang lịch sử (server thật: Realtime:ChatHistoryLimit)
+
+const ROOMS = [
+  { id: 'chung', name: 'Phòng chung', icon: '#', desc: 'Trao đổi chung toàn công ty' },
+  { id: 'ke-toan', name: 'Kế toán', icon: '₫', desc: 'Nhóm phòng kế toán' },
+  { id: 'tro-ly', name: 'Trợ lý ảo', icon: '✦', desc: 'Hỏi nhanh: doanh thu, tồn kho, mấy giờ...' },
+];
+
+// Người giả lập trong từng phòng (online = đang hoạt động)
+const PEOPLE = {
+  an: { user: 'an.nv', name: 'Nguyễn Văn An', online: true },
+  binh: { user: 'binh.tt', name: 'Trần Thị Bình', online: true },
+  hoa: { user: 'hoa.lt', name: 'Lê Thị Hoa', online: true },
+  dung: { user: 'dung.pm', name: 'Phạm Minh Dũng', online: false },
+  bot: { user: 'bot', name: 'Trợ lý ảo', online: true, bot: true },
+};
+const ROOM_PEOPLE = { chung: ['an', 'binh', 'dung'], 'ke-toan': ['hoa', 'dung'], 'tro-ly': ['bot'] };
+
+const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
+const SEED = {
+  chung: [
+    { user: 'an.nv', name: 'Nguyễn Văn An', text: 'Chào cả nhà, sáng nay họp giao ban lúc 9h nhé 👋', at: minutesAgo(180) },
+    { user: 'binh.tt', name: 'Trần Thị Bình', text: 'Ok anh, em chuẩn bị số liệu bán hàng tuần trước.', at: minutesAgo(176) },
+    { user: 'an.nv', name: 'Nguyễn Văn An', text: 'Nhớ gửi kèm báo cáo tồn kho chi nhánh HCM nữa nha.', at: minutesAgo(175) },
+  ],
+  'ke-toan': [
+    { user: 'hoa.lt', name: 'Lê Thị Hoa', text: 'Cuối tháng khoá sổ ngày 31, mọi người hoàn thiện chứng từ trước 17h giúp mình.', at: minutesAgo(60 * 26) },
+  ],
+  'tro-ly': [
+    { user: 'bot', name: 'Trợ lý ảo', text: 'Xin chào! Mình là trợ lý ảo (giả lập). Thử hỏi: "doanh thu", "tồn kho", "mấy giờ rồi".', at: minutesAgo(5) },
+  ],
+};
+
+const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+/** Kho: { seq: số thứ tự tin cuối, rooms: { room: [tin] } } – seq tăng dần dùng để tải trang cũ hơn (giống Id trong SQL) */
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (s && typeof s === 'object' && s.rooms) return s;
+  } catch { /* hỏng -> tạo lại */ }
+  const store = { seq: 0, rooms: {} };
+  for (const [room, list] of Object.entries(SEED)) {
+    store.rooms[room] = list.map((m) => ({ ...m, id: newId(), seq: ++store.seq, room }));
+  }
+  return store;
+}
+function save(store) {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* đầy bộ nhớ */ }
+}
+function append(msg) {
+  const store = load();
+  const saved = { ...msg, seq: ++store.seq };
+  store.rooms[msg.room] = [...(store.rooms[msg.room] || []), saved].slice(-HISTORY_MAX);
+  save(store);
+  return saved;
+}
+/** 1 trang lịch sử: beforeSeq = null -> mới nhất; có giá trị -> các tin cũ hơn */
+function page(room, beforeSeq) {
+  const all = load().rooms[room] || [];
+  const older = beforeSeq ? all.filter((x) => x.seq < beforeSeq) : all;
+  return { room, history: older.slice(-PAGE), hasMore: older.length > PAGE };
+}
+
+const roomGroup = (room) => `chat:${room}`;
+const members = (ctx, room) => [
+  { user: ctx.user, name: ctx.name, online: true, me: true },
+  ...(ROOM_PEOPLE[room] || []).map((k) => ({ ...PEOPLE[k] })),
+];
+
+/** Câu trả lời của trợ lý ảo */
+function botAnswer(text) {
+  const t = text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+  if (/chao|hello|hi\b/.test(t)) return 'Chào bạn 😊 Mình có thể giúp gì?';
+  if (/doanh thu/.test(t)) return 'Doanh thu tháng này (giả lập): 12,4 tỷ – tăng 8,2% so với tháng trước. Chi nhánh HCM dẫn đầu.';
+  if (/ton kho|ton/.test(t)) return 'Tồn kho hiện tại (giả lập): 1.284 mã hàng, 37 mã dưới mức tồn tối thiểu.';
+  if (/may gio|gio/.test(t)) return `Bây giờ là ${new Date().toLocaleTimeString('vi-VN')}.`;
+  if (/cam on|thanks/.test(t)) return 'Không có gì nhé!';
+  return `Mình đã nhận: "${text.slice(0, 80)}". (Đây là trợ lý giả lập – thử hỏi "doanh thu" hoặc "tồn kho".)`;
+}
+const COLLEAGUE_REPLIES = ['Ok nhé 👍', 'Mình nhận được rồi.', 'Để mình kiểm tra lại rồi báo bạn.', 'Chuẩn luôn!', 'Cảm ơn bạn nhiều 🙏', 'Chiều nay mình gửi nhé.'];
+
+/** Người khác trong phòng gõ rồi trả lời (chỉ để demo có hội thoại) */
+function simulateReply(ctx, room, text) {
+  let who;
+  let reply;
+  if (room === 'tro-ly') {
+    who = PEOPLE.bot;
+    reply = botAnswer(text);
+  } else {
+    const online = (ROOM_PEOPLE[room] || []).map((k) => PEOPLE[k]).filter((p) => p.online);
+    if (!online.length || Math.random() < 0.4) return;
+    who = online[Math.floor(Math.random() * online.length)];
+    reply = COLLEAGUE_REPLIES[Math.floor(Math.random() * COLLEAGUE_REPLIES.length)];
+  }
+  const group = roomGroup(room);
+  setTimeout(() => ctx.publish('UserTyping', [{ room, user: who.user, name: who.name }], { group }), 500);
+  setTimeout(() => {
+    const msg = append({ id: newId(), room, user: who.user, name: who.name, text: reply, at: new Date().toISOString() });
+    ctx.publish('ReceiveMessage', [msg], { group });
+  }, 1600 + Math.random() * 900);
+}
+
+export const mockHub = {
+  // ===== Dùng chung =====
+  JoinGroup(ctx, group) { ctx.groups.add(group); return true; },
+  LeaveGroup(ctx, group) { ctx.groups.delete(group); return true; },
+
+  /** Gửi thông báo cho mọi người (server thật thường tự đẩy 'Notify' từ nghiệp vụ, không cho client gọi) */
+  NotifyAll(ctx, title, message, type = 'info') {
+    ctx.publish('Notify', [{ title, message, type, from: ctx.name }]);
+    return true;
+  },
+
+  // ===== Chat =====
+  GetRooms() { return ROOMS; },
+
+  /** Chỉ nhận tin các phòng (đếm chưa đọc) – không tải lịch sử */
+  SubscribeRooms(ctx, rooms = []) {
+    rooms.forEach((r) => ctx.groups.add(roomGroup(r)));
+    return rooms;
+  },
+
+  /** Đang xem phòng: 1 trang lịch sử mới nhất + người online */
+  JoinRoom(ctx, room) {
+    ctx.groups.add(roomGroup(room));
+    const list = members(ctx, room);
+    return { ...page(room, null), online: list.filter((x) => x.online).length, members: list, large: false };
+  },
+
+  /** Tải trang cũ hơn (kéo lên đầu khung chat) */
+  GetHistory(ctx, room, beforeSeq) { return page(room, beforeSeq); },
+
+  LeaveRoom(ctx, room, unsubscribe = false) {
+    if (unsubscribe) ctx.groups.delete(roomGroup(room));
+    return true;
+  },
+
+  SendMessage(ctx, room, text, clientId) {
+    const body = String(text ?? '').trim();
+    if (!body) throw new Error('Tin nhắn trống.');
+    if (body.length > 2000) throw new Error('Tin nhắn quá dài (tối đa 2000 ký tự).');
+    const msg = append({ id: newId(), clientId, room, user: ctx.user, name: ctx.name, text: body, at: new Date().toISOString() });
+    ctx.publish('ReceiveMessage', [msg], { group: roomGroup(room) });
+    simulateReply(ctx, room, body);
+    return msg;
+  },
+
+  /** Báo "đang gõ" cho người khác trong phòng (không gửi lại cho chính mình) */
+  Typing(ctx, room) {
+    ctx.publish('UserTyping', [{ room, user: ctx.user, name: ctx.name }], { group: roomGroup(room), except: ctx.connectionId });
+    return true;
+  },
+
+  /** Xoá lịch sử giả lập (nút trong màn demo) */
+  ClearHistory(ctx, room) {
+    const store = load();
+    store.rooms[room] = [];
+    save(store);
+    ctx.publish('HistoryCleared', [{ room }], { group: roomGroup(room) });
+    return true;
+  },
+};

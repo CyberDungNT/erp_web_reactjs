@@ -451,6 +451,16 @@ export default function DemoControlsPage() {
               </button>
               <button className="cy-btn" onClick={() => { toast.dismiss(); addLog('toast.dismiss() – đóng tất cả'); }}>Đóng tất cả</button>
             </div>
+
+            <p className="hint" style={{ marginTop: 14 }}>Lỗi tự bật toast (cấu hình ở <code>utils/errorReporter.js</code>):</p>
+            <div className="page__actions">
+              <button className="cy-btn" onClick={() => callProc('Proc_Khong_Ton_Tai', []).catch(() => addLog('callProc lỗi -> toast'))}>Gọi API lỗi</button>
+              <button className="cy-btn" onClick={() => callProc('Proc_Khong_Ton_Tai', [], { silent: true }).catch((e) => addLog(`silent: ${e.message}`))}>Gọi API lỗi (silent)</button>
+              <button className="cy-btn" onClick={() => { ts.bind('SaiTenField'); addLog("form.bind('SaiTenField')"); }}>Bind sai tên field</button>
+              <button className="cy-btn" onClick={() => setTimeout(() => { throw new Error('Lỗi JS không được bắt (demo)'); })}>Lỗi JS</button>
+              <button className="cy-btn" onClick={() => Promise.reject(new Error('Promise bị reject không có catch (demo)'))}>Promise reject</button>
+              <button className="cy-btn" onClick={() => console.error('console.error từ code (demo)', { ma: 42 })}>console.error</button>
+            </div>
           </section>
         </div>
 

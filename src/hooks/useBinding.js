@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { reportError } from '@/utils/errorReporter';
 
 /**
  * Hook nội bộ của các control: hỗ trợ 2 kiểu binding.
@@ -14,6 +15,7 @@ export function useBinding(props, fieldName = 'field') {
   const field = props[fieldName];
   const isBound = !!field && (data !== undefined || setData !== undefined);
   const current = isBound ? data?.[field] : value;
+  if (import.meta.env.DEV && isBound) checkBinding(data, setData, field);
 
   const setValue = useCallback(
     (v, extra) => {
@@ -24,6 +26,15 @@ export function useBinding(props, fieldName = 'field') {
   );
 
   return [current, setValue];
+}
+
+/** Phát hiện bind sai thường gặp -> toast (chỉ khi dev, mỗi lỗi 1 lần nhờ chống lặp của reportError) */
+function checkBinding(data, setData, field) {
+  if (data !== undefined && data !== null && typeof data !== 'object') {
+    reportError(`Control bind field '${field}' nhưng data không phải object (${typeof data}).`, { source: 'binding' });
+  } else if (!setData) {
+    reportError(`Control bind field '${field}' nhưng thiếu setData – nhập liệu sẽ không cập nhật được form.`, { source: 'binding' });
+  }
 }
 
 /** Gán thêm 1 field phụ vào object bind (vd: lookup lưu cả TenKH). */

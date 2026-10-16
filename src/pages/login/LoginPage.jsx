@@ -315,7 +315,7 @@ export default function LoginPage() {
             <span className="lg__forgot">
               {BRAND.forgotPasswordUrl
                 ? <a href={BRAND.forgotPasswordUrl} target="_blank" rel="noreferrer">{t.forgot}</a>
-                : <button type="button" onClick={() => setMessage({ type: 'info', text: t.forgotMsg })}>{t.forgot}</button>}
+                : <button type="button" onClick={() => toast.info(t.forgotMsg, { title: t.forgot.replace('?', '') })}>{t.forgot}</button>}
             </span>
           </div>
 

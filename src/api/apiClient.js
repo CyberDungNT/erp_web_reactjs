@@ -12,9 +12,11 @@
  *   res.tables   -> tất cả các bảng trong DataSet
  *   res.message  -> Message từ server
  *
- * Nếu Status = false hoặc lỗi mạng -> throw ApiError (có .message).
+ * Nếu Status = false hoặc lỗi mạng -> throw ApiError (có .message) VÀ tự bật toast lỗi.
+ * Không muốn toast (tự hiển thị lỗi theo cách riêng): callProc(name, para, { silent: true }).
  */
 import { mockExecute } from '@/api/mock';
+import { reportError } from '@/utils/errorReporter';
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const USE_MOCK = String(import.meta.env.VITE_USE_MOCK).toLowerCase() === 'true';
@@ -84,10 +86,19 @@ export function normalizeTables(data) {
  * Gọi stored procedure.
  * @param {string} name     Tên proc
  * @param {Array|string} [params]  Mảng tham số hoặc chuỗi "a#b"
- * @param {{signal?: AbortSignal}} [options]
+ * @param {{signal?: AbortSignal, silent?: boolean}} [options]  silent: lỗi không bật toast
  * @returns {Promise<{tables: any[][], table: any[], message: string, raw: any}>}
  */
 export async function callProc(name, params, options = {}) {
+  try {
+    return await execute(name, params, options);
+  } catch (err) {
+    if (!options.silent) reportError(err, { source: 'api', title: `Lỗi gọi ${name}` });
+    throw err;
+  }
+}
+
+async function execute(name, params, options) {
   const body = { Name: name, Para: buildPara(params) };
 
   let json;
