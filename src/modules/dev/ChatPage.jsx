@@ -3,6 +3,8 @@ import { useAuth } from '@/auth/AuthContext';
 import { msgbox, toast } from '@/components/cyber';
 import { socket, useSocketEvent, useSocketReady, useSocketStatus, SocketStatus } from '@/realtime';
 import { chatBridge, colorOf, initials, isMineMsg, rememberSent, sameUser, timeOf } from './chatBridge';
+import ChatPicker from './ChatPicker';
+import { REACTIONS, encodeSticker, isJumboEmoji, parseSticker, previewText, toggleReaction } from './stickers';
 import './chat.css';
 
 /**
@@ -254,6 +256,15 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
   });
 
   // Có người vừa đọc tới tin seq (server không gửi ở phòng lớn)
+  // Cảm xúc của 1 tin vừa đổi (server gửi toàn bộ cảm xúc hiện tại của tin)
+  useSocketEvent('MessageReactions', ({ room, messageId, reactions }) => {
+    setMsgs((prev) => {
+      const list = prev[room];
+      if (!list?.some((x) => x.id === messageId)) return prev;
+      return { ...prev, [room]: list.map((x) => (x.id === messageId ? { ...x, reactions } : x)) };
+    });
+  });
+
   useSocketEvent('MessagesRead', (r) => {
     if (!r?.room) return;
     setReads((prev) => {
@@ -321,6 +332,47 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
     } catch {
       setMsgs((prev) => ({ ...prev, [room]: (prev[room] || []).map((m) => (m.clientId === clientId ? { ...m, pending: false, failed: true } : m)) }));
     }
+  };
+
+  // ----- Thả cảm xúc vào tin: hiện ngay trên máy mình, server báo lại bản chuẩn cho cả phòng -----
+  const reactTo = useCallback(async (m, emoji) => {
+    if (!m?.id || m.pending || m.failed || socket.status !== 'connected') return;
+    const myName = user?.Comment || me;
+    const flip = (prev) => ({
+      ...prev,
+      [m.room]: (prev[m.room] || []).map((x) => (x.id === m.id
+        ? { ...x, reactions: toggleReaction(x.reactions, emoji, me, myName, sameUser) } : x)),
+    });
+    setMsgs(flip);
+    try {
+      await socket.invoke('React', m.room, m.id, emoji);
+    } catch {
+      setMsgs(flip); // lỗi -> trả lại như cũ (đã báo toast)
+    }
+  }, [me, user]);
+
+  // ----- Biểu tượng cảm xúc / nhãn dán -----
+  const [picker, setPicker] = useState(null); // null | 'emoji' | 'sticker'
+  const closePicker = useCallback(() => setPicker(null), []);
+  useEffect(() => { setPicker(null); }, [active]);
+  /** Chèn emoji vào đúng vị trí con trỏ trong ô nhập */
+  const insertEmoji = (emo) => {
+    const el = inputRef.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emo + text.slice(end);
+    onType(next);
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus({ preventScroll: true });
+      const pos = start + emo.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+  const sendSticker = (packId, itemId) => {
+    setPicker(null);
+    if (!online || !active) return;
+    sendMsg(active, encodeSticker(packId, itemId));
   };
 
   const submit = (e) => {
@@ -401,7 +453,7 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
                       {last && <time>{timeOf(last.at)}</time>}
                     </span>
                     <span className="chat__room-last">
-                      {last ? `${isMineMsg(last, me) ? 'Bạn' : last.name.split(' ').at(-1)}: ${last.text}` : r.desc}
+                      {last ? `${isMineMsg(last, me) ? 'Bạn' : last.name.split(' ').at(-1)}: ${previewText(last.text)}` : r.desc}
                     </span>
                   </span>
                   {n > 0 && <span className="chat__badge" aria-label={`${n} tin chưa đọc`}>{n > 99 ? '99+' : n}</span>}
@@ -458,7 +510,7 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
 
         <MessageList key={active} list={list} me={me} loading={loading} hasMore={!!hasMore[active]} onLoadMore={loadMore}
           readers={readers} readLog={readLog[active]} onBottomChange={onBottomChange}
-          onRetry={(m) => sendMsg(m.room, m.text, m.clientId)} />
+          onRetry={(m) => sendMsg(m.room, m.text, m.clientId)} onReact={online ? reactTo : null} />
 
         <div className="chat__typing" aria-live="polite">
           {typingNames.length > 0 && (
@@ -466,9 +518,27 @@ export default function ChatPage({ compact = false, onUnreadChange, onActiveChan
           )}
         </div>
 
+        {picker && (
+          <ChatPicker tab={picker} onTab={setPicker} onEmoji={insertEmoji} onSticker={sendSticker} onClose={closePicker} />
+        )}
         <form className="chat__composer" onSubmit={submit}>
+          <div className="chat__tools-row">
+            <button type="button" className={`chat__tool ${picker === 'sticker' ? 'is-on' : ''}`} disabled={!online}
+              onClick={() => setPicker((p) => (p === 'sticker' ? null : 'sticker'))} title="Gửi nhãn dán" aria-label="Gửi nhãn dán" aria-pressed={picker === 'sticker'}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 12.5V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h5.5" /><path d="M20 12.5L12.5 20c0-4.1 3.4-7.5 7.5-7.5z" />
+                <path d="M9 10h.01M15 10h.01" strokeWidth="2.6" /><path d="M9 14.5c.8.6 1.8 1 3 1" />
+              </svg>
+            </button>
+            <button type="button" className={`chat__tool ${picker === 'emoji' ? 'is-on' : ''}`} disabled={!online}
+              onClick={() => setPicker((p) => (p === 'emoji' ? null : 'emoji'))} title="Biểu tượng cảm xúc" aria-label="Biểu tượng cảm xúc" aria-pressed={picker === 'emoji'}>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="8.5" /><path d="M8.5 14c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2" /><path d="M9 9.5h.01M15 9.5h.01" strokeWidth="2.6" />
+              </svg>
+            </button>
+          </div>
           <AutoTextarea inputRef={inputRef} value={text} onChange={onType} onEnter={submit} disabled={!online}
-            placeholder={online ? `Nhắn tới ${room?.name || ''}... (Enter gửi, Shift+Enter xuống dòng)` : 'Đang chờ kết nối...'} />
+            placeholder={online ? `Nhắn tới ${room?.name || ''}... ` : 'Đang chờ kết nối...'} />
           <button type="submit" className="chat__send" disabled={!online || !text.trim()} aria-label="Gửi">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12l16-8-6 16-2.5-6.5L4 12z" /><path d="M11.5 13.5L20 4" />
@@ -501,7 +571,7 @@ function ChatEmpty({ unread, online, status }) {
 }
 
 /** Danh sách tin: gộp theo người + ngày, tự cuộn xuống khi có tin mới (nếu đang ở cuối) */
-function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, readers = [], readLog = {}, onBottomChange }) {
+function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, onReact, readers = [], readLog = {}, onBottomChange }) {
   const ref = useRef(null);
   const atBottom = useRef(true);
   const lastKey = useRef(null);
@@ -622,7 +692,7 @@ function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, readers 
           <div key={r.key} className="chat__day"><span>{r.day}</span></div>
         ) : (
           <Fragment key={r.key}>
-            <Message m={r.m} mine={isMineMsg(r.m, me)} first={r.first} onRetry={onRetry}
+            <Message m={r.m} mine={isMineMsg(r.m, me)} first={r.first} onRetry={onRetry} me={me} onReact={onReact}
               open={openKey === r.key} onToggle={() => setOpenKey((k) => (k === r.key ? null : r.key))} />
             {openKey === r.key && <MessageInfo m={r.m} mine={isMineMsg(r.m, me)} readers={readers} readLog={readLog} />}
             {seenAt.has(r.key) ? (
@@ -642,9 +712,13 @@ function MessageList({ list, me, loading, hasMore, onLoadMore, onRetry, readers 
   );
 }
 
-function Message({ m, mine, first, open, onToggle, onRetry }) {
+function Message({ m, mine, first, open, onToggle, onRetry, me, onReact }) {
+  const sticker = parseSticker(m.text);
+  const jumbo = !sticker && isJumboEmoji(m.text);
+  const canReact = !!onReact && !!m.id && !m.pending && !m.failed;
+  const groups = (m.reactions || []).filter((g) => g.users?.length);
   return (
-    <div className={`chat__msg ${mine ? 'is-mine' : ''} ${first ? 'is-first' : ''}`}>
+    <div className={`chat__msg ${mine ? 'is-mine' : ''} ${first ? 'is-first' : ''} ${sticker ? 'is-sticker' : ''} ${jumbo ? 'is-jumbo' : ''}`}>
       {!mine && (first
         ? <span className="chat__avatar" style={{ '--c': colorOf(m.user) }} title={m.name}>{initials(m.name)}</span>
         : <span className="chat__avatar-gap" />)}
@@ -654,8 +728,17 @@ function Message({ m, mine, first, open, onToggle, onRetry }) {
           role="button" tabIndex={0} aria-expanded={open} title="Bấm để xem thời gian"
           onClick={() => { if (!window.getSelection()?.toString()) onToggle(); }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}>
-          <span className="chat__text">{m.text}</span>
+          {sticker ? (
+            <span className="chat__sticker" aria-label={sticker.item.t || 'Nhãn dán'}>
+              <span className="chat__sticker-e">{sticker.item.e}</span>
+              {sticker.item.t && <span className="chat__sticker-t">{sticker.item.t}</span>}
+            </span>
+          ) : (
+            <span className="chat__text">{m.text}</span>
+          )}
+          {canReact && <ReactButton onReact={(e) => onReact(m, e)} mine={groups.filter((g) => g.users.some((u) => sameUser(u.user, me))).map((g) => g.emoji)} />}
         </div>
+        {groups.length > 0 && <ReactionChips groups={groups} me={me} onReact={canReact ? (e) => onReact(m, e) : null} />}
         {m.failed && (
           <button type="button" className="chat__retry" onClick={() => onRetry(m)}>Gửi lỗi – bấm để gửi lại</button>
         )}
@@ -693,6 +776,70 @@ function MessageInfo({ m, mine, readers, readLog }) {
           Đã xem: {seenBy.map((r) => `${r.name} (${fullTime(r.seenAt)})`).join(', ')}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Nút thả cảm xúc (hiện khi rê chuột vào tin): bấm = 👍 (bấm lại = bỏ); rê vào nút -> thanh 8 cảm xúc để chọn.
+ * mine: các cảm xúc mình đã thả (tô sáng trong thanh chọn).
+ */
+function ReactButton({ onReact, mine }) {
+  const [bar, setBar] = useState(false);
+  const [below, setBelow] = useState(false); // phía trên không đủ chỗ -> thanh hiện bên dưới
+  const timer = useRef(null);
+  const ref = useRef(null);
+  const show = () => {
+    // đo chỗ trống phía trên trong khung tin (khung cuộn cắt mọi thứ tràn ra ngoài)
+    const el = ref.current;
+    const list = el?.closest('.chat__list');
+    if (el && list) setBelow(el.getBoundingClientRect().top - list.getBoundingClientRect().top < 56);
+    setBar(true);
+  };
+  const openBar = () => { clearTimeout(timer.current); timer.current = setTimeout(show, 250); };
+  const closeBar = () => { clearTimeout(timer.current); timer.current = setTimeout(() => setBar(false), 250); };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const pick = (e, ev) => { ev.stopPropagation(); setBar(false); onReact(e); };
+  const quick = mine[0] || REACTIONS[0].e;
+  return (
+    <span ref={ref} className={`chat__react ${bar ? 'is-bar' : ''} ${mine.length ? 'is-mine' : ''} ${below ? 'is-below' : ''}`} onMouseEnter={openBar} onMouseLeave={closeBar}
+      onClick={(ev) => ev.stopPropagation()} onKeyDown={(ev) => ev.stopPropagation()}>
+      <button type="button" className="chat__react-btn" aria-label={mine.length ? `Bỏ cảm xúc ${quick}` : 'Thả cảm xúc 👍'}
+        title={mine.length ? 'Bỏ cảm xúc' : 'Thích (rê chuột để chọn cảm xúc khác)'}
+        onClick={(ev) => pick(quick, ev)} onFocus={show}>
+        {mine.length ? mine[0] : (
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M7 11v9H4v-9h3z" /><path d="M7 11l4-7c1.4 0 2.2 1 2 2.4L12.6 10H18a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 20H7" />
+          </svg>
+        )}
+      </button>
+      {bar && (
+        <span className="chat__react-bar" role="toolbar" aria-label="Chọn cảm xúc">
+          {REACTIONS.map((r, i) => (
+            <button key={r.e} type="button" className={mine.includes(r.e) ? 'is-on' : ''} style={{ '--i': i }}
+              title={r.name} aria-label={r.name} aria-pressed={mine.includes(r.e)} onClick={(ev) => pick(r.e, ev)}>{r.e}</button>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** Cảm xúc đã thả dưới tin: mỗi loại 1 ô "👍 2" (mình đã thả -> tô sáng); bấm = thả / bỏ loại đó; rê chuột = ai đã thả */
+function ReactionChips({ groups, me, onReact }) {
+  return (
+    <div className="chat__reacts">
+      {groups.map((g) => {
+        const mineOn = g.users.some((u) => sameUser(u.user, me));
+        const names = g.users.map((u) => (sameUser(u.user, me) ? 'Bạn' : u.name)).join(', ');
+        return (
+          <button key={g.emoji} type="button" className={`chat__react-chip ${mineOn ? 'is-mine' : ''}`}
+            title={`${g.emoji} ${names}`} aria-label={`${g.emoji} ${g.users.length}: ${names}`} aria-pressed={mineOn}
+            disabled={!onReact} onClick={(ev) => { ev.stopPropagation(); onReact?.(g.emoji); }}>
+            <span>{g.emoji}</span>{g.users.length > 1 && <b>{g.users.length}</b>}
+          </button>
+        );
+      })}
     </div>
   );
 }

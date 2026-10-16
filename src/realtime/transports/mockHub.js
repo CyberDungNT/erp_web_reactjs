@@ -62,10 +62,30 @@ function append(msg) {
 function page(room, beforeSeq) {
   const all = load().rooms[room] || [];
   const older = beforeSeq ? all.filter((x) => x.seq < beforeSeq) : all;
-  return { room, history: older.slice(-PAGE), hasMore: older.length > PAGE };
+  return { room, history: withReactions(older.slice(-PAGE)), hasMore: older.length > PAGE };
 }
 
 const roomGroup = (room) => `chat:${room}`;
+
+// ----- Cảm xúc: messageId -> [{ emoji, users: [{ user, name }] }] (bộ nhớ tab) -----
+const reactions = {};
+const ALLOWED_REACTIONS = ['👍', '❤️', '😆', '😮', '😭', '😡', '🙏', '🎉'];
+function toggle(messageId, emoji, user, name) {
+  const list = (reactions[messageId] || []).map((g) => ({ ...g, users: [...g.users] }));
+  let g = list.find((x) => x.emoji === emoji);
+  if (!g) { g = { emoji, users: [] }; list.push(g); }
+  const i = g.users.findIndex((u) => u.user === user);
+  const added = i < 0;
+  if (added) g.users.push({ user, name }); else g.users.splice(i, 1);
+  reactions[messageId] = list.filter((x) => x.users.length);
+  return { list: reactions[messageId], added };
+}
+/** Sự kiện MessageReactions giống server thật: kèm người thả, người viết tin, trích nội dung */
+function reactionEvent(room, messageId, emoji, actor, result) {
+  const msg = (load().rooms[room] || []).find((m) => m.id === messageId);
+  return { room, messageId, reactions: result.list, actor, emoji, added: result.added, author: msg?.user, preview: msg?.text?.slice(0, 120) };
+}
+const withReactions = (list) => list.map((m) => (reactions[m.id] ? { ...m, reactions: reactions[m.id] } : m));
 
 // ----- Đã xem: phòng -> user -> { room, user, name, seq, at } (bộ nhớ tab) -----
 const reads = {};
@@ -85,6 +105,18 @@ function simulateRead(ctx, room, seq) {
       if (state) ctx.publish('MessagesRead', [state], { group: roomGroup(room) });
     }, 900 + Math.random() * 2200);
   });
+}
+
+/** Đồng nghiệp giả lập thỉnh thoảng thả cảm xúc vào tin vừa gửi (để demo) */
+function simulateReaction(ctx, room, messageId) {
+  const people = (ROOM_PEOPLE[room] || []).map((k) => PEOPLE[k]).filter((p) => p.online && !p.bot);
+  if (!people.length || Math.random() > 0.45) return;
+  const p = people[Math.floor(Math.random() * people.length)];
+  const emoji = ['👍', '❤️', '😆', '🎉'][Math.floor(Math.random() * 4)];
+  setTimeout(() => {
+    const evt = reactionEvent(room, messageId, emoji, { user: p.user, name: p.name }, toggle(messageId, emoji, p.user, p.name));
+    ctx.publish('MessageReactions', [evt], { group: roomGroup(room) });
+  }, 2500 + Math.random() * 2500);
 }
 const members = (ctx, room) => [
   { user: ctx.user, name: ctx.name, online: true, me: true },
@@ -169,8 +201,18 @@ export const mockHub = {
     const msg = append({ id: newId(), clientId, room, user: ctx.user, name: ctx.name, text: body, at: new Date().toISOString() });
     ctx.publish('ReceiveMessage', [msg], { group: roomGroup(room) });
     simulateRead(ctx, room, msg.seq);
+    simulateReaction(ctx, room, msg.id);
     simulateReply(ctx, room, body);
     return msg;
+  },
+
+  /** Thả / bỏ cảm xúc vào tin */
+  React(ctx, room, messageId, emoji) {
+    if (!ALLOWED_REACTIONS.includes(emoji)) throw new Error('Cảm xúc không hợp lệ.');
+    if (!(load().rooms[room] || []).some((m) => m.id === messageId)) throw new Error('Tin nhắn không còn trong phòng này.');
+    const evt = reactionEvent(room, messageId, emoji, { user: ctx.user, name: ctx.name }, toggle(messageId, emoji, ctx.user, ctx.name));
+    ctx.publish('MessageReactions', [evt], { group: roomGroup(room) });
+    return evt;
   },
 
   /** Đã xem tới tin seq – báo cho cả phòng khi vị trí đọc tiến lên */
