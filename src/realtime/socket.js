@@ -123,11 +123,20 @@ export const socket = {
     const t = await createTransport({
       token, user, name: mine.name, unit,
       onEvent: dispatch,
-      onStatus: (s) => {
+      onStatus: (s, err) => {
         if (transport !== holder.t) return; // sự kiện của kết nối cũ
-        setStatus(s);
-        // SignalR đã thử kết nối lại hết lượt mà vẫn đóng -> tiếp tục thử theo chu kỳ của mình
-        if (s === 'disconnected') { clearTimeout(retryTimer); retryCount = Math.max(retryCount, 1); retryTimer = setTimeout(start, backoffDelay(retryCount + 1)); }
+        setStatus(s, err);
+        if (s !== 'disconnected') return;
+        clearTimeout(retryTimer);
+        // Server TỪ CHỐI có lý do (HubException – vd phiên đăng nhập không hợp lệ / hết hạn): báo 1 lần, KHÔNG thử lại
+        // (thử lại cũng bị từ chối, chỉ làm phiền). Đăng nhập lại -> SocketBridge gọi connect() với token mới.
+        if (err?.hub) {
+          reportError(err, { title: 'Không kết nối được chat', type: 'warning', source: 'api' });
+          return;
+        }
+        // Mất kết nối thường (SignalR đã thử kết nối lại hết lượt) -> tiếp tục thử theo chu kỳ của mình
+        retryCount = Math.max(retryCount, 1);
+        retryTimer = setTimeout(start, backoffDelay(retryCount + 1));
       },
       onReconnected: rejoinGroups,
       events: () => [...listeners.keys()],

@@ -19,9 +19,11 @@ function toHubError(err) {
  * Token gửi qua query ?access_token=... (SignalR tự làm với accessTokenFactory) – server đọc trong AppHub.OnConnectedAsync.
  */
 export function createSignalRTransport({ url, token, user, name, unit, onEvent, onStatus, onReconnected, events }) {
-  // u / n / dv: CHỈ gửi khi chạy dev – server bật Realtime:DevBypassToken (không kiểm tra token) lấy user từ đây.
-  // Bản build production KHÔNG gửi: server lấy user từ TokenKey (proc CP_RT_ValidateToken).
-  const devInfo = import.meta.env.DEV ? new URLSearchParams({ u: user || '', n: name || '', dv: unit || '' }).toString() : '';
+  // u / n / dv: server bật Realtime:DevBypassToken (KHÔNG kiểm tra token) lấy user từ đây.
+  // Gửi khi chạy dev (npm run dev), hoặc bản build có VITE_SOCKET_SEND_USER=true (test trên IIS khi chưa có proc
+  // CP_RT_ValidateToken). Chạy thật: tắt cờ này -> không gửi, server lấy user từ TokenKey.
+  const sendUser = import.meta.env.DEV || String(import.meta.env.VITE_SOCKET_SEND_USER).toLowerCase() === 'true';
+  const devInfo = sendUser ? new URLSearchParams({ u: user || '', n: name || '', dv: unit || '' }).toString() : '';
   const conn = new HubConnectionBuilder()
     .withUrl(devInfo ? `${url}${url.includes('?') ? '&' : '?'}${devInfo}` : url, { accessTokenFactory: () => token })
     // Kết nối lại có ngẫu nhiên (xem backoff.js). Sau 2 phút vẫn không được -> trả null để đóng hẳn,
@@ -42,7 +44,8 @@ export function createSignalRTransport({ url, token, user, name, unit, onEvent, 
 
   conn.onreconnecting(() => onStatus('reconnecting'));
   conn.onreconnected(() => { onStatus('connected'); onReconnected(); });
-  conn.onclose(() => onStatus('disconnected'));
+  // Server đóng kèm lý do (vd HubException: phiên đăng nhập không hợp lệ) -> chuyển lý do lên socket.js để báo / ngừng thử lại
+  conn.onclose((err) => onStatus('disconnected', err ? toHubError(err) : undefined));
 
   return {
     get connectionId() { return conn.connectionId; },
