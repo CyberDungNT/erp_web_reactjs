@@ -5,6 +5,7 @@
 
 import { mockLogin, mockDashboard } from './mockLogin';
 import { mockGetUnits } from './mockUnits';
+import { mockDashboardHome } from './mockDashboard';
 
 const khachHang = [
   { MaKH: 'KH001', TenKH: 'Công ty TNHH Minh Phát', DiaChi: 'Q.1, TP.HCM', DienThoai: '0901234567' },
@@ -74,6 +75,20 @@ const procs = {
     return { Table: [{ Result: 'OK' }] };
   },
 };
+
+// ===== Phiếu nhập kho (màn mẫu CyberForm: PhieuNhapPage) =====
+let soPhieu = 12;
+procs.Demo_GetSoCT = () => ({ Table: [{ SoCT: `PN-2026-${String(soPhieu + 1).padStart(4, '0')}` }] });
+procs.Demo_SavePhieuNhap = ([soCT, , maKH, maKho, , chiTiet = '[]']) => {
+  if (!maKH || !maKho) return { Table: [{ Result: 'ERR', Message: 'Thiếu khách hàng hoặc kho' }] };
+  const lines = JSON.parse(chiTiet || '[]');
+  soPhieu += 1;
+  return { Table: [{ Result: 'OK', SoCT: soCT, SoDong: lines.length }] };
+};
+
+
+// Dashboard trang chủ (HomeDashboard): CP_DashboardHome @SoThang
+procs.CP_DashboardHome = mockDashboardHome;
 
 export async function mockExecute({ Name, Para }) {
   await new Promise((r) => setTimeout(r, 250)); // giả lập độ trễ mạng

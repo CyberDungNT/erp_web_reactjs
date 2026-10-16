@@ -60,6 +60,9 @@ export function getMenuRows(session) {
 
 // Đổi số này khi cấu trúc bản ghi token thay đổi -> bản ghi cũ tự bị bỏ, phải đăng nhập lại
 const TOKEN_VERSION = 2;
+/** Cờ (sessionStorage) báo màn login vừa được mở sau khi đăng xuất -> chạy hiệu ứng quay lại */
+export const LOGOUT_FX_KEY = 'cyber_bye';
+
 const TOKEN_KEY = 'cyber_auth';
 const LEGACY_SESSION_KEY = 'cyber_session';
 const DEVICE_KEY = 'cyber_device_id';

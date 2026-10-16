@@ -2,10 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { CyberTextBox, CyberSelect } from '../components/cyber';
 import Icon from '../components/icons/Icon';
-import LoginIllustration from './LoginIllustration';
 import { useCyberForm } from '../hooks/useCyberForm';
 import { AuthSplash, useAuth } from '../auth/AuthContext';
-import { getLastLogin, getUnits } from '../auth/authService';
+import { getLastLogin, getUnits, LOGOUT_FX_KEY } from '../auth/authService';
 import { apiConfig } from '../api/apiClient';
 import { BRAND, SOCIAL_LOGINS } from '../config/brand';
 import './login.css';
@@ -17,34 +16,41 @@ const T_ENTER = 2100;    // vào màn chính
 
 const TEXT = {
   V: {
-    welcome: 'Chào mừng bạn đã quay trở lại!', sub: 'Đăng nhập để tiếp tục phiên làm việc',
+    welcome: 'Chào mừng trở lại', sub: 'Đăng nhập để tiếp tục phiên làm việc', badge: 'Hệ thống quản trị doanh nghiệp', remember: 'Ghi nhớ đăng nhập',
     user: 'Tài khoản', userPh: 'Nhập tài khoản', pass: 'Mật khẩu', passPh: 'Nhập mật khẩu',
     unit: 'Đơn vị', unitPh: 'Nhập tài khoản để tải đơn vị', unitPick: 'Chọn đơn vị', unitLoading: 'Đang tải đơn vị...',
     forgot: 'Quên mật khẩu?', login: 'Đăng nhập', loading: 'Đang xác thực...', ok: 'Thành công',
-    or: 'Hoặc đăng nhập bằng', caps: 'Caps Lock đang bật', success: 'Đăng nhập thành công', hello: 'Chào mừng',
+    or: 'hoặc tiếp tục với', caps: 'Caps Lock đang bật', success: 'Đăng nhập thành công', hello: 'Chào mừng',
     needUser: 'Vui lòng nhập tài khoản', needPass: 'Vui lòng nhập mật khẩu', needUnit: 'Vui lòng chọn đơn vị',
     noUnit: 'Tài khoản không có đơn vị nào được phân quyền', group: 'Đơn vị cơ sở',
     forgotMsg: 'Vui lòng liên hệ quản trị hệ thống để cấp lại mật khẩu.', social: (n) => `Đăng nhập bằng ${n} chưa được kích hoạt.`,
   },
   E: {
-    welcome: 'Welcome back!', sub: 'Sign in to continue your session',
+    welcome: 'Welcome back', sub: 'Sign in to continue your session', badge: 'Enterprise management system', remember: 'Keep me signed in',
     user: 'Username', userPh: 'Enter username', pass: 'Password', passPh: 'Enter password',
     unit: 'Unit', unitPh: 'Enter username to load units', unitPick: 'Select unit', unitLoading: 'Loading units...',
     forgot: 'Forgot password?', login: 'Sign in', loading: 'Signing in...', ok: 'Success',
-    or: 'Or sign in with', caps: 'Caps Lock is on', success: 'Signed in successfully', hello: 'Welcome',
+    or: 'or continue with', caps: 'Caps Lock is on', success: 'Signed in successfully', hello: 'Welcome',
     needUser: 'Please enter your username', needPass: 'Please enter your password', needUnit: 'Please select a unit',
     noUnit: 'This account has no unit assigned', group: 'Company',
     forgotMsg: 'Please contact your administrator to reset your password.', social: (n) => `Sign in with ${n} is not enabled yet.`,
   },
 };
 
-// Các phân hệ hiển thị ở panel giới thiệu bên trái
-const MODULES = {
-  V: ['Tài chính – Kế toán', 'Mua hàng – Bán hàng', 'Kho vận', 'Nhân sự – Tiền lương'],
-  E: ['Finance & Accounting', 'Purchasing & Sales', 'Inventory', 'HR & Payroll'],
-};
-
 const norm = (s) => String(s || '').trim().toLowerCase();
+
+/**
+ * Chấm chạy quanh các vòng tròn góc dưới panel trái (cùng kiểu chấm cam):
+ * [bán kính vòng (170 | 240 | 310), góc ban đầu (độ), kích thước, màu, số giây chạy hết 1 vòng]
+ */
+const ORBIT_DOTS = [
+  [170, 200, 6, '#5B8CFF', 34],
+  [240, 245, 7, '#FFB547', 52],
+  [240, 160, 4, '#FFFFFF', 52],
+  [310, 215, 5, '#3DD6A3', 70],
+  [310, 270, 8, '#FF7A59', 70],
+  [170, 300, 4, '#FFFFFF', 34],
+];
 
 export default function LoginPage() {
   const { session, login, restoring, notice } = useAuth();
@@ -54,7 +60,6 @@ export default function LoginPage() {
 
   const form = useCyberForm({ UserName: last.userName || '', Password: '', MaTTCP: last.maTTCP || '' });
   const [lang, setLang] = useState(last.lang === 'E' ? 'E' : 'V');
-  const [langOpen, setLangOpen] = useState(false);
   const langPicked = useRef(!!last.lang);
   const t = TEXT[lang];
 
@@ -70,15 +75,24 @@ export default function LoginPage() {
   const [message, setMessage] = useState(null); // { type: 'error' | 'info', text }
   // Tự đăng nhập lại bằng token thất bại (hết hạn...) -> báo trên thẻ đăng nhập
   useEffect(() => { if (notice) setMessage({ type: 'info', text: notice }); }, [notice]);
+  // Vừa đăng xuất -> lớp màu đang phủ kín màn hình thu lại, mở ra màn login
+  const [bye, setBye] = useState(() => { try { return sessionStorage.getItem(LOGOUT_FX_KEY) === '1'; } catch { return false; } });
+  useEffect(() => {
+    try { sessionStorage.removeItem(LOGOUT_FX_KEY); } catch { /* bỏ qua */ }
+    if (!bye) return undefined;
+    const id = setTimeout(() => setBye(false), 1100);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [phase, setPhase] = useState('idle'); // idle | loading | success | reveal | leave
   const [shake, setShake] = useState(0);
   const [showPass, setShowPass] = useState(false);
+  const [remember, setRemember] = useState(() => last.remember !== false); // ghi nhớ đăng nhập (lưu TokenKey đã mã hoá)
   const [capsLock, setCapsLock] = useState(false);
   const [welcome, setWelcome] = useState('');
   const [origin, setOrigin] = useState({ x: '50%', y: '50%' });
   const btnRef = useRef(null);
   const timers = useRef([]);
-  const langRef = useRef(null);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
@@ -131,13 +145,6 @@ export default function LoginPage() {
     if (last.userName) loadUnits(last.userName);
   }, [last.userName, loadUnits]);
 
-  useEffect(() => {
-    if (!langOpen) return;
-    const close = (e) => { if (!langRef.current?.contains(e.target)) setLangOpen(false); };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [langOpen]);
-
   const shownErrors = Object.fromEntries(
     Object.entries(errors).filter(([k]) => !String(form.data[k] ?? '').trim())
   );
@@ -175,7 +182,7 @@ export default function LoginPage() {
         userName: d.UserName.trim(),
         password: d.Password,
         maTTCP: String(d.MaTTCP).trim(),   // mã đơn vị đã chọn -> @M_Ma_TTCP
-        remember: true,
+        remember,
         lang,
       });
       if (!res.ok) {
@@ -198,47 +205,68 @@ export default function LoginPage() {
   };
 
   const busy = phase !== 'idle';
+  // Tên đơn vị hiển thị trên trang: đơn vị đang chọn, nếu chưa có thì lấy tên mặc định trong brand.js
+  // const unitName =  units.find((x) => String(x.Ma_TTCP) === String(form.data.MaTTCP))?.Ten_TTCP || BRAND.unitName;
+  const unitName = "Tên đơn vị";
   const unitError = unitsError === 'noUnit' ? t.noUnit : unitsError;
-  const pickLang = (l) => { setLang(l); langPicked.current = true; setLangOpen(false); };
+  const pickLang = (l) => { setLang(l); langPicked.current = true; };
 
   return (
-    <div className={`lg lg--${phase}`}>
-      <div className="lg__shell">
-
-      {/* ---------- Bên trái ---------- */}
+    <div className={`lg lg--${phase} ${bye ? 'lg--bye' : ''}`}>
+      {/* ---------- Bên trái: panel thương hiệu ---------- */}
       <section className="lg__left">
-        <h1 className="lg__slogan">
-          <span>{BRAND.slogan[0]}</span>
-          <span className="lg__slogan-hl">{BRAND.slogan[1]}</span>
-        </h1>
-        <p className="lg__desc">{BRAND.sloganSub}</p>
-        <ul className="lg__modules">
-          {MODULES[lang].map((m) => <li key={m}>{m}</li>)}
-        </ul>
-        <div className="lg__illu"><LoginIllustration /></div>
-        <div className="lg__company">{BRAND.company}</div>
+        <svg className="lg__rings" aria-hidden="true" width="640" height="640" viewBox="0 0 640 640">
+          <circle cx="320" cy="320" r="310" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="1.5" />
+          <circle className="lg__ring-dash" cx="320" cy="320" r="240" fill="none" stroke="rgba(255,255,255,.10)" strokeWidth="1.5" strokeDasharray="4 8" />
+          <circle cx="320" cy="320" r="170" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="1.5" />
+          <circle className="lg__ring-core" cx="320" cy="320" r="100" fill="#2448D8" opacity=".6" />
+          {/* Các chấm nhỏ chạy quanh các vòng tròn (giống chấm cam) */}
+          {ORBIT_DOTS.map(([ring, deg, size, color, sec], i) => (
+            <g key={i} className="lg__orbit" style={{ '--t': `${sec}s` }}>
+              <circle cx={320 + ring * Math.cos((deg * Math.PI) / 180)} cy={320 + ring * Math.sin((deg * Math.PI) / 180)} r={size} fill={color} />
+            </g>
+          ))}
+          <circle className="lg__ring-dot" cx="545" cy="150" r="12" fill="#FFB547" />
+          <circle cx="120" cy="230" r="6" fill="#FFFFFF" opacity=".6" />
+        </svg>
+
+        <div className="lg__brand">
+          <span className="lg__mark" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#12161F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 18 L12 4 L20 18" /><path d="M8 13 H16" />
+            </svg>
+          </span>
+          <span className="lg__brand-name" title={unitName}>{unitName}</span>
+        </div>
+
+        <div className="lg__hero">
+          <span className="lg__badge">{t.badge}</span>
+          <h1 className="lg__headline">{BRAND.slogan[0]},<br />{BRAND.slogan[1]}.</h1>
+          <p className="lg__desc">{BRAND.sloganSub}</p>
+        </div>
+
+        <p className="lg__copy">© {new Date().getFullYear()} {unitName}</p>
       </section>
 
-      {/* ---------- Thẻ đăng nhập ---------- */}
+      {/* ---------- Bên phải: thẻ đăng nhập ---------- */}
       <main className="lg__right">
         <form key={shake} className={`lg__card ${shake ? 'is-shake' : ''}`} onSubmit={submit} noValidate>
           <div className="lg__card-top">
-            <span className="lg__product"><i />{BRAND.product}</span>
-            <div className="lg__lang" ref={langRef}>
-              <button type="button" className="lg__lang-btn" onClick={() => setLangOpen((v) => !v)} aria-expanded={langOpen}>
-                <Flag code={lang} /> {lang === 'E' ? 'EN' : 'VN'}
-              </button>
-              {langOpen && (
-                <div className="lg__lang-pop">
-                  <button type="button" className={lang === 'V' ? 'is-on' : ''} onClick={() => pickLang('V')}><Flag code="V" /> Tiếng Việt</button>
-                  <button type="button" className={lang === 'E' ? 'is-on' : ''} onClick={() => pickLang('E')}><Flag code="E" /> English</button>
-                </div>
-              )}
+            <div className="lg__heading">
+              <h2 className="lg__title">{t.welcome}</h2>
+              <p className="lg__sub">{t.sub}</p>
+            </div>
+            {/* Đổi ngôn ngữ: bấm là đổi ngay */}
+            <div className={`lg__lang lg__lang--${lang}`} role="radiogroup" aria-label="Ngôn ngữ / Language">
+              <span className="lg__lang-thumb" aria-hidden="true" />
+              {[['V', 'VN', 'Tiếng Việt'], ['E', 'EN', 'English']].map(([code, short, name]) => (
+                <button key={code} type="button" role="radio" aria-checked={lang === code} title={name}
+                  className={lang === code ? 'is-on' : ''} onClick={() => pickLang(code)}>
+                  <Flag code={code} /> {short}
+                </button>
+              ))}
             </div>
           </div>
-
-          <h2 className="lg__title">{t.welcome}</h2>
-          <p className="lg__sub">{t.sub}</p>
 
           {message && (
             <div className={`lg__msg lg__msg--${message.type}`} role="alert">
@@ -248,27 +276,27 @@ export default function LoginPage() {
 
           <fieldset className="lg__fields" disabled={busy}>
             <CyberTextBox
-              {...form.bind('UserName')}
+              {...form.bind('UserName')} className="lg__f lg__f--user"
               id="login-user" layout="vertical" label={t.user} name="username" autoComplete="username"
               autoFocus={!form.data.UserName} placeholder={t.userPh} error={shownErrors.UserName}
               onBlur={(e) => loadUnits(e.target.value)}
               onEnter={() => document.getElementById('login-pass')?.focus()}
             />
             <CyberTextBox
-              {...form.bind('Password')}
+              {...form.bind('Password')} className="lg__f lg__f--pass"
               id="login-pass" layout="vertical" label={t.pass} name="password" type={showPass ? 'text' : 'password'}
               autoComplete="current-password" autoFocus={!!form.data.UserName} placeholder={t.passPh}
               error={shownErrors.Password} onKeyUp={(e) => setCapsLock(!!e.getModifierState?.('CapsLock'))}
               addon={
                 <button type="button" className="lg__eye" tabIndex={-1}
                   title={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} onClick={() => setShowPass((v) => !v)}>
-                  <Icon name={showPass ? 'eyeOff' : 'eye'} size={17} />
+                  <Icon name={showPass ? 'eyeOff' : 'eye'} size={19} />
                 </button>
               }
             />
             {capsLock && <div className="lg__caps"><Icon name="warning" size={13} /> {t.caps}</div>}
             <CyberSelect
-              {...form.bind('MaTTCP')}
+              {...form.bind('MaTTCP')} className="lg__f lg__f--unit"
               layout="vertical" label={t.unit}
               dataSource={units} valueField="Ma_TTCP" displayField="Ten_TTCP"
               groupField="Ma_Dvcs" groupLabel={(g) => `${t.group} ${g}`} showValue
@@ -279,15 +307,26 @@ export default function LoginPage() {
             />
           </fieldset>
 
-          <div className="lg__forgot">
-            {BRAND.forgotPasswordUrl
-              ? <a href={BRAND.forgotPasswordUrl} target="_blank" rel="noreferrer">{t.forgot}</a>
-              : <button type="button" onClick={() => setMessage({ type: 'info', text: t.forgotMsg })}>{t.forgot}</button>}
+          <div className="lg__row">
+            <label className="lg__remember">
+              <input type="checkbox" checked={remember} disabled={busy} onChange={(e) => setRemember(e.target.checked)} />
+              {t.remember}
+            </label>
+            <span className="lg__forgot">
+              {BRAND.forgotPasswordUrl
+                ? <a href={BRAND.forgotPasswordUrl} target="_blank" rel="noreferrer">{t.forgot}</a>
+                : <button type="button" onClick={() => setMessage({ type: 'info', text: t.forgotMsg })}>{t.forgot}</button>}
+            </span>
           </div>
 
           <button ref={btnRef} type="submit" className={`lg__submit is-${phase === 'leave' ? 'reveal' : phase}`} disabled={busy}
             aria-label={phase === 'idle' ? t.login : phase === 'loading' ? t.loading : t.ok} aria-live="polite">
-            <span className="lg__submit-face lg__submit-face--idle" aria-hidden="true">{t.login}</span>
+            <span className="lg__submit-face lg__submit-face--idle" aria-hidden="true">
+              {t.login}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="lg__arrow">
+                <path d="M5 12 H19" /><path d="M13 6 L19 12 L13 18" />
+              </svg>
+            </span>
             <span className="lg__submit-face lg__submit-face--loading" aria-hidden="true"><span className="lg__spinner" /> {t.loading}</span>
             <span className="lg__submit-face lg__submit-face--success" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="20" height="20" className="lg__tick" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
@@ -310,10 +349,11 @@ export default function LoginPage() {
           )}
 
           {apiConfig.USE_MOCK && <p className="lg__hint">Dữ liệu giả: mật khẩu <b>123</b></p>}
-          <footer className="lg__foot">{BRAND.copyright}©{new Date().getFullYear()} - Version: {BRAND.version}</footer>
+          <footer className="lg__foot">© {new Date().getFullYear()} {unitName} · Version {BRAND.version}</footer>
         </form>
       </main>
-      </div>
+
+      {bye && <div className="lg__bye" aria-hidden="true" />}
 
       {(phase === 'reveal' || phase === 'leave') && (
         <div className={`lg__reveal ${phase === 'leave' ? 'is-leave' : ''}`} style={{ '--ox': origin.x, '--oy': origin.y }} role="status">

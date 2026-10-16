@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   CyberTextBox, CyberNumeric, CyberLookup, CyberDate, CyberCheckBox,
-  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup,
+  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox,
 } from '../components/cyber';
 import { useCyberForm } from '../hooks/useCyberForm';
 import { useProc } from '../hooks/useProc';
@@ -60,6 +60,18 @@ const bigData = Array.from({ length: 300 }, (_, i) => {
   row.TongTien = sum;
   return row;
 });
+
+const msgLangItems = [
+  { value: 'V', text: 'Tiếng Việt' },
+  { value: 'E', text: 'English' },
+];
+const msgTypeItems = [
+  { value: 'success', text: 'success' },
+  { value: 'warning', text: 'warning' },
+  { value: 'failed', text: 'failed' },
+  { value: 'yesno', text: 'yesno' },
+  { value: 'info', text: 'info' },
+];
 
 const thanhToanTable = [
   { Ma: 'TM', Ten: 'Tiền mặt' },
@@ -137,11 +149,64 @@ export default function DemoControlsPage() {
     }
   };
   const remove = async (row) => {
-    if (!window.confirm(`Xoá ${row.MaHang} - ${row.TenHang}?`)) return;
-    await callProc('Demo_DeleteHangHoa', [row.MaHang]);
-    addLog(`Đã xoá ${row.MaHang}`);
-    reload();
+    const ok = await msgbox.yesNo(`Xoá ${row.MaHang} - ${row.TenHang}?`, {
+      title: 'Xoá hàng hoá', detail: 'Dữ liệu đã xoá không thể khôi phục.', yesText: 'Xoá', noText: 'Huỷ', danger: true,
+    });
+    if (!ok) return;
+    try {
+      await callProc('Demo_DeleteHangHoa', [row.MaHang]);
+      addLog(`Đã xoá ${row.MaHang}`);
+      msgbox.success(`Đã xoá ${row.MaHang}`);
+      reload();
+    } catch (err) {
+      msgbox.failed('Không xoá được hàng hoá', { detail: err.message });
+    }
   };
+
+  // ===== CyberMsgBox =====
+  const mb = useCyberForm({
+    Type: 'yesno',
+    Title: '',
+    Message: 'Bạn có chắc muốn lưu chứng từ này?',
+    Detail: 'Sau khi lưu, chứng từ sẽ được chuyển sang trạng thái chờ duyệt.',
+    Lang: 'V',
+    Danger: false,
+  });
+  const mbOpts = () => ({
+    title: mb.data.Title || undefined,
+    detail: mb.data.Detail || undefined,
+    lang: mb.data.Lang,
+    danger: !!mb.data.Danger,
+  });
+  /** Gọi msgbox.<type> và ghi kết quả Promise trả về vào nhật ký */
+  const showMsg = async (type) => {
+    const fn = { success: msgbox.success, warning: msgbox.warning, failed: msgbox.failed, yesno: msgbox.yesNo, info: msgbox.info }[type];
+    addLog(`msgbox.${type === 'yesno' ? 'yesNo' : type}(...) mở`);
+    const r = await fn(mb.data.Message, mbOpts());
+    addLog(`msgbox.${type === 'yesno' ? 'yesNo' : type} -> ${r}`);
+  };
+  /** Kịch bản thực tế: hỏi -> giả lập lưu -> báo kết quả (await nối tiếp) */
+  const runFlow = async (willFail) => {
+    const ok = await msgbox.yesNo('Lưu phiếu nhập PN-2026-0001?', { title: 'Lưu chứng từ' });
+    addLog(`Kịch bản: hỏi lưu -> ${ok}`);
+    if (!ok) return msgbox.warning('Đã huỷ thao tác lưu.');
+    await new Promise((r) => setTimeout(r, 600));
+    if (willFail) {
+      await msgbox.failed('Lưu chứng từ thất bại', { detail: 'Lỗi SQL 547: xung đột ràng buộc khoá ngoại (MaKho = K09).' });
+      addLog('Kịch bản: lưu lỗi');
+    } else {
+      await msgbox.success('Đã lưu phiếu nhập PN-2026-0001', { detail: 'Tổng tiền: 12.345.678 đ' });
+      addLog('Kịch bản: lưu thành công');
+    }
+  };
+  /** Mở liên tiếp nhiều hộp: hộp sau chồng lên hộp trước, Esc / Enter chỉ tác động hộp trên cùng */
+  const stackMsgs = () => {
+    msgbox.info('Hộp 1 (dưới cùng)').then((r) => addLog(`Hộp 1 -> ${r}`));
+    msgbox.warning('Hộp 2').then((r) => addLog(`Hộp 2 -> ${r}`));
+    msgbox.yesNo('Hộp 3 (trên cùng) – trả lời trước').then((r) => addLog(`Hộp 3 -> ${r}`));
+  };
+  // Dạng component (tự quản lý state open)
+  const [declOpen, setDeclOpen] = useState(false);
 
   // ===== Cố định cột / dòng =====
   const freeze = useCyberForm({ Left: 3, Right: 1, Rows: 1, PinUuTien: false });
@@ -235,7 +300,7 @@ export default function DemoControlsPage() {
               rowClassName={(row) => (row.SoLuong === 0 ? 'row-out-of-stock' : '')}
               contextMenu={(row) => [
                 { text: 'Sửa', icon: '✎', shortcut: 'Enter', onClick: () => openEdit(row) },
-                { text: 'Xem chi tiết', icon: '👁', onClick: () => alert(JSON.stringify(row, null, 2)) },
+                { text: 'Xem chi tiết', icon: '👁', onClick: () => msgbox.info(`${row.MaHang} - ${row.TenHang}`, { title: 'Chi tiết hàng hoá', detail: JSON.stringify(row, null, 2) }) },
                 { text: 'Sao chép mã', icon: '⧉', onClick: () => { navigator.clipboard?.writeText(row.MaHang); addLog(`Đã copy ${row.MaHang}`); } },
                 { text: 'Ngừng kinh doanh', icon: '⏸', disabled: !row.ConKD, onClick: () => addLog(`Ngừng KD ${row.MaHang}`) },
                 '-',
@@ -276,6 +341,49 @@ export default function DemoControlsPage() {
           <section className="panel">
             <h3 className="panel__title">CyberPopup – vẽ giao diện tuỳ ý</h3>
             <button className="cy-btn cy-btn--primary" onClick={() => setFreeOpen(true)}>Mở popup lọc báo cáo</button>
+          </section>
+
+          <section className="panel">
+            <h3 className="panel__title">CyberMsgBox – hộp thông báo (success, warning, failed, yesno, info)</h3>
+            <div className="grid grid--2">
+              <div>
+                <CyberTextBox {...mb.bind('Message')} label="Nội dung" multiline rows={2} />
+                <CyberTextBox {...mb.bind('Detail')} label="Chi tiết (detail)" multiline rows={2} placeholder="Để trống nếu không cần" />
+                <CyberTextBox {...mb.bind('Title')} label="Tiêu đề" placeholder="Để trống = tiêu đề mặc định theo dạng" />
+              </div>
+              <div>
+                <CyberRadioButton {...mb.bind('Lang')} label="Ngôn ngữ" items={msgLangItems} />
+                <CyberCheckBox {...mb.bind('Danger')} label="Nút Có" text="Màu đỏ (danger) – dạng yesno" />
+                <CyberRadioButton {...mb.bind('Type')} label="Dạng (component)" items={msgTypeItems} />
+              </div>
+            </div>
+
+            <p className="hint">Gọi nhanh <code>msgbox.*</code> (trả về Promise – kết quả ghi vào Nhật ký sự kiện):</p>
+            <div className="page__actions">
+              <button className="cy-btn" onClick={() => showMsg('success')}>✔ success</button>
+              <button className="cy-btn" onClick={() => showMsg('warning')}>⚠ warning</button>
+              <button className="cy-btn" onClick={() => showMsg('failed')}>✖ failed</button>
+              <button className="cy-btn cy-btn--primary" onClick={() => showMsg('yesno')}>? yesNo</button>
+              <button className="cy-btn" onClick={() => showMsg('info')}>ℹ info</button>
+            </div>
+
+            <p className="hint" style={{ marginTop: 14 }}>Kịch bản thực tế &amp; trường hợp đặc biệt:</p>
+            <div className="page__actions">
+              <button className="cy-btn" onClick={() => runFlow(false)}>Hỏi → lưu thành công</button>
+              <button className="cy-btn" onClick={() => runFlow(true)}>Hỏi → lưu thất bại</button>
+              <button className="cy-btn" onClick={stackMsgs}>Mở 3 hộp chồng nhau</button>
+              <button className="cy-btn" onClick={() => msgbox.warning('Chuỗi rất dài: ' + 'Lorem ipsum dolor sit amet, '.repeat(12), { detail: 'Dòng 1\nDòng 2\nDòng 3 – xuống dòng bằng \\n' })}>
+                Nội dung dài / nhiều dòng
+              </button>
+              <button className="cy-btn" onClick={() => setDeclOpen(true)}>Dạng component &lt;CyberMsgBox /&gt;</button>
+            </div>
+            <p className="hint" style={{ marginTop: 10 }}>
+              Phím: <b>Enter</b> = nút chính, <b>Esc</b> = Không / đóng, <b>Tab</b> chỉ chạy trong hộp.
+            </p>
+
+            <CyberMsgBox open={declOpen} type={mb.data.Type} title={mb.data.Title || undefined} message={mb.data.Message}
+              detail={mb.data.Detail || undefined} lang={mb.data.Lang} danger={!!mb.data.Danger}
+              onClose={(r) => { setDeclOpen(false); addLog(`<CyberMsgBox type="${mb.data.Type}"> onClose(${r})`); }} />
           </section>
         </div>
 

@@ -60,3 +60,8 @@ code { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; font-s
   animation: auth-spin .7s linear infinite;
 }
 @keyframes auth-spin { to { transform: rotate(360deg); } }
+
+/* Hàng nhập dòng chi tiết trên màn chứng từ (PhieuNhapPage) */
+.pn-addline { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-bottom: 12px; }
+.pn-addline > .cy-btn { height: var(--cy-h, 30px); margin-bottom: 10px; white-space: nowrap; }
+@media (max-width: 900px) { .pn-addline { grid-template-columns: 1fr 1fr; } }

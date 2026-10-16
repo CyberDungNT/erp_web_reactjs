@@ -10,21 +10,17 @@ import { lazy } from 'react';
 export const screens = {
   'DEV.DEMO': lazy(() => import('../pages/DemoControlsPage')),
   'DEV.HANGHOA': lazy(() => import('../pages/HangHoaPage')),
+  'DEV.PHIEUNHAP': lazy(() => import('../pages/PhieuNhapPage')),
   'DEV.PROC': lazy(() => import('../pages/ProcTesterPage')),
 };
 
 export const Placeholder = lazy(() => import('../pages/PlaceholderPage'));
 
 /**
- * TRANG DASHBOARD (hàng tab trên cùng vùng làm việc) lấy từ bảng có cột PageName / CP_name / Para / Title
- * trong kết quả CP_SysLogin. PageName -> component. PageName chưa khai báo dùng DashboardView
- * (gọi CP_name với Para và hiển thị các bảng trả về).
- * Component nhận props: { board } = dòng dashboard ({ PageName, CP_name, Para, isRefresh, Title }).
+ * TRANG CHỦ: 1 dashboard biểu đồ duy nhất (không còn hàng tab dashboard).
+ * Muốn dùng trang chủ khác thì đổi component ở đây.
  */
-export const dashboardPages = {
-  FrmReference: lazy(() => import('../pages/HomeLauncher')),
-};
-export const DashboardDefault = lazy(() => import('../pages/DashboardView'));
+export const HomePage = lazy(() => import('../pages/HomeDashboard'));
 
 /** Mã đặc biệt trong menu hệ thống */
 export const EXIT_MENU_IDS = ['01.19.00'];            // Kết thúc -> đăng xuất (hoặc Icon = EXIT)
@@ -39,6 +35,7 @@ export const devMenu = [
     children: [
       { id: 'DEV.DEMO', parentId: 'DEV', text: 'Test bộ control', icon: '', separator: false, children: [] },
       { id: 'DEV.HANGHOA', parentId: 'DEV', text: 'Danh mục hàng hoá (mẫu)', icon: '', separator: false, children: [] },
+      { id: 'DEV.PHIEUNHAP', parentId: 'DEV', text: 'Phiếu nhập kho (mẫu CyberForm)', icon: '', separator: false, children: [] },
       { id: 'DEV.PROC', parentId: 'DEV', text: 'Gọi proc tuỳ ý', icon: '', separator: false, children: [] },
     ],
   },

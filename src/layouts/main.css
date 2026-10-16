@@ -454,3 +454,26 @@
 @keyframes mn-in-fade { from { opacity: 0; } }
 @keyframes mn-in-zoom { from { opacity: 0; transform: scale(.92); } }
 @keyframes mn-in-tile { from { opacity: 0; transform: translateY(14px) scale(.85); } }
+
+/* ===== Hiệu ứng đăng xuất: màn chính thu lại, lớp màu lan từ avatar phủ kín rồi chuyển sang login ===== */
+.mn--bye { pointer-events: none; }
+.mn--bye > * { animation: mn-bye-out .5s cubic-bezier(.4, 0, .2, 1) forwards; }
+@keyframes mn-bye-out { to { opacity: .4; transform: scale(.97); filter: blur(2px); } }
+.mn-bye {
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center;
+  background: linear-gradient(150deg, #2448D8, #0F1B2D);
+  clip-path: circle(0 at calc(100% - 36px) 26px);
+  animation: mn-bye-cover .6s cubic-bezier(.7, 0, .2, 1) forwards;
+}
+@keyframes mn-bye-cover { to { clip-path: circle(150vmax at calc(100% - 36px) 26px); } }
+.mn-bye__inner {
+  display: flex; align-items: center; gap: 12px; color: #fff; font-size: 15px; font-weight: 600;
+  animation: mn-in-fade .3s ease .3s backwards;
+}
+.mn-bye__spin {
+  width: 18px; height: 18px; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; border-radius: 50%;
+  animation: mn-bye-spin .7s linear infinite;
+}
+@keyframes mn-bye-spin { to { transform: rotate(360deg); } }
+.mn--bye { overflow: hidden; }
+html:has(.mn--bye), html:has(.lg--bye) { overflow: hidden; }
