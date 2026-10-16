@@ -4,7 +4,6 @@
  * ctx: { connectionId, user, name, groups, publish(event, args, { group, except, to }) }
  */
 
-const STORE_KEY = 'cyber_mock_chat_v2';
 const HISTORY_MAX = 500;
 const PAGE = 30; // số tin mỗi trang lịch sử (server thật: Realtime:ChatHistoryLimit)
 
@@ -42,20 +41,16 @@ const SEED = {
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 
 /** Kho: { seq: số thứ tự tin cuối, rooms: { room: [tin] } } – seq tăng dần dùng để tải trang cũ hơn (giống Id trong SQL) */
+let memory = null; // giữ trong bộ nhớ của tab – không lưu localStorage (xem utils/storage.js). Tab khác nhận tin qua BroadcastChannel.
 function load() {
-  try {
-    const s = JSON.parse(localStorage.getItem(STORE_KEY));
-    if (s && typeof s === 'object' && s.rooms) return s;
-  } catch { /* hỏng -> tạo lại */ }
-  const store = { seq: 0, rooms: {} };
+  if (memory) return memory;
+  memory = { seq: 0, rooms: {} };
   for (const [room, list] of Object.entries(SEED)) {
-    store.rooms[room] = list.map((m) => ({ ...m, id: newId(), seq: ++store.seq, room }));
+    memory.rooms[room] = list.map((m) => ({ ...m, id: newId(), seq: ++memory.seq, room }));
   }
-  return store;
+  return memory;
 }
-function save(store) {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* đầy bộ nhớ */ }
-}
+function save(store) { memory = store; }
 function append(msg) {
   const store = load();
   const saved = { ...msg, seq: ++store.seq };
@@ -71,6 +66,26 @@ function page(room, beforeSeq) {
 }
 
 const roomGroup = (room) => `chat:${room}`;
+
+// ----- Đã xem: phòng -> user -> { room, user, name, seq, at } (bộ nhớ tab) -----
+const reads = {};
+function markRead(room, user, name, seq) {
+  const r = (reads[room] ||= {});
+  if ((r[user]?.seq || 0) >= seq) return null;
+  r[user] = { room, user, name, seq, at: new Date().toISOString() };
+  return r[user];
+}
+
+/** Đồng nghiệp giả lập đang online "đọc" tin vừa gửi sau 1-3 giây (để demo trạng thái đã xem) */
+function simulateRead(ctx, room, seq) {
+  const people = (ROOM_PEOPLE[room] || []).map((k) => PEOPLE[k]).filter((p) => p.online);
+  people.forEach((p) => {
+    setTimeout(() => {
+      const state = markRead(room, p.user, p.name, seq);
+      if (state) ctx.publish('MessagesRead', [state], { group: roomGroup(room) });
+    }, 900 + Math.random() * 2200);
+  });
+}
 const members = (ctx, room) => [
   { user: ctx.user, name: ctx.name, online: true, me: true },
   ...(ROOM_PEOPLE[room] || []).map((k) => ({ ...PEOPLE[k] })),
@@ -133,7 +148,10 @@ export const mockHub = {
   JoinRoom(ctx, room) {
     ctx.groups.add(roomGroup(room));
     const list = members(ctx, room);
-    return { ...page(room, null), online: list.filter((x) => x.online).length, members: list, large: false };
+    return {
+      ...page(room, null), online: list.filter((x) => x.online).length, members: list, large: false,
+      reads: Object.values(reads[room] || {}),
+    };
   },
 
   /** Tải trang cũ hơn (kéo lên đầu khung chat) */
@@ -150,8 +168,16 @@ export const mockHub = {
     if (body.length > 2000) throw new Error('Tin nhắn quá dài (tối đa 2000 ký tự).');
     const msg = append({ id: newId(), clientId, room, user: ctx.user, name: ctx.name, text: body, at: new Date().toISOString() });
     ctx.publish('ReceiveMessage', [msg], { group: roomGroup(room) });
+    simulateRead(ctx, room, msg.seq);
     simulateReply(ctx, room, body);
     return msg;
+  },
+
+  /** Đã xem tới tin seq – báo cho cả phòng khi vị trí đọc tiến lên */
+  MarkRead(ctx, room, seq) {
+    const state = markRead(room, ctx.user, ctx.name, Number(seq) || 0);
+    if (state) ctx.publish('MessagesRead', [state], { group: roomGroup(room) });
+    return !!state;
   },
 
   /** Báo "đang gõ" cho người khác trong phòng (không gửi lại cho chính mình) */
@@ -165,6 +191,7 @@ export const mockHub = {
     const store = load();
     store.rooms[room] = [];
     save(store);
+    delete reads[room];
     ctx.publish('HistoryCleared', [{ room }], { group: roomGroup(room) });
     return true;
   },

@@ -12,6 +12,7 @@
  *     (2 bảng này tìm theo cột vì khi đăng nhập sai thứ tự bảng khác khi đúng)
  */
 import { callProc } from '@/api/apiClient';
+import { LOCAL_KEYS, localStore } from '@/utils/storage';
 import { decryptText, encryptText } from './tokenVault';
 
 export const LOGIN_PROC = 'CP_SysLogin';
@@ -60,23 +61,29 @@ export function getMenuRows(session) {
 
 // Đổi số này khi cấu trúc bản ghi token thay đổi -> bản ghi cũ tự bị bỏ, phải đăng nhập lại
 const TOKEN_VERSION = 2;
-/** Cờ (sessionStorage) báo màn login vừa được mở sau khi đăng xuất -> chạy hiệu ứng quay lại */
-export const LOGOUT_FX_KEY = 'cyber_bye';
-
-const TOKEN_KEY = 'cyber_auth';
+const TOKEN_KEY = LOCAL_KEYS.AUTH;
+const DEVICE_KEY = LOCAL_KEYS.DEVICE_ID;
 const LEGACY_SESSION_KEY = 'cyber_session';
-const DEVICE_KEY = 'cyber_device_id';
-const LAST_LOGIN_KEY = 'cyber_last_login';
+
+// Giữ trong BỘ NHỚ (không lưu trình duyệt – xem utils/storage.js): mất khi tải lại trang
+let lastLogin = {};     // tài khoản + đơn vị lần đăng nhập trước (điền sẵn ở màn login sau khi đăng xuất / đổi đơn vị)
+let logoutFx = false;   // màn login vừa mở sau khi đăng xuất -> chạy hiệu ứng quay lại
+
+/** Đánh dấu vừa đăng xuất (MainLayout gọi trước khi logout) */
+export function markLogoutFx() { logoutFx = true; }
+/** Màn login: vừa đăng xuất? (đọc) – xoá cờ bằng clearLogoutFx() sau khi đã dùng */
+export function isLogoutFx() { return logoutFx; }
+export function clearLogoutFx() { logoutFx = false; }
 
 /** Mã thiết bị: chuỗi hex 64 ký tự, sinh 1 lần và lưu lại trên trình duyệt (thay cho @M_Id_Device) */
 export function getDeviceId() {
   try {
-    let id = localStorage.getItem(DEVICE_KEY);
+    let id = localStore.get(DEVICE_KEY);
     if (!id) {
       const bytes = new Uint8Array(32);
       crypto.getRandomValues(bytes);
       id = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-      localStorage.setItem(DEVICE_KEY, id);
+      localStore.set(DEVICE_KEY, id);
     }
     return id;
   } catch {
@@ -137,7 +144,7 @@ export async function login({ userName, password = '', maTTCP, tokenKey = '', ot
 const TOKEN_PREFIX = `v${TOKEN_VERSION}:`;
 
 const readRaw = () => {
-  try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+  return localStore.get(TOKEN_KEY) || '';
 };
 
 /** Có bản ghi đăng nhập đã lưu không (để màn hình biết đang tự đăng nhập lại) */
@@ -160,7 +167,7 @@ async function readRecord() {
 
 async function writeRecord(rec) {
   const enc = await encryptText(JSON.stringify(rec));
-  try { localStorage.setItem(TOKEN_KEY, TOKEN_PREFIX + enc); } catch { /* bộ nhớ đầy / bị chặn */ }
+  localStore.set(TOKEN_KEY, TOKEN_PREFIX + enc);
 }
 
 /** Mã hoá + lưu TokenKey kèm tài khoản, đơn vị, ngôn ngữ */
@@ -176,7 +183,7 @@ export async function updateSavedToken(patch) {
 }
 
 export function clearToken() {
-  try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+  localStore.remove(TOKEN_KEY);
 }
 
 /**
@@ -202,10 +209,10 @@ export function clearLegacySession() {
   } catch { /* ignore */ }
 }
 
-/** Nhớ tên đăng nhập + đơn vị lần trước (không lưu mật khẩu) */
+/** Tài khoản + đơn vị lần trước (chỉ trong bộ nhớ, không lưu trình duyệt, không lưu mật khẩu) */
 export function getLastLogin() {
-  try { return JSON.parse(localStorage.getItem(LAST_LOGIN_KEY)) || {}; } catch { return {}; }
+  return { ...lastLogin };
 }
 export function setLastLogin(v) {
-  try { localStorage.setItem(LAST_LOGIN_KEY, JSON.stringify(v)); } catch { /* ignore */ }
+  lastLogin = { ...(v || {}) };
 }

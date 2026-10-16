@@ -6,6 +6,7 @@ import { lazy } from 'react';
  * Màn hình nghiệp vụ nằm trong src/modules/<phân-hệ>/, mỗi phân hệ có 1 file index.js khai báo:
  *   export const screens = { '02.02.01': lazy(() => import('./PhieuKeToanPage')) };
  *   export const menu = [];   // (tuỳ chọn) menu thêm vào menu trái
+ *   export const widgets = [lazy(() => import('./XxxNotifier'))]; // (tuỳ chọn) thành phần chạy nền trong màn chính
  * File này TỰ NẠP mọi src/modules/* /index.js (bỏ qua thư mục bắt đầu bằng "_", vd _template)
  * -> thêm màn / thêm phân hệ KHÔNG cần sửa file này.
  *
@@ -16,12 +17,15 @@ const modules = import.meta.glob(['../modules/*/index.js', '!../modules/_*/index
 
 export const screens = {};
 const moduleMenus = [];
+/** Thành phần chạy nền của các module (popup thông báo...) – MainLayout gắn trong màn chính */
+export const moduleWidgets = [];
 for (const [file, mod] of Object.entries(modules)) {
   for (const id of Object.keys(mod.screens || {})) {
     if (screens[id]) console.warn(`[registry] Menu_Id '${id}' bị khai báo trùng (${file})`);
   }
   Object.assign(screens, mod.screens);
   if (mod.menu?.length) moduleMenus.push(...mod.menu);
+  if (mod.widgets?.length) moduleWidgets.push(...mod.widgets);
 }
 
 export const Placeholder = lazy(() => import('@/pages/PlaceholderPage'));

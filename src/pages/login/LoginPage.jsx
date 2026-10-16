@@ -4,7 +4,7 @@ import { CyberTextBox, CyberSelect, toast } from '@/components/cyber';
 import Icon from '@/components/icons/Icon';
 import { useCyberForm } from '@/hooks/useCyberForm';
 import { AuthSplash, useAuth } from '@/auth/AuthContext';
-import { getLastLogin, getUnits, LOGOUT_FX_KEY } from '@/auth/authService';
+import { clearLogoutFx, getLastLogin, getUnits, isLogoutFx } from '@/auth/authService';
 import { apiConfig } from '@/api/apiClient';
 import { BRAND, SOCIAL_LOGINS } from '@/config/brand';
 import './login.css';
@@ -76,9 +76,9 @@ export default function LoginPage() {
   // Tự đăng nhập lại bằng token thất bại (hết hạn...) -> báo trên thẻ đăng nhập
   useEffect(() => { if (notice) setMessage({ type: 'info', text: notice }); }, [notice]);
   // Vừa đăng xuất -> lớp màu đang phủ kín màn hình thu lại, mở ra màn login
-  const [bye, setBye] = useState(() => { try { return sessionStorage.getItem(LOGOUT_FX_KEY) === '1'; } catch { return false; } });
+  const [bye, setBye] = useState(() => isLogoutFx());
   useEffect(() => {
-    try { sessionStorage.removeItem(LOGOUT_FX_KEY); } catch { /* bỏ qua */ }
+    clearLogoutFx();
     if (!bye) return undefined;
     const id = setTimeout(() => setBye(false), 1100);
     return () => clearTimeout(id);

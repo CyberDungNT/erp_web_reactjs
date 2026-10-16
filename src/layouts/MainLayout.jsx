@@ -12,7 +12,8 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/auth/AuthContext";
 import { apiConfig } from "@/api/apiClient";
-import { getMenuRows, LOGOUT_FX_KEY as BYE_KEY } from "@/auth/authService";
+import { getMenuRows, markLogoutFx } from "@/auth/authService";
+import { LOCAL_KEYS, localStore } from "@/utils/storage";
 import { buildMenuTree } from "@/utils/menuTree";
 import {
   screens,
@@ -22,6 +23,7 @@ import {
   EXIT_MENU_IDS,
   LANG_MENU_IDS,
   HomePage,
+  moduleWidgets,
 } from "@/screens/registry";
 import { CyberContextMenu, msgbox } from "@/components/cyber";
 import Icon from "@/components/icons/Icon";
@@ -32,8 +34,8 @@ import UnitSwitcher from "./UnitSwitcher";
 import TaskBar from "./TaskBar";
 import "./main.css";
 
-const SIDEBAR_KEY = "cyber_sidebar_collapsed";
-const SIDEBAR_W_KEY = "cyber_sidebar_width";
+const SIDEBAR_KEY = LOCAL_KEYS.SIDEBAR_COLLAPSED;
+const SIDEBAR_W_KEY = LOCAL_KEYS.SIDEBAR_WIDTH;
 const SIDE_DEFAULT = 264;
 const SIDE_MIN = 200;
 const SIDE_MAX = 480;
@@ -166,7 +168,7 @@ export default function MainLayout() {
   const [activeKey, setActiveKey] = useState(HOME); // HOME = trang chủ (dashboard biểu đồ), còn lại = Menu_Id
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(SIDEBAR_KEY) === "1";
+      return localStore.get(SIDEBAR_KEY) === "1";
     } catch {
       return false;
     }
@@ -177,7 +179,7 @@ export default function MainLayout() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0");
+      localStore.set(SIDEBAR_KEY, collapsed ? "1" : "0");
     } catch {
       /* ignore */
     }
@@ -187,7 +189,7 @@ export default function MainLayout() {
   const [sideW, setSideW] = useState(() => {
     try {
       return clampSide(
-        Number(localStorage.getItem(SIDEBAR_W_KEY)) || SIDE_DEFAULT,
+        Number(localStore.get(SIDEBAR_W_KEY)) || SIDE_DEFAULT,
       );
     } catch {
       return SIDE_DEFAULT;
@@ -196,7 +198,7 @@ export default function MainLayout() {
   const [resizing, setResizing] = useState(false);
   useEffect(() => {
     try {
-      localStorage.setItem(SIDEBAR_W_KEY, String(sideW));
+      localStore.set(SIDEBAR_W_KEY, String(sideW));
     } catch {
       /* ignore */
     }
@@ -293,7 +295,7 @@ export default function MainLayout() {
     // Hiệu ứng đăng xuất: màn chính thu lại, lớp màu phủ kín rồi mới về login (login chạy tiếp hiệu ứng mở ra)
     setBye(true);
     setTimeout(() => {
-      try { sessionStorage.setItem(BYE_KEY, "1"); } catch { /* bỏ qua */ }
+      markLogoutFx();
       logout();
     }, BYE_MS);
   }, [logout, lang]);
@@ -707,6 +709,11 @@ export default function MainLayout() {
         {ctxMenu && (
           <CyberContextMenu {...ctxMenu} onClose={() => setCtxMenu(null)} />
         )}
+
+        {/* Thành phần chạy nền của các module (popup tin nhắn...) – khai báo "widgets" trong index.js của từng phân hệ */}
+        <Suspense fallback={null}>
+          {moduleWidgets.map((Widget, i) => <PaneBoundary key={i} silent><Widget /></PaneBoundary>)}
+        </Suspense>
       </div>
       {bye && (
         <div className="mn-bye" role="status">
@@ -728,6 +735,7 @@ class PaneBoundary extends Component {
   }
   render() {
     if (this.state.error) {
+      if (this.props.silent) return null; // widget nền lỗi: ẩn đi, không làm hỏng màn chính
       return (
         <div className="page">
           <div className="alert alert--error">

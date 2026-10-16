@@ -15,6 +15,12 @@ export const screens = {
 };
 
 /**
+ * Thành phần chạy NỀN trong màn chính (không phải màn hình) – MainLayout tự gắn khi đăng nhập.
+ * ChatNotifier: popup tin nhắn mới ở góc dưới phải khi không mở màn chat.
+ */
+export const widgets = [lazy(() => import('./ChatNotifier'))];
+
+/**
  * Menu thêm vào cuối menu trái (chỉ dùng cho màn KHÔNG có trong menu hệ thống trả về từ CP_SysLogin).
  * Màn nghiệp vụ thật đã có Menu_Id trong DB thì không cần khai báo menu ở đây.
  * Ẩn nhóm này: đặt SHOW_DEV_MENU = false trong screens/registry.js.

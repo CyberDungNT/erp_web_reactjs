@@ -1,0 +1,161 @@
+/* ===== Thông báo tin nhắn mới (góc dưới phải, trên thanh TaskBar) ===== */
+.cn {
+  --cn-bg: rgba(255, 255, 255, .92);
+  --cn-ink: #12161f;
+  --cn-ink-2: #4a5160;
+  --cn-muted: #8a909c;
+  --cn-line: rgba(15, 30, 50, .08);
+  --cn-brand: var(--brand, #1f5f8b);
+  position: fixed; right: 18px; bottom: 58px; z-index: 9000;
+  width: min(372px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 8px;
+  font-family: inherit; pointer-events: none;
+}
+.cn > * { pointer-events: auto; }
+
+/* Thanh đầu khi có nhiều thông báo */
+.cn__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px;
+  animation: cn-bubble .25s ease;
+}
+.cn__head-title {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px;
+  background: rgba(18, 22, 31, .78); color: #fff; font-size: 12px; font-weight: 600;
+  backdrop-filter: blur(8px); box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+}
+.cn__head-dot { width: 7px; height: 7px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 0 3px rgba(61, 220, 151, .25); }
+.cn__clear {
+  padding: 5px 11px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .95); color: var(--cn-ink);
+  font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(15, 30, 50, .14);
+}
+.cn__clear:hover { background: #fff; color: #c03030; }
+
+/* Các thẻ xếp thành cột (mới nhất ở dưới cùng) – rê chuột vào không đổi bố cục */
+.cn__list { display: flex; flex-direction: column; gap: 10px; }
+
+/* ----- Thẻ ----- */
+.cn__card {
+  position: relative; overflow: hidden; box-sizing: border-box;
+  background: var(--cn-bg); backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, .7); border-radius: 18px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 0 0 1px var(--cn-line),
+              0 10px 30px -6px rgba(15, 30, 50, .28), 0 2px 6px rgba(15, 30, 50, .06);
+  flex-shrink: 0; transform-origin: 50% 100%;
+  animation: cn-in .5s cubic-bezier(.22, 1.2, .36, 1);
+}
+/* dải màu người gửi phía trên */
+.cn__card::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 64px; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c) 13%, transparent), transparent);
+}
+@keyframes cn-in { from { opacity: 0; transform: translateY(18px) scale(.94); } }
+.cn__card.is-leave { animation: cn-out .26s ease forwards; }
+@keyframes cn-out { to { opacity: 0; transform: translateX(40px) scale(.96); } }
+
+.cn__card > * { position: relative; }
+
+/* Đầu thẻ: biểu tượng + phòng + giờ + đóng */
+.cn__bar-top { display: flex; align-items: center; gap: 7px; padding: 11px 10px 0 14px; }
+.cn__app {
+  display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px;
+  background: var(--cn-brand); color: #fff; flex-shrink: 0;
+}
+.cn__room {
+  display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-size: 11.5px; font-weight: 700;
+  color: var(--cn-ink-2); text-transform: uppercase; letter-spacing: .04em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cn__room i { font-style: normal; color: var(--c); }
+.cn__time { margin-left: auto; font-size: 11.5px; color: var(--cn-muted); flex-shrink: 0; }
+.cn__close {
+  display: grid; place-items: center; width: 24px; height: 24px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--cn-muted); cursor: pointer; transition: background-color .15s, color .15s;
+}
+.cn__close:hover { background: rgba(15, 30, 50, .08); color: var(--cn-ink); }
+
+/* Thân thẻ */
+.cn__main {
+  display: flex; gap: 12px; width: 100%; padding: 10px 14px 4px; border: 0; background: none;
+  text-align: left; font: inherit; color: var(--cn-ink); cursor: pointer;
+}
+.cn__main:focus-visible { outline: 2px solid var(--cn-brand); outline-offset: -4px; border-radius: 14px; }
+.cn__avatar {
+  position: relative; flex-shrink: 0; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
+  background: var(--c); color: #fff; font-size: 14px; font-weight: 700;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px color-mix(in srgb, var(--c) 35%, transparent);
+}
+.cn__count {
+  position: absolute; top: -5px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  display: grid; place-items: center; border-radius: 999px; border: 2px solid #fff;
+  background: #e5484d; color: #fff; font-size: 10px; font-weight: 800; animation: cn-pop .35s cubic-bezier(.34, 1.6, .64, 1);
+}
+@keyframes cn-pop { from { transform: scale(.3); } }
+.cn__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cn__name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cn__msgs { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.cn__bubble {
+  max-width: 100%; box-sizing: border-box; padding: 6px 11px; border-radius: 4px 14px 14px 4px;
+  background: rgba(15, 30, 50, .06); color: var(--cn-ink-2); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
+}
+.cn__bubble:first-child { border-top-left-radius: 14px; }
+.cn__bubble.is-last {
+  -webkit-line-clamp: 3; color: var(--cn-ink); border-bottom-left-radius: 14px;
+  background: color-mix(in srgb, var(--c) 10%, #fff); animation: cn-bubble .35s ease;
+}
+@keyframes cn-bubble { from { opacity: 0; transform: translateY(4px); } }
+
+/* Nút hành động */
+.cn__actions { display: flex; gap: 8px; padding: 8px 14px 14px 68px; }
+.cn__btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px;
+  border: 1px solid var(--cn-line); border-radius: 10px; background: #fff; color: var(--cn-ink);
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: background-color .15s, border-color .15s;
+}
+.cn__btn:hover { border-color: rgba(15, 30, 50, .18); background: #f7f9fb; }
+.cn__btn:focus-visible { outline: 2px solid var(--cn-brand); outline-offset: 2px; }
+.cn__btn--primary { background: var(--cn-brand); border-color: transparent; color: #fff; }
+.cn__btn--primary:hover { filter: brightness(1.1); border-color: transparent; background: var(--cn-brand); }
+.cn__btn--primary svg { transition: transform .15s; }
+.cn__btn--primary:hover svg { transform: translateX(2px); }
+
+/* Trả lời nhanh */
+.cn__reply-form { display: flex; gap: 8px; padding: 8px 14px 14px 68px; animation: cn-bubble .25s ease; }
+.cn__input {
+  flex: 1; min-width: 0; height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--cn-line);
+  border-radius: 11px; background: #fff; color: var(--cn-ink); font: inherit; font-size: 13px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.cn__input:focus { border-color: var(--cn-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cn-brand) 18%, transparent); }
+.cn__send {
+  flex-shrink: 0; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 11px;
+  background: var(--cn-brand); color: #fff; cursor: pointer; transition: filter .15s, transform .15s, opacity .15s;
+}
+.cn__send:hover:not(:disabled) { filter: brightness(1.1); }
+.cn__send:active:not(:disabled) { transform: scale(.93); }
+.cn__send:disabled { opacity: .45; cursor: not-allowed; }
+.cn__spin { width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, .4); border-top-color: #fff; border-radius: 50%; animation: cn-spin .7s linear infinite; }
+@keyframes cn-spin { to { transform: rotate(360deg); } }
+.cn__sent {
+  display: flex; align-items: center; gap: 6px; margin: 8px 14px 14px 68px; padding: 8px 12px; border-radius: 10px;
+  background: #e8f7f0; color: #12825a; font-size: 12.5px; font-weight: 600; animation: cn-bubble .25s ease;
+}
+
+/* Thanh thời gian còn lại */
+.cn__progress {
+  position: absolute !important; left: 14px; right: 14px; bottom: 5px; height: 3px; border-radius: 3px;
+  background: color-mix(in srgb, var(--c) 55%, transparent); transform-origin: left;
+  animation: cn-progress var(--cn-ms, 8000ms) linear forwards;
+}
+.cn__progress.is-paused { animation-play-state: paused; }
+@keyframes cn-progress { to { transform: scaleX(0); } }
+
+@media (max-width: 520px) {
+  .cn { right: 8px; left: 8px; width: auto; bottom: 52px; }
+  .cn__actions, .cn__reply-form { padding-left: 14px; }
+  .cn__sent { margin-left: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cn__card, .cn__bubble, .cn__count { animation: none; }
+  .cn__progress { display: none; }
+}

@@ -16,3 +16,6 @@ export const screens = {
  * Bình thường để trống: menu lấy từ DB, chỉ cần khai báo screens ở trên.
  */
 export const menu = [];
+
+/** (Tuỳ chọn) Thành phần chạy nền trong màn chính (vd popup thông báo nghiệp vụ nghe qua socket) */
+export const widgets = [];
