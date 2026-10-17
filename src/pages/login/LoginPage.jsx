@@ -24,6 +24,8 @@ const TEXT = {
     needUser: 'Vui lòng nhập tài khoản', needPass: 'Vui lòng nhập mật khẩu', needUnit: 'Vui lòng chọn đơn vị',
     noUnit: 'Tài khoản không có đơn vị nào được phân quyền', group: 'Đơn vị cơ sở',
     forgotMsg: 'Vui lòng liên hệ quản trị hệ thống để cấp lại mật khẩu.', social: (n) => `Đăng nhập bằng ${n} chưa được kích hoạt.`,
+    failTitle: 'Đăng nhập thất bại', failMsg: 'Không đăng nhập được, vui lòng thử lại.', missTitle: 'Thiếu thông tin',
+    unitErrTitle: 'Không tải được đơn vị', sessionTitle: 'Phiên đăng nhập',
   },
   E: {
     welcome: 'Welcome back', sub: 'Sign in to continue your session', badge: 'Enterprise management system', remember: 'Keep me signed in',
@@ -34,6 +36,8 @@ const TEXT = {
     needUser: 'Please enter your username', needPass: 'Please enter your password', needUnit: 'Please select a unit',
     noUnit: 'This account has no unit assigned', group: 'Company',
     forgotMsg: 'Please contact your administrator to reset your password.', social: (n) => `Sign in with ${n} is not enabled yet.`,
+    failTitle: 'Sign-in failed', failMsg: 'Could not sign in, please try again.', missTitle: 'Missing information',
+    unitErrTitle: 'Could not load units', sessionTitle: 'Session',
   },
 };
 
@@ -62,19 +66,25 @@ export default function LoginPage() {
   const [lang, setLang] = useState(last.lang === 'E' ? 'E' : 'V');
   const langPicked = useRef(!!last.lang);
   const t = TEXT[lang];
+  const tRef = useRef(t); // loadUnits (useCallback) đọc chữ theo ngôn ngữ hiện tại
+  tRef.current = t;
 
   const [units, setUnits] = useState([]);
   const [unitsLoading, setUnitsLoading] = useState(false);
-  const [unitsError, setUnitsError] = useState(null);
+  const unitsFailed = useRef(false); // lần tải đơn vị gần nhất lỗi (đã báo toast) -> không báo thêm "Vui lòng chọn đơn vị"
   const unitsFor = useRef(null);   // tài khoản đã tải đơn vị
   const unitsPromise = useRef(null); // lần tải đơn vị đang chạy (để nút Đăng nhập chờ)
   const dataRef = useRef(form.data);
   dataRef.current = form.data;
 
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState(null); // { type: 'error' | 'info', text }
-  // Tự đăng nhập lại bằng token thất bại (hết hạn...) -> báo trên thẻ đăng nhập
-  useEffect(() => { if (notice) setMessage({ type: 'info', text: notice }); }, [notice]);
+  // MỌI lỗi ở màn login đều báo bằng toast, không hiện chữ lỗi trên thẻ đăng nhập / dưới ô nhập.
+  // Tự đăng nhập lại bằng token thất bại (hết hạn...) -> toast
+  const noticeShown = useRef(null); // StrictMode chạy effect 2 lần -> chỉ bật 1 toast
+  useEffect(() => {
+    if (!notice || noticeShown.current === notice) return;
+    noticeShown.current = notice;
+    toast.warning(notice, { title: tRef.current.sessionTitle });
+  }, [notice]);
   // Vừa đăng xuất -> lớp màu đang phủ kín màn hình thu lại, mở ra màn login
   const [bye, setBye] = useState(() => isLogoutFx());
   useEffect(() => {
@@ -105,16 +115,16 @@ export default function LoginPage() {
     const u = String(userName || '').trim();
     if (!u) {
       unitsFor.current = null;
+      unitsFailed.current = false;
       setUnits([]);
-      setUnitsError(null);
       return [];
     }
     if (norm(u) === unitsFor.current) return unitsPromise.current; // đã / đang tải cho tài khoản này
     unitsFor.current = norm(u);
+    unitsFailed.current = false;
     setUnitsLoading(true);
-    setUnitsError(null);
     const run = (async () => { try {
-      const r = await getUnits(u);
+      const r = await getUnits(u, { silent: true }); // lỗi báo bằng toast bên dưới (không bật thêm toast "Lỗi gọi ...")
       if (unitsFor.current !== norm(u)) return null; // người dùng đã đổi tài khoản khác
       setUnits(r.units);
       const cur = dataRef.current.MaTTCP;
@@ -125,12 +135,17 @@ export default function LoginPage() {
       dataRef.current = { ...dataRef.current, MaTTCP: chosen }; // để nút Đăng nhập đang chờ đọc được ngay
       form.setField('MaTTCP', chosen);
       if (r.lang && !langPicked.current) setLang(r.lang);
-      if (!r.units.length) setUnitsError('noUnit');
+      if (!r.units.length) {
+        unitsFailed.current = true;
+        toast.warning(tRef.current.noUnit, { title: tRef.current.unitErrTitle });
+      }
       return r.units;
     } catch (err) {
+      if (unitsFor.current !== norm(u)) return []; // đã đổi tài khoản khác -> bỏ qua lỗi cũ
       unitsFor.current = null;
+      unitsFailed.current = true;
       setUnits([]);
-      setUnitsError(err.message);
+      toast.error(err.message, { title: tRef.current.unitErrTitle });
       return [];
     } finally {
       setUnitsLoading(false);
@@ -145,33 +160,31 @@ export default function LoginPage() {
     if (last.userName) loadUnits(last.userName);
   }, [last.userName, loadUnits]);
 
-  const shownErrors = Object.fromEntries(
-    Object.entries(errors).filter(([k]) => !String(form.data[k] ?? '').trim())
-  );
-
   if (restoring) return <AuthSplash />;
   if (session) return <Navigate to={location.state?.from || '/'} replace />;
 
   const fail = (text) => {
-    setMessage({ type: 'error', text });
+    toast.error(text || t.failMsg, { title: t.failTitle });
     setShake((n) => n + 1);
     setPhase('idle');
   };
 
+  /** Thiếu thông tin -> toast lỗi đầu tiên + focus vào ô đó (không hiện chữ lỗi dưới ô) */
   const validate = (d) => {
-    const e = {};
-    if (!d.UserName.trim()) e.UserName = t.needUser;
-    // if (!d.Password) e.Password = t.needPass;
-    if (!String(d.MaTTCP || '').trim()) e.MaTTCP = t.needUnit;
-    setErrors(e);
-    if (Object.keys(e).length) setShake((n) => n + 1);
-    return Object.keys(e).length === 0;
+    let miss = null;
+    if (!d.UserName.trim()) miss = { msg: t.needUser, focus: 'login-user' };
+    // else if (!d.Password) miss = { msg: t.needPass, focus: 'login-pass' };
+    else if (!String(d.MaTTCP || '').trim()) miss = unitsFailed.current ? { msg: null } : { msg: t.needUnit };
+    if (!miss) return true;
+    if (miss.msg) toast.warning(miss.msg, { title: t.missTitle }); // lỗi tải đơn vị đã có toast riêng
+    setShake((n) => n + 1);
+    if (miss.focus) setTimeout(() => document.getElementById(miss.focus)?.focus(), 0);
+    return false;
   };
 
   const submit = async (e) => {
     e?.preventDefault();
     if (phase !== 'idle') return;
-    setMessage(null);
     setPhase('loading');
     // Đơn vị chưa tải xong (gõ nhanh rồi Enter) -> chờ tải xong, đơn vị mặc định được chọn sẵn
     if (norm(form.data.UserName)) await loadUnits(form.data.UserName);
@@ -208,7 +221,6 @@ export default function LoginPage() {
   // Tên đơn vị hiển thị trên trang: đơn vị đang chọn, nếu chưa có thì lấy tên mặc định trong brand.js
   // const unitName =  units.find((x) => String(x.Ma_TTCP) === String(form.data.MaTTCP))?.Ten_TTCP || BRAND.unitName;
   const unitName = "Tên đơn vị";
-  const unitError = unitsError === 'noUnit' ? t.noUnit : unitsError;
   const pickLang = (l) => { setLang(l); langPicked.current = true; };
 
   return (
@@ -241,8 +253,8 @@ export default function LoginPage() {
 
         <div className="lg__hero">
           <span className="lg__badge">{t.badge}</span>
-          <h1 className="lg__headline">{BRAND.slogan[0]},<br />{BRAND.slogan[1]}.</h1>
-          <p className="lg__desc">{BRAND.sloganSub}</p>
+          <h1 className="lg__headline">{BRAND.slogan[lang][0]},<br />{BRAND.slogan[lang][1]}.</h1>
+          <p className="lg__desc">{BRAND.sloganSub[lang]}</p>
         </div>
 
         <p className="lg__copy">© {new Date().getFullYear()} {unitName}</p>
@@ -268,17 +280,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {message && (
-            <div className={`lg__msg lg__msg--${message.type}`} role="alert">
-              <Icon name="warning" size={15} /> {message.text}
-            </div>
-          )}
-
           <fieldset className="lg__fields" disabled={busy}>
             <CyberTextBox
               {...form.bind('UserName')} className="lg__f lg__f--user"
               id="login-user" layout="vertical" label={t.user} name="username" autoComplete="username"
-              autoFocus={!form.data.UserName} placeholder={t.userPh} error={shownErrors.UserName}
+              autoFocus={!form.data.UserName} placeholder={t.userPh}
               onBlur={(e) => loadUnits(e.target.value)}
               onEnter={() => document.getElementById('login-pass')?.focus()}
             />
@@ -286,7 +292,7 @@ export default function LoginPage() {
               {...form.bind('Password')} className="lg__f lg__f--pass"
               id="login-pass" layout="vertical" label={t.pass} name="password" type={showPass ? 'text' : 'password'}
               autoComplete="current-password" autoFocus={!!form.data.UserName} placeholder={t.passPh}
-              error={shownErrors.Password} onKeyUp={(e) => setCapsLock(!!e.getModifierState?.('CapsLock'))}
+              onKeyUp={(e) => setCapsLock(!!e.getModifierState?.('CapsLock'))}
               addon={
                 <button type="button" className="lg__eye" tabIndex={-1}
                   title={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} onClick={() => setShowPass((v) => !v)}>
@@ -303,7 +309,6 @@ export default function LoginPage() {
               loading={unitsLoading} loadingText={t.unitLoading}
               placeholder={units.length ? t.unitPick : t.unitPh}
               disabled={!units.length && !unitsLoading}
-              error={unitError || shownErrors.MaTTCP}
             />
           </fieldset>
 

@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
    * màn login chạy hiệu ứng xong mới gọi commit() để lưu token (mã hoá) và chuyển vào màn chính.
    */
   const login = useCallback(async ({ userName, password, maTTCP, remember: rem = true, lang }) => {
-    const res = await auth.login({ userName, password, maTTCP });
+    const res = await auth.login({ userName, password, maTTCP, silent: true }); // lỗi do màn login báo bằng toast
     if (res.ok) {
       const s = makeSession(res, lang);
       auth.setLastLogin({ userName, maTTCP, remember: rem, lang });

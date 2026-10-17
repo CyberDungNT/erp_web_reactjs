@@ -28,8 +28,9 @@ export const unitsConfig = {
   firstParam: '01', // tham số thứ nhất của CP_SysGetUnits
 };
 
-export async function getUnits(userName) {
-  const res = await callProc(UNITS_PROC, [unitsConfig.firstParam, userName]);
+/** silent: true -> lỗi không tự bật toast (màn login tự báo bằng toast riêng) */
+export async function getUnits(userName, { silent = false } = {}) {
+  const res = await callProc(UNITS_PROC, [unitsConfig.firstParam, userName], { silent });
   const tables = res.tables;
   const units = tables.find((t) => hasCols(t, 'Ma_TTCP', 'Ten_TTCP') && !hasCols(t, 'M_LAN') && !hasCols(t, 'M_Lan')) || [];
   const def = tables.find((t) => hasCols(t, 'M_LAN') || hasCols(t, 'M_Lan'))?.[0] || null;
@@ -126,7 +127,7 @@ export function parseLoginResult(tables) {
  * Gọi đăng nhập.
  * @returns {Promise<{ok:boolean, message:string, info:object, tables?:any[][], dashboards?:[]}>}
  */
-export async function login({ userName, password = '', maTTCP, tokenKey = '', otp = '', idOtp = '' }) {
+export async function login({ userName, password = '', maTTCP, tokenKey = '', otp = '', idOtp = '', silent = false }) {
   const params = [
     loginConfig.type,
     loginConfig.platform,
@@ -140,7 +141,7 @@ export async function login({ userName, password = '', maTTCP, tokenKey = '', ot
     loginConfig.userWindow,
     getDeviceId(),
   ];
-  const res = await callProc(LOGIN_PROC, params);
+  const res = await callProc(LOGIN_PROC, params, { silent });
   return parseLoginResult(res.tables);
 }
 
@@ -204,7 +205,8 @@ export function clearToken() {
 export async function loginWithSavedToken() {
   const rec = await readRecord();
   if (!rec) return null;
-  const res = await login({ userName: rec.userName, maTTCP: rec.maTTCP, tokenKey: rec.tokenKey });
+  // silent: lỗi được báo 1 lần bằng toast ở màn login (notice), không bật thêm toast "Lỗi gọi CP_SysLogin"
+  const res = await login({ userName: rec.userName, maTTCP: rec.maTTCP, tokenKey: rec.tokenKey, silent: true });
   // Thủ tục có thể cấp token mới; không trả thì giữ token cũ
   return { ...res, userName: rec.userName, maTTCP: rec.maTTCP, lang: rec.lang, tokenKey: res.info?.TokenKey || rec.tokenKey };
 }

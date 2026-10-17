@@ -17,8 +17,15 @@ export const BRAND = {
   company: UNIT_NAME,
   copyright: UNIT_NAME,
   watermark: '', // chữ chìm góc dưới màn chính ('' để ẩn)
-  slogan: ['Quản trị tập trung', 'vận hành thông minh'],
-  sloganSub: 'Kết nối mọi nghiệp vụ, đồng bộ dữ liệu và tối ưu hoạt động doanh nghiệp trên một nền tảng duy nhất.',
+  // Khẩu hiệu bên trái màn login – theo ngôn ngữ đang chọn (V: tiếng Việt, E: tiếng Anh)
+  slogan: {
+    V: ['Quản trị tập trung', 'vận hành thông minh'],
+    E: ['Centralized management', 'smart operations'],
+  },
+  sloganSub: {
+    V: 'Kết nối mọi nghiệp vụ, đồng bộ dữ liệu và tối ưu hoạt động doanh nghiệp trên một nền tảng duy nhất.',
+    E: 'Connect every business process, sync your data and optimize operations on a single platform.',
+  },
   forgotPasswordUrl: '',                         // link "Quên mật khẩu?" ('' -> hiện thông báo liên hệ quản trị)
 };
 
