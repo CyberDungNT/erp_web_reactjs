@@ -147,7 +147,7 @@ export async function login({ userName, password = '', maTTCP, tokenKey = '', ot
 
 // ===== Ghi nhớ đăng nhập bằng TokenKey đã mã hoá =====
 // Đăng nhập thành công -> mã hoá NGUYÊN bản ghi (tokenVault: AES-GCM) rồi lưu localStorage[TOKEN_KEY]:
-//   "v2:<base64( IV + mã hoá JSON { tokenKey, userName, maTTCP, lang, savedAt } )>"
+//   "v2:<base64( IV + mã hoá JSON { tokenKey, userName, maTTCP, lang, theme, savedAt } )>"
 //   -> nhìn localStorage không đọc được tài khoản, đơn vị hay token.
 // Lần sau mở web -> giải mã -> gọi lại CP_SysLogin với @M_TokenKey (không cần mật khẩu) để lấy menu / quyền mới nhất.
 // Không lưu menu / thông tin phiên ra trình duyệt nữa: phiên chỉ nằm trong bộ nhớ.
@@ -182,9 +182,15 @@ async function writeRecord(rec) {
 }
 
 /** Mã hoá + lưu TokenKey kèm tài khoản, đơn vị, ngôn ngữ */
-export async function saveToken({ tokenKey, userName, maTTCP, lang }) {
+export async function saveToken({ tokenKey, userName, maTTCP, lang, theme }) {
   if (!tokenKey) return;
-  await writeRecord({ tokenKey, userName, maTTCP, lang, savedAt: new Date().toISOString() });
+  await writeRecord({ tokenKey, userName, maTTCP, lang, theme, savedAt: new Date().toISOString() });
+}
+
+/** Đọc nhanh tuỳ chọn trong bản ghi đã lưu (giao diện sáng/tối...) – không gọi API */
+export async function getSavedPrefs() {
+  const rec = await readRecord();
+  return rec ? { lang: rec.lang, theme: rec.theme } : null;
 }
 
 /** Cập nhật thông tin phụ (vd. ngôn ngữ) mà không đổi token: giải mã -> sửa -> mã hoá lại */
@@ -208,7 +214,7 @@ export async function loginWithSavedToken() {
   // silent: lỗi được báo 1 lần bằng toast ở màn login (notice), không bật thêm toast "Lỗi gọi CP_SysLogin"
   const res = await login({ userName: rec.userName, maTTCP: rec.maTTCP, tokenKey: rec.tokenKey, silent: true });
   // Thủ tục có thể cấp token mới; không trả thì giữ token cũ
-  return { ...res, userName: rec.userName, maTTCP: rec.maTTCP, lang: rec.lang, tokenKey: res.info?.TokenKey || rec.tokenKey };
+  return { ...res, userName: rec.userName, maTTCP: rec.maTTCP, lang: rec.lang, theme: rec.theme, tokenKey: res.info?.TokenKey || rec.tokenKey };
 }
 
 /** Dọn dữ liệu kiểu cũ còn dạng chữ rõ: phiên đầy đủ (menu + TokenKey) và bản ghi token v1 lộ tài khoản */

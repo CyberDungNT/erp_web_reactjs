@@ -12,12 +12,12 @@
   color: var(--ink-2); cursor: pointer; transition: background-color .2s, color .2s, box-shadow .2s;
 }
 .dash__filter button:hover { color: var(--brand-text); }
-.dash__filter button.is-on { background: #fff; color: var(--brand-text); box-shadow: 0 1px 4px rgba(15, 47, 71, .12); }
+.dash__filter button.is-on { background: var(--surface); color: var(--brand-text); box-shadow: 0 1px 4px rgba(15, 47, 71, .12); }
 
 /* KPI */
 .dash__kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }
 .dash__kpi {
-  display: flex; flex-direction: column; gap: 4px; padding: 16px 18px 12px; border-radius: 14px; background: #fff;
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 18px 12px; border-radius: 14px; background: var(--surface);
   border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(15, 47, 71, .04);
   animation: dash-in .45s var(--ease) both; animation-delay: calc(var(--i, 0) * 70ms);
   transition: box-shadow .2s, transform .2s var(--ease);
@@ -26,8 +26,8 @@
 .dash__kpi-name { font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .dash__kpi-value { font-size: 26px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; line-height: 1.2; }
 .dash__delta { font-size: 12px; font-weight: 700; }
-.dash__delta.is-good { color: #006300; }
-.dash__delta.is-bad { color: #b42323; }
+.dash__delta.is-good { color: var(--ok-text); }
+.dash__delta.is-bad { color: var(--danger-text); }
 .dash__delta-note { font-weight: 500; color: var(--muted); }
 .dash__kpi .ch-spark { margin-top: 6px; }
 @keyframes dash-in { from { opacity: 0; transform: translateY(10px); } }
@@ -35,7 +35,7 @@
 /* Lưới biểu đồ */
 .dash__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .dash__card {
-  min-width: 0; padding: 16px 18px 18px; border-radius: 14px; background: #fff; border: 1px solid var(--line);
+  min-width: 0; padding: 16px 18px 18px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
   box-shadow: 0 1px 3px rgba(15, 47, 71, .04); animation: dash-in .5s var(--ease) .15s both;
 }
 .dash__card--wide { grid-column: 1 / -1; }

@@ -10,10 +10,10 @@ code { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; font-s
 ::selection { background: var(--brand-200); color: var(--ink); }
 
 /* Thanh cuộn mảnh */
-* { scrollbar-width: thin; scrollbar-color: #c2d0db transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
-*::-webkit-scrollbar-thumb { background: #c2d0db; border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
-*::-webkit-scrollbar-thumb:hover { background-color: #9cb2c3; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--muted-2); }
 
 .badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap; letter-spacing: .02em; }
 .badge--warn { background: var(--accent); color: var(--accent-ink); }
@@ -39,7 +39,7 @@ code { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; font-s
 .log { margin: 0; padding: 0; list-style: none; max-height: 160px; overflow: auto; font-family: "JetBrains Mono", Consolas, monospace; font-size: 12px; }
 .log li { padding: 4px 0; border-bottom: 1px dashed var(--line); }
 .alert { padding: 9px 12px; border-radius: 8px; margin-bottom: 12px; }
-.alert--error { background: var(--danger-50); color: #a3242b; border: 1px solid #f6c4c7; }
+.alert--error { background: var(--danger-50); color: var(--danger-text); border: 1px solid var(--danger-line); }
 .alert--ok { background: var(--brand-50); color: var(--brand-text); border: 1px solid var(--brand-200); }
 .hint { color: var(--muted); font-size: 12px; margin: 0 0 10px; }
 
@@ -53,7 +53,7 @@ code { font-family: "JetBrains Mono", Consolas, "Courier New", monospace; font-s
 /* Màn chờ tự đăng nhập lại bằng token (AuthContext.AuthSplash) */
 .auth-splash {
   position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-  background: #fff; color: var(--muted); font-size: 13.5px;
+  background: var(--surface); color: var(--muted); font-size: 13.5px;
 }
 .auth-splash__spin {
   width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--brand-100); border-top-color: var(--brand);

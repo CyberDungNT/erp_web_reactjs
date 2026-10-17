@@ -28,7 +28,7 @@
   padding: 5px 11px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, .95); color: var(--cn-ink);
   font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(15, 30, 50, .14);
 }
-.cn__clear:hover { background: #fff; color: #c03030; }
+.cn__clear:hover { background: var(--surface); color: var(--danger-text); }
 
 /* Các thẻ xếp thành cột (mới nhất ở dưới cùng) – rê chuột vào không đổi bố cục */
 .cn__list { display: flex; flex-direction: column; gap: 10px; }
@@ -82,11 +82,11 @@
 .cn__avatar {
   position: relative; flex-shrink: 0; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%;
   background: var(--c); color: #fff; font-size: 14px; font-weight: 700;
-  box-shadow: 0 0 0 3px #fff, 0 0 0 5px color-mix(in srgb, var(--c) 35%, transparent);
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px color-mix(in srgb, var(--c) 35%, transparent);
 }
 .cn__count {
   position: absolute; top: -5px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
-  display: grid; place-items: center; border-radius: 999px; border: 2px solid #fff;
+  display: grid; place-items: center; border-radius: 999px; border: 2px solid var(--surface);
   background: #e5484d; color: #fff; font-size: 10px; font-weight: 800; animation: cn-pop .35s cubic-bezier(.34, 1.6, .64, 1);
 }
 @keyframes cn-pop { from { transform: scale(.3); } }
@@ -101,7 +101,7 @@
 .cn__bubble:first-child { border-top-left-radius: 14px; }
 .cn__bubble.is-last {
   -webkit-line-clamp: 3; color: var(--cn-ink); border-bottom-left-radius: 14px;
-  background: color-mix(in srgb, var(--c) 10%, #fff); animation: cn-bubble .35s ease;
+  background: color-mix(in srgb, var(--c) 10%, var(--surface)); animation: cn-bubble .35s ease;
 }
 @keyframes cn-bubble { from { opacity: 0; transform: translateY(4px); } }
 
@@ -109,11 +109,11 @@
 .cn__actions { display: flex; gap: 8px; padding: 8px 14px 14px 68px; }
 .cn__btn {
   flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px;
-  border: 1px solid var(--cn-line); border-radius: 10px; background: #fff; color: var(--cn-ink);
+  border: 1px solid var(--cn-line); border-radius: 10px; background: var(--surface); color: var(--cn-ink);
   font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
   transition: background-color .15s, border-color .15s;
 }
-.cn__btn:hover { border-color: rgba(15, 30, 50, .18); background: #f7f9fb; }
+.cn__btn:hover { border-color: rgba(15, 30, 50, .18); background: var(--surface-2); }
 .cn__btn:focus-visible { outline: 2px solid var(--cn-brand); outline-offset: 2px; }
 .cn__btn--primary { background: var(--cn-brand); border-color: transparent; color: #fff; }
 .cn__btn--primary:hover { filter: brightness(1.1); border-color: transparent; background: var(--cn-brand); }
@@ -124,7 +124,7 @@
 .cn__reply-form { display: flex; gap: 8px; padding: 8px 14px 14px 68px; animation: cn-bubble .25s ease; }
 .cn__input {
   flex: 1; min-width: 0; height: 36px; box-sizing: border-box; padding: 0 12px; border: 1px solid var(--cn-line);
-  border-radius: 11px; background: #fff; color: var(--cn-ink); font: inherit; font-size: 13px; outline: none;
+  border-radius: 11px; background: var(--surface); color: var(--cn-ink); font: inherit; font-size: 13px; outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
 .cn__input:focus { border-color: var(--cn-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cn-brand) 18%, transparent); }
@@ -139,7 +139,7 @@
 @keyframes cn-spin { to { transform: rotate(360deg); } }
 .cn__sent {
   display: flex; align-items: center; gap: 6px; margin: 8px 14px 14px 68px; padding: 8px 12px; border-radius: 10px;
-  background: #e8f7f0; color: #12825a; font-size: 12.5px; font-weight: 600; animation: cn-bubble .25s ease;
+  background: var(--ok-50); color: var(--ok-text); font-size: 12.5px; font-weight: 600; animation: cn-bubble .25s ease;
 }
 
 /* Thanh thời gian còn lại */
@@ -183,10 +183,10 @@
 }
 
 /* ----- Thẻ "đã thả cảm xúc vào tin nhắn của bạn" ----- */
-.cn__app--react { background: #fff; font-size: 13px; box-shadow: 0 1px 3px rgba(15, 30, 50, .18); }
+.cn__app--react { background: var(--surface); font-size: 13px; box-shadow: 0 1px 3px rgba(15, 30, 50, .18); }
 .cn__react-badge {
   position: absolute; right: -6px; bottom: -6px; display: grid; place-items: center; width: 22px; height: 22px;
-  border-radius: 50%; background: #fff; font-size: 13px; box-shadow: 0 2px 6px rgba(15, 30, 50, .25);
+  border-radius: 50%; background: var(--surface); font-size: 13px; box-shadow: 0 2px 6px rgba(15, 30, 50, .25);
   animation: cn-react-pop .5s cubic-bezier(.34, 1.8, .64, 1);
 }
 @keyframes cn-react-pop { 0% { transform: scale(0) rotate(-30deg); } 60% { transform: scale(1.35) rotate(8deg); } 100% { transform: none; } }

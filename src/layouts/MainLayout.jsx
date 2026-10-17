@@ -16,6 +16,7 @@ import { getMenuRows, markLogoutFx } from "@/auth/authService";
 import { LOCAL_KEYS, localStore } from "@/utils/storage";
 import { ScreenContext } from "@/hooks/screenContext";
 import { clearAllDrafts } from "@/utils/draftStore";
+import { THEMES, useTheme } from "@/utils/theme";
 import { clearPushOnLogout } from "@/realtime/push";
 import { decryptText, encryptText } from "@/auth/tokenVault";
 import { buildMenuTree } from "@/utils/menuTree";
@@ -55,6 +56,10 @@ const USER_TEXT = {
     lockDate: "Ngày khoá sổ",
     mock: "Đang dùng dữ liệu giả",
     lang: "Ngôn ngữ",
+    theme: "Giao diện",
+    themes: { light: "Sáng", dark: "Tối", system: "Theo máy" },
+    toDark: "Chuyển sang giao diện tối",
+    toLight: "Chuyển sang giao diện sáng",
     account: "Thông tin tài khoản",
     fs: "Toàn màn hình",
     exitFs: "Thoát toàn màn hình",
@@ -88,6 +93,10 @@ const USER_TEXT = {
     lockDate: "Lock date",
     mock: "Using mock data",
     lang: "Language",
+    theme: "Appearance",
+    themes: { light: "Light", dark: "Dark", system: "System" },
+    toDark: "Switch to dark mode",
+    toLight: "Switch to light mode",
     account: "Account information",
     fs: "Full screen",
     exitFs: "Exit full screen",
@@ -133,6 +142,7 @@ export const useMain = () => useContext(MainContext);
  */
 export default function MainLayout() {
   const { session, user, lang, logout, setLang } = useAuth();
+  const { pref: themePref, theme, setPref: setThemePref, toggle: toggleTheme } = useTheme();
 
   // Vừa đăng nhập thành công -> chạy hiệu ứng mở màn chính 1 lần (thanh trên, menu, vùng làm việc lần lượt hiện ra)
   const location = useLocation();
@@ -511,6 +521,17 @@ export default function MainLayout() {
           <div className="mn__menu">
             <MenuStrip tree={topTree} onOpen={openMenu} variant="header" />
           </div>
+          {/* Đổi nhanh sáng / tối (chọn "Theo máy" trong menu tài khoản) */}
+          <button
+            type="button"
+            className={`mn__theme ${theme === "dark" ? "is-dark" : ""}`}
+            title={theme === "dark" ? UT.toLight : UT.toDark}
+            aria-label={theme === "dark" ? UT.toLight : UT.toDark}
+            onClick={toggleTheme}
+          >
+            <Icon name="sun" size={19} className="mn__theme-sun" />
+            <Icon name="moon" size={18} className="mn__theme-moon" />
+          </button>
           <div className="mn__user" ref={userRef}>
             <button
               type="button"
@@ -595,6 +616,32 @@ export default function MainLayout() {
                     >
                       English
                     </button>
+                  </div>
+                </div>
+
+                <div className="mn__user-sec">
+                  <div className="mn__user-label">
+                    <Icon name={theme === "dark" ? "moon" : "sun"} size={14} /> {UT.theme}
+                  </div>
+                  <div
+                    className="mn__seg mn__seg--3"
+                    style={{ "--seg-i": THEMES.indexOf(themePref) }}
+                    role="radiogroup"
+                    aria-label={UT.theme}
+                  >
+                    {THEMES.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        role="radio"
+                        aria-checked={themePref === t}
+                        className={themePref === t ? "is-on" : ""}
+                        title={UT.themes[t]}
+                        onClick={() => setThemePref(t)}
+                      >
+                        <Icon name={t === "light" ? "sun" : t === "dark" ? "moon" : "monitor"} size={14} />
+                      </button>
+                    ))}
                   </div>
                 </div>
 

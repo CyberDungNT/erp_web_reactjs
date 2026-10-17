@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import * as auth from './authService';
+import { applySavedTheme, getThemePref, setThemePersister } from '@/utils/theme';
+
+// Đổi sáng/tối -> lưu vào bản ghi đăng nhập mã hoá (không có bản ghi = không "Ghi nhớ đăng nhập" -> chỉ giữ trong tab)
+setThemePersister((theme) => auth.updateSavedToken({ theme }).catch(() => {}));
 
 /**
  * Thông tin đăng nhập dùng chung toàn app.
@@ -36,13 +40,15 @@ export function AuthProvider({ children }) {
     started.current = true;
     auth.clearLegacySession();
     if (!auth.hasSavedToken()) return;
+    // Giao diện sáng/tối đã lưu: áp ngay (chỉ giải mã, không chờ gọi API) để màn chờ đã đúng màu
+    auth.getSavedPrefs().then((p) => applySavedTheme(p?.theme)).catch(() => {});
     (async () => {
       try {
         const res = await auth.loginWithSavedToken();
         if (res?.ok) {
           const s = makeSession(res, res.lang);
           setSession(s);
-          auth.saveToken({ tokenKey: res.tokenKey, userName: res.userName, maTTCP: res.maTTCP, lang: s.lang }).catch(() => {});
+          auth.saveToken({ tokenKey: res.tokenKey, userName: res.userName, maTTCP: res.maTTCP, lang: s.lang, theme: getThemePref() }).catch(() => {});
         } else {
           auth.clearToken();
           if (res) setNotice(res.message || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
@@ -68,7 +74,7 @@ export function AuthProvider({ children }) {
       res.commit = () => {
         setNotice(null);
         if (rem) {
-          auth.saveToken({ tokenKey: res.info.TokenKey, userName, maTTCP, lang: s.lang })
+          auth.saveToken({ tokenKey: res.info.TokenKey, userName, maTTCP, lang: s.lang, theme: getThemePref() })
             .catch((err) => console.warn('Không lưu được token đăng nhập:', err));
         }
         setSession(s);

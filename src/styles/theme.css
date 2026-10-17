@@ -32,15 +32,26 @@
 
   --ink: #1b2d3c;
   --ink-2: #3a4b5b;
+  --ink-3: #56697b;            /* icon / chữ phụ đậm */
   --muted: #66788a;
+  --muted-2: #8597a8;          /* icon / chữ phụ nhạt */
   --line: #d6e1e9;
   --line-2: #e6edf2;
-  --surface: #ffffff;
+  --line-strong: #c2d0db;      /* thanh cuộn, chấm, viền đậm */
+  --surface: #ffffff;          /* nền thẻ, popup, thanh trên / dưới */
   --surface-2: #f4f8fb;
   --bg: #ffffff;               /* nền vùng làm việc (trang chủ, các màn hình) */
 
   --danger: #d1373f;
   --danger-50: #fdeced;
+  --danger-text: #a3242b;
+  --danger-line: #f6c4c7;
+  --warn-50: #fff4dc;
+  --warn-text: #8a5a00;
+  --ok-50: #e6f5ec;
+  --ok-text: #17844a;
+  --info-50: #e0f2fe;
+  --info-text: #2a5bc7;
 
   --radius: 8px;
   --ease: cubic-bezier(.22, .61, .36, 1);
@@ -48,6 +59,69 @@
   --shadow-sm: 0 1px 2px rgba(15, 47, 71, .06), 0 1px 3px rgba(15, 47, 71, .05);
   --shadow-md: 0 6px 16px rgba(15, 47, 71, .08), 0 2px 4px rgba(15, 47, 71, .05);
   --shadow-lg: 0 18px 44px rgba(15, 47, 71, .16), 0 4px 10px rgba(15, 47, 71, .06);
+  color-scheme: light;
+}
+
+/* =====================================================================
+   DARK MODE – <html data-theme="dark"> (bật / tắt ở utils/theme.js)
+   Chỉ đổi giá trị biến; component nào dùng biến ở trên là tự đổi theo.
+   Màu riêng của từng khối (chat, toast, login...) ghi đè ở styles/dark.css
+   ===================================================================== */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --brand: #2f7cb3;            /* đủ tương phản với chữ trắng trên nút */
+  --brand-hover: #3a8bc4;
+  --brand-press: #276c9e;
+  --brand-600: #276c9e;
+  --brand-text: #7cbde8;       /* chữ xanh trên nền tối */
+  --brand-ink: #ffffff;
+  --brand-50: #152636;
+  --brand-100: #1b3349;
+  --brand-200: #2a4d6b;
+  --brand-glow: rgba(47, 124, 179, .4);
+
+  /* Nền nhạt dùng màu ĐẶC (không trong suốt): ô cố định (sticky) trong bảng phải che được nội dung cuộn bên dưới */
+  --accent-text: #ffb547;
+  --accent-50: #2a2216;
+  --accent-100: #4a3615;
+  --accent-ink: #ffd9a3;
+
+  --ink: #e2eaf1;
+  --ink-2: #c2cfda;
+  --ink-3: #a3b3c2;
+  --muted: #8a9bab;
+  --muted-2: #6c7e90;
+  --line: #2a3a49;
+  --line-2: #223140;
+  --line-strong: #3d5163;
+  --surface: #17222d;
+  --surface-2: #1d2a36;
+  --bg: #111a23;
+
+  --danger: #e5555c;
+  --danger-50: #2f1c22;
+  --danger-text: #ff9196;
+  --danger-line: #6a2d34;
+  --warn-50: #2c2517;
+  --warn-text: #ffc266;
+  --ok-50: #152b24;
+  --ok-text: #6fdca6;
+  --info-50: #15283a;
+  --info-text: #8cc8ff;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .3), 0 1px 3px rgba(0, 0, 0, .2);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, .35), 0 2px 4px rgba(0, 0, 0, .2);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, .5), 0 4px 10px rgba(0, 0, 0, .25);
+}
+
+/* Đổi sáng <-> tối (utils/theme.js):
+   - .theme-instant: tắt transition của từng phần tử trong lúc đổi -> không có màu "lưng chừng" gây nháy sáng
+   - Hiệu ứng mờ dần cả trang (View Transitions): giao diện cũ mờ đi, giao diện mới hiện lên. Đổi tốc độ ở đây */
+:root.theme-instant *, :root.theme-instant *::before, :root.theme-instant *::after { transition: none !important; }
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: .55s;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

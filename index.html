@@ -14,6 +14,16 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="WebDemo" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- Sáng / tối: đặt ngay khi tải trang để không nháy nền trắng trước khi JS chạy (logic đầy đủ ở src/utils/theme.js) -->
+    <script>
+      (function () {
+        var p = null;
+        try { p = sessionStorage.getItem('cyber_theme'); } catch (e) {}
+        if (p !== 'light' && p !== 'dark') p = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', p);
+      })();
+    </script>
+    <style>:root[data-theme='dark'] body { background: #111a23; }</style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />

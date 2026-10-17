@@ -40,7 +40,7 @@
 
 .cw__badge {
   position: absolute; top: -4px; right: -4px; min-width: 21px; height: 21px; padding: 0 5px; box-sizing: border-box;
-  display: grid; place-items: center; border-radius: 999px; border: 2px solid #fff;
+  display: grid; place-items: center; border-radius: 999px; border: 2px solid var(--surface);
   background: linear-gradient(180deg, #ff5a5a, #e5262b); color: #fff; font-size: 10.5px; font-weight: 800;
   box-shadow: 0 2px 6px rgba(229, 38, 43, .45); animation: cw-badge .4s cubic-bezier(.34, 1.6, .64, 1);
 }
@@ -59,7 +59,7 @@
   /* z-index 1500: trên nội dung trang, DƯỚI popup (2000), dropdown/menu (3000-5000), msgbox (6000), toast (10000)
      -> "Xoá lịch sử" mở msgbox thì hộp hỏi nằm TRÊN khung chat */
   position: fixed; z-index: 1500; display: flex; flex-direction: column; overflow: hidden;
-  background: #fff; border: 1px solid var(--zl-line); border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--zl-line); border-radius: 14px;
   box-shadow: 0 20px 50px -12px rgba(8, 28, 54, .35), 0 4px 14px rgba(8, 28, 54, .1);
   transition: width .32s cubic-bezier(.22, 1, .36, 1);
   animation: cw-open .26s cubic-bezier(.22, 1, .36, 1);
@@ -77,7 +77,7 @@
 
 .cw__head {
   display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 8px 0 16px; flex-shrink: 0;
-  background: #fff; border-bottom: 1px solid var(--zl-line);
+  background: var(--surface); border-bottom: 1px solid var(--zl-line);
 }
 .cw__title { font-size: 15px; font-weight: 700; color: var(--zl-ink); }
 .cw__spacer { flex: 1; }
@@ -85,7 +85,7 @@
   display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none;
   color: var(--zl-muted); cursor: pointer; transition: background-color .15s, color .15s;
 }
-.cw__icon:hover { background: #f1f3f6; color: var(--zl-ink); }
+.cw__icon:hover { background: var(--surface-2); color: var(--zl-ink); }
 .cw__icon.is-on { color: var(--zl-blue); background: var(--zl-blue-soft); }
 .cw__icon:focus-visible { outline: 2px solid var(--zl-blue); outline-offset: 1px; }
 .cw__body { flex: 1; min-height: 0; }
@@ -116,12 +116,12 @@
 .chat--compact:not(.has-active) .chat__main { display: none; }
 
 /* --- Danh sách cuộc trò chuyện --- */
-.chat--compact .chat__side { border-right: 1px solid var(--zl-line); border-bottom: 0; background: #fff; min-width: 0; }
+.chat--compact .chat__side { border-right: 1px solid var(--zl-line); border-bottom: 0; background: var(--surface); min-width: 0; }
 .chat__search {
   display: flex; align-items: center; gap: 8px; margin: 10px 12px 6px; padding: 0 10px; height: 34px;
-  border-radius: 8px; background: #eaedf0; color: var(--zl-muted);
+  border-radius: 8px; background: var(--surface-2); color: var(--zl-muted);
 }
-.chat__search:focus-within { background: #fff; box-shadow: 0 0 0 1px var(--zl-blue); }
+.chat__search:focus-within { background: var(--surface); box-shadow: 0 0 0 1px var(--zl-blue); }
 .chat__search input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font: inherit; font-size: 13px; color: var(--zl-ink); }
 .chat__search button { border: 0; background: none; color: var(--zl-muted); cursor: pointer; font-size: 11px; padding: 2px; }
 .chat--compact .chat__rooms { flex-direction: column; overflow-y: auto; padding: 4px 0; gap: 0; }
@@ -129,7 +129,7 @@
   width: 100%; min-width: 0; padding: 10px 14px; border-radius: 0; gap: 12px;
   transition: background-color .12s;
 }
-.chat--compact .chat__room:hover { background: #f3f5f6; }
+.chat--compact .chat__room:hover { background: var(--surface-2); }
 .chat--compact .chat__room.is-active { background: var(--zl-blue-soft); box-shadow: none; }
 .chat--compact .chat__room-icon { width: 46px; height: 46px; border-radius: 50%; font-size: 18px; }
 .chat--compact .chat__room-top b { font-size: 14.5px; font-weight: 600; color: var(--zl-ink); }
@@ -141,7 +141,7 @@
 
 /* --- Nội dung cuộc trò chuyện --- */
 .chat--compact .chat__main { background: var(--zl-chat-bg); }
-.chat--compact .chat__head { height: 64px; padding: 0 12px; gap: 10px; background: #fff; border-bottom: 1px solid var(--zl-line); }
+.chat--compact .chat__head { height: 64px; padding: 0 12px; gap: 10px; background: var(--surface); border-bottom: 1px solid var(--zl-line); }
 .chat--compact .chat__room-icon--lg { width: 42px; height: 42px; border-radius: 50%; font-size: 16px; }
 .chat--compact .chat__head-text h3 { font-size: 15.5px; font-weight: 600; color: var(--zl-ink); }
 .chat--compact .chat__head-text p { color: var(--zl-muted); }
@@ -151,7 +151,7 @@
 .chat--compact .chat__day span { background: rgba(8, 28, 54, .08); color: var(--zl-ink); }
 .chat--compact .chat__msg { max-width: 78%; }
 .chat--compact .chat__bubble {
-  border: 0; border-radius: 10px; background: #fff; color: var(--zl-ink);
+  border: 0; border-radius: 10px; background: var(--surface); color: var(--zl-ink);
   box-shadow: 0 1px 1px rgba(8, 28, 54, .08); padding: 8px 12px;
 }
 .chat--compact .chat__msg:not(.is-mine) .chat__bubble { border-bottom-left-radius: 10px; }
@@ -164,14 +164,14 @@
 .chat--compact .chat__info-seen { color: var(--zl-ink); }
 .chat--compact .chat__state.is-sent { color: var(--zl-blue); }
 .chat--compact .chat__typing { padding: 0 16px; background: var(--zl-chat-bg); }
-.chat--compact .chat__composer { padding: 10px 12px; gap: 8px; background: #fff; border-top: 1px solid var(--zl-line); }
+.chat--compact .chat__composer { padding: 10px 12px; gap: 8px; background: var(--surface); border-top: 1px solid var(--zl-line); }
 .chat--compact .chat__input {
-  border: 0; border-radius: 8px; background: #fff; min-height: 40px; padding: 10px 6px; box-shadow: none;
+  border: 0; border-radius: 8px; background: var(--surface); min-height: 40px; padding: 10px 6px; box-shadow: none;
 }
-.chat--compact .chat__input:focus { background: #fff; box-shadow: none; }
+.chat--compact .chat__input:focus { background: var(--surface); box-shadow: none; }
 .chat--compact .chat__send { width: 40px; height: 40px; border-radius: 10px; background: none; color: var(--zl-blue); }
 .chat--compact .chat__send:hover:not(:disabled) { background: var(--zl-blue-soft); filter: none; transform: none; }
-.chat--compact .chat__send:disabled { color: #a8b5c4; opacity: 1; }
+.chat--compact .chat__send:disabled { color: var(--line-strong); opacity: 1; }
 .chat--compact .chat__new { background: var(--zl-blue); }
 
 /* Màn hẹp: không đủ 2 cột -> chỉ hiện cuộc trò chuyện (nút ‹ để về danh sách) */

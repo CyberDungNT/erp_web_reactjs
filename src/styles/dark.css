@@ -1,0 +1,159 @@
+/* =====================================================================
+   DARK MODE – màu riêng của từng khối (bộ màu chung ở styles/theme.css)
+   Chỉ áp khi <html data-theme="dark">; bật / tắt ở utils/theme.js
+   ===================================================================== */
+
+/* ---------- Bộ control Cyber* (biến ở components/cyber/cyber.css) ---------- */
+:root[data-theme='dark'] {
+  --cy-border: #2f4050;
+  --cy-border-strong: #4a6175;
+  --cy-bg: var(--surface);
+  --cy-bg-muted: var(--surface-2);
+  --cy-row-hover: #1c2c3a;
+  --cy-row-selected: var(--brand-100);
+}
+:root[data-theme='dark'] .cy-mb--success { --mb: #34c779; --mb-soft: var(--ok-50); }
+:root[data-theme='dark'] .cy-mb--warning { --mb: #f0a83a; --mb-soft: var(--warn-50); }
+:root[data-theme='dark'] .cy-mb--failed  { --mb: #f06b6b; --mb-soft: var(--danger-50); }
+:root[data-theme='dark'] .cy-mb--info    { --mb: #4cb3f0; --mb-soft: var(--info-50); }
+:root[data-theme='dark'] .cy-mb__btn--primary.is-danger { background: #d84343; border-color: #d84343; }
+:root[data-theme='dark'] .cf__error-icon { color: #f06b6b; }
+:root[data-theme='dark'] .cy-table__loading { background: rgba(17, 26, 35, .7); }
+:root[data-theme='dark'] .cf__head { background: rgba(17, 26, 35, .92); }
+:root[data-theme='dark'] .cy-upload__thumb--doc { background: var(--info-50); color: var(--info-text); }
+
+/* Toast: nền tối, màu nhấn sáng hơn cho đủ tương phản */
+:root[data-theme='dark'] .cy-toast {
+  --tc: #7d95ff; --tc-soft: rgba(125, 149, 255, .16);
+  border-color: rgba(255, 255, 255, .08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .3), 0 14px 32px -8px rgba(0, 0, 0, .6);
+}
+:root[data-theme='dark'] .cy-toast--success { --tc: #3ccf8e; --tc-soft: rgba(60, 207, 142, .15); }
+:root[data-theme='dark'] .cy-toast--warning { --tc: #f5b443; --tc-soft: rgba(245, 180, 67, .16); }
+:root[data-theme='dark'] .cy-toast--error { --tc: #ff7b7b; --tc-soft: rgba(255, 123, 123, .15); }
+
+/* ---------- Màn chính ---------- */
+:root[data-theme='dark'] .mn__top { box-shadow: 0 1px 0 rgba(0, 0, 0, .3); }
+:root[data-theme='dark'] .mn__watermark { color: rgba(140, 165, 190, .18); }
+:root[data-theme='dark'] .auth-splash { background: var(--bg); }
+
+/* ---------- Chat nổi kiểu Zalo (modules/dev/chat-widget.css) ---------- */
+:root[data-theme='dark'] .cw {
+  --zl-blue: #2f86ff;
+  --zl-blue-2: #5a9dff;
+  --zl-blue-soft: #1a3354;
+  --zl-ink: #e2eaf3;
+  --zl-muted: #8fa1b8;
+  --zl-line: #283545;
+  --zl-chat-bg: #0f1822;
+}
+:root[data-theme='dark'] .cw__bubble:focus-visible { outline-color: #2f5f9f; }
+:root[data-theme='dark'] .cw.is-pinned .cw__panel { border-color: #2f5f9f; }
+:root[data-theme='dark'] .cw.is-mobile .cw__hint,
+:root[data-theme='dark'] .chat--compact .chat__msg.is-mine .chat__bubble { border-color: #284a75; }
+
+/* ---------- Thông báo tin nhắn (modules/dev/chat-notifier.css) ---------- */
+:root[data-theme='dark'] .cn {
+  --cn-bg: rgba(26, 36, 48, .94);
+  --cn-ink: #e6edf4;
+  --cn-ink-2: #b9c5d1;
+  --cn-muted: #8a9aab;
+  --cn-line: rgba(255, 255, 255, .08);
+}
+:root[data-theme='dark'] .cn__card { --cn-bg: rgba(26, 36, 48, .9); }
+:root[data-theme='dark'] .cn__clear { background: rgba(30, 42, 55, .95); box-shadow: 0 4px 14px rgba(0, 0, 0, .4); }
+:root[data-theme='dark'] .cn__clear:hover { background: var(--surface-2); }
+
+/* ---------- Trạng thái realtime ---------- */
+:root[data-theme='dark'] .rt-status { --rt: #8a93a8; }
+:root[data-theme='dark'] .rt-status--connected { --rt: #2fcf8f; }
+:root[data-theme='dark'] .rt-status--connecting, :root[data-theme='dark'] .rt-status--reconnecting { --rt: #f0b030; }
+:root[data-theme='dark'] .rt-status--disconnected { --rt: #f06060; }
+
+/* ---------- Màn đăng nhập (pages/login/login.css – chỉ đổi biến --lg-*) ---------- */
+:root[data-theme='dark'] .lg {
+  --lg-accent: #4F70F2;
+  --lg-accent-press: #3D5EE6;
+  --lg-accent-soft: rgba(79, 112, 242, .24);
+  --lg-link: #8EA3FF;
+  --lg-link-hover: #B4C2FF;
+  --lg-panel: #090E1A;
+  --lg-bg: #090E1A;              /* cùng nền với panel trái */
+  --lg-card: #171E2B;
+  --lg-card-line: #2A3346;
+  --lg-ink: #E7EAF1;
+  --lg-ink-2: #C4C9D4;
+  --lg-muted: #A0A7B4;
+  --lg-faint: #7F8696;
+  --lg-line: #333D52;
+  --lg-line-hover: #4C5870;
+  --lg-field: #1E2636;
+  --lg-hover: #1D2430;
+  --lg-seg: #1A202B;
+  --lg-seg-on: #E7EAF1;
+  --lg-seg-on-ink: #0C1222;
+  --lg-warn: #FFB547;
+}
+/* Quả địa cầu bay lên / rơi xuống khi đổi sáng-tối (dùng translate, riêng với transform: scale thu nhỏ cảnh).
+   Chạy CÙNG LÚC và CÙNG thời gian / nhịp với hiệu ứng mờ dần cả trang (--lg-switch-* ở login.css) -> bắt đầu và kết thúc cùng nhau.
+   --sp-rise / --sp-fall = khoảng cách giữa vị trí sáng (góc dưới) và tối (phía trên). */
+
+/* Sang tối (hoặc mở trang ở chế độ tối): bay từ dưới lên */
+:root[data-theme='dark'] .sp__scene { animation: sp-rise var(--lg-switch-time) var(--lg-switch-ease) both; }
+@keyframes sp-rise { from { translate: 0 var(--sp-rise, 420px); } }
+@media (max-width: 880px) { .sp__scene { --sp-rise: 40px; } }
+
+/* Bấm từ tối về sáng (.theme-to-light do utils/theme.js gắn tạm ~2,4s): quả địa cầu rơi từ trên xuống lại góc dưới.
+   Màn hẹp: quả cầu ở cùng chỗ trong cả 2 chế độ -> chỉ nhún nhẹ */
+:root.theme-to-light .sp__scene { animation: sp-fall var(--lg-switch-time) var(--lg-switch-ease) both; }
+@keyframes sp-fall { from { translate: 0 var(--sp-fall, calc(340px - 100vh)); } }
+@media (max-width: 880px) { .sp__scene { --sp-fall: -40px; } }
+/* Laptop nhỏ: cảnh thu nhỏ .82 (login.css) -> quãng bay ngắn hơn: 100vh - 2 × 340 × .82 + 190 + 150 */
+@media (min-width: 881px) and (max-width: 1180px) {
+  .sp__scene { --sp-fall: calc(218px - 100vh); }
+  :root[data-theme='dark'] .lg .sp__scene { --sp-rise: calc(100vh - 218px); }
+}
+
+/* Màn rộng: 2 nửa liền một khối – lưới nền vẽ 1 lần cho cả trang (khớp đường kẻ),
+   panel trái không cắt nữa -> quả địa cầu + quỹ đạo tràn sang bên phải, nằm dưới thẻ đăng nhập */
+@media (min-width: 881px) {
+  :root[data-theme='dark'] .lg {
+    overflow: clip; /* cắt phần thừa nhưng không phá sticky của panel trái (hidden thì phá) */
+    background-color: var(--lg-panel);
+    background-image: linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  :root[data-theme='dark'] .lg__left { overflow: visible; } /* giữ nền đặc riêng (cùng màu + lưới khớp với nền trang) để hiệu ứng đổi sáng-tối không lộ nền phía sau */
+  /* Tối: quả địa cầu nằm phía TRÊN (sáng: góc dưới). --sp-rise = quãng bay từ vị trí dưới lên trên */
+  :root[data-theme='dark'] .sp__scene {
+    --sp-rise: calc(100vh - 340px);
+    bottom: auto; top: -150px; transform-origin: 100% 0;
+  }
+  :root[data-theme='dark'] .lg__right { position: relative; z-index: 1; background: transparent; }
+}
+/* Khung đăng nhập nổi bật trên nền tối: nền sáng hơn 1 bậc, viền ánh xanh, vệt sáng mép trên, quầng sáng xanh phía sau */
+:root[data-theme='dark'] .lg__card {
+  position: relative;
+  background: linear-gradient(180deg, #1B2333 0%, #151B27 100%);
+  border-color: rgba(142, 168, 255, .22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .06),
+    0 0 0 1px rgba(0, 0, 0, .35),
+    0 30px 60px -24px rgba(0, 0, 0, .85),
+    0 0 90px -10px rgba(79, 112, 242, .32);
+}
+:root[data-theme='dark'] .lg__card::after {
+  content: ''; position: absolute; top: -1px; left: 12%; right: 12%; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(142, 168, 255, .85), transparent);
+}
+:root[data-theme='dark'] .lg__card .cy-input:hover,
+:root[data-theme='dark'] .lg__card .cy-select:hover:not(:disabled) { background: #212A3B; }
+:root[data-theme='dark'] .lg__card .cy-input:focus,
+:root[data-theme='dark'] .lg__card .cy-select.is-open,
+:root[data-theme='dark'] .lg__card .cy-select:focus-visible { background: #121826; box-shadow: 0 0 0 4px rgba(79, 112, 242, .28), 0 0 24px -6px rgba(79, 112, 242, .6); }
+@media (max-width: 880px) {
+  /* điện thoại: tấm đăng nhập sáng hơn header một chút để thấy mép bo tròn */
+  :root[data-theme='dark'] .lg__right { background: linear-gradient(180deg, #1A2232 0%, #131A26 220px); border-top: 1px solid rgba(142, 168, 255, .25); box-shadow: 0 -12px 40px rgba(0, 0, 0, .5), 0 -2px 30px -8px rgba(79, 112, 242, .35); }
+  :root[data-theme='dark'] .lg__card { background: transparent; border-color: transparent; box-shadow: none; }
+  :root[data-theme='dark'] .lg__card::after { display: none; }
+}

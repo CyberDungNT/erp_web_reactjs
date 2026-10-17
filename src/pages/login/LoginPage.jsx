@@ -7,6 +7,8 @@ import { AuthSplash, useAuth } from '@/auth/AuthContext';
 import { clearLogoutFx, getLastLogin, getUnits, isLogoutFx } from '@/auth/authService';
 import { apiConfig } from '@/api/apiClient';
 import { BRAND, SOCIAL_LOGINS } from '@/config/brand';
+import { useTheme } from '@/utils/theme';
+import SpaceScene from './SpaceScene';
 import './login.css';
 
 // Thời gian các bước hiệu ứng đăng nhập thành công (ms)
@@ -26,6 +28,7 @@ const TEXT = {
     forgotMsg: 'Vui lòng liên hệ quản trị hệ thống để cấp lại mật khẩu.', social: (n) => `Đăng nhập bằng ${n} chưa được kích hoạt.`,
     failTitle: 'Đăng nhập thất bại', failMsg: 'Không đăng nhập được, vui lòng thử lại.', missTitle: 'Thiếu thông tin',
     unitErrTitle: 'Không tải được đơn vị', sessionTitle: 'Phiên đăng nhập',
+    toDark: 'Giao diện tối', toLight: 'Giao diện sáng',
   },
   E: {
     welcome: 'Welcome back', sub: 'Sign in to continue your session', badge: 'Enterprise management system', remember: 'Keep me signed in',
@@ -38,23 +41,11 @@ const TEXT = {
     forgotMsg: 'Please contact your administrator to reset your password.', social: (n) => `Sign in with ${n} is not enabled yet.`,
     failTitle: 'Sign-in failed', failMsg: 'Could not sign in, please try again.', missTitle: 'Missing information',
     unitErrTitle: 'Could not load units', sessionTitle: 'Session',
+    toDark: 'Dark mode', toLight: 'Light mode',
   },
 };
 
 const norm = (s) => String(s || '').trim().toLowerCase();
-
-/**
- * Chấm chạy quanh các vòng tròn góc dưới panel trái (cùng kiểu chấm cam):
- * [bán kính vòng (170 | 240 | 310), góc ban đầu (độ), kích thước, màu, số giây chạy hết 1 vòng]
- */
-const ORBIT_DOTS = [
-  [170, 200, 6, '#5B8CFF', 34],
-  [240, 245, 7, '#FFB547', 52],
-  [240, 160, 4, '#FFFFFF', 52],
-  [310, 215, 5, '#3DD6A3', 70],
-  [310, 270, 8, '#FF7A59', 70],
-  [170, 300, 4, '#FFFFFF', 34],
-];
 
 export default function LoginPage() {
   const { session, login, restoring, notice } = useAuth();
@@ -66,6 +57,7 @@ export default function LoginPage() {
   const [lang, setLang] = useState(last.lang === 'E' ? 'E' : 'V');
   const langPicked = useRef(!!last.lang);
   const t = TEXT[lang];
+  const { theme, toggle: toggleTheme } = useTheme();
   const tRef = useRef(t); // loadUnits (useCallback) đọc chữ theo ngôn ngữ hiện tại
   tRef.current = t;
 
@@ -95,7 +87,6 @@ export default function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [phase, setPhase] = useState('idle'); // idle | loading | success | reveal | leave
-  const [shake, setShake] = useState(0);
   const [showPass, setShowPass] = useState(false);
   const [remember, setRemember] = useState(() => last.remember !== false); // ghi nhớ đăng nhập (lưu TokenKey đã mã hoá)
   const [capsLock, setCapsLock] = useState(false);
@@ -165,7 +156,6 @@ export default function LoginPage() {
 
   const fail = (text) => {
     toast.error(text || t.failMsg, { title: t.failTitle });
-    setShake((n) => n + 1);
     setPhase('idle');
   };
 
@@ -177,7 +167,6 @@ export default function LoginPage() {
     else if (!String(d.MaTTCP || '').trim()) miss = unitsFailed.current ? { msg: null } : { msg: t.needUnit };
     if (!miss) return true;
     if (miss.msg) toast.warning(miss.msg, { title: t.missTitle }); // lỗi tải đơn vị đã có toast riêng
-    setShake((n) => n + 1);
     if (miss.focus) setTimeout(() => document.getElementById(miss.focus)?.focus(), 0);
     return false;
   };
@@ -227,33 +216,24 @@ export default function LoginPage() {
     <div className={`lg lg--${phase} ${bye ? 'lg--bye' : ''}`}>
       {/* ---------- Bên trái: panel thương hiệu ---------- */}
       <section className="lg__left">
-        <svg className="lg__rings" aria-hidden="true" width="640" height="640" viewBox="0 0 640 640">
-          <circle cx="320" cy="320" r="310" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="1.5" />
-          <circle className="lg__ring-dash" cx="320" cy="320" r="240" fill="none" stroke="rgba(255,255,255,.10)" strokeWidth="1.5" strokeDasharray="4 8" />
-          <circle cx="320" cy="320" r="170" fill="none" stroke="rgba(255,255,255,.12)" strokeWidth="1.5" />
-          <circle className="lg__ring-core" cx="320" cy="320" r="100" fill="#2448D8" opacity=".6" />
-          {/* Các chấm nhỏ chạy quanh các vòng tròn (giống chấm cam) */}
-          {ORBIT_DOTS.map(([ring, deg, size, color, sec], i) => (
-            <g key={i} className="lg__orbit" style={{ '--t': `${sec}s` }}>
-              <circle cx={320 + ring * Math.cos((deg * Math.PI) / 180)} cy={320 + ring * Math.sin((deg * Math.PI) / 180)} r={size} fill={color} />
-            </g>
-          ))}
-          <circle className="lg__ring-dot" cx="545" cy="150" r="12" fill="#FFB547" />
-          <circle cx="120" cy="230" r="6" fill="#FFFFFF" opacity=".6" />
-        </svg>
+        {/* Sao, sao băng, quả địa cầu + vệ tinh (SpaceScene.jsx) */}
+        <SpaceScene />
 
         <div className="lg__brand">
           <span className="lg__mark" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#12161F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 18 L12 4 L20 18" /><path d="M8 13 H16" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0C1222" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 20 12 4l8 16" /><path d="M8 14h8" />
             </svg>
           </span>
           <span className="lg__brand-name" title={unitName}>{unitName}</span>
         </div>
 
         <div className="lg__hero">
-          <span className="lg__badge">{t.badge}</span>
-          <h1 className="lg__headline">{BRAND.slogan[lang][0]},<br />{BRAND.slogan[lang][1]}.</h1>
+          <span className="lg__badge"><i aria-hidden="true" />{t.badge}</span>
+          <h1 className="lg__headline">
+            <span>{BRAND.slogan[lang][0]},</span>
+            <span className="lg__headline-2">{BRAND.slogan[lang][1]}.</span>
+          </h1>
           <p className="lg__desc">{BRAND.sloganSub[lang]}</p>
         </div>
 
@@ -262,21 +242,29 @@ export default function LoginPage() {
 
       {/* ---------- Bên phải: thẻ đăng nhập ---------- */}
       <main className="lg__right">
-        <form key={shake} className={`lg__card ${shake ? 'is-shake' : ''}`} onSubmit={submit} noValidate>
+        <form className="lg__card" onSubmit={submit} noValidate>
           <div className="lg__card-top">
             <div className="lg__heading">
               <h2 className="lg__title">{t.welcome}</h2>
               <p className="lg__sub">{t.sub}</p>
             </div>
-            {/* Đổi ngôn ngữ: bấm là đổi ngay */}
-            <div className={`lg__lang lg__lang--${lang}`} role="radiogroup" aria-label="Ngôn ngữ / Language">
-              <span className="lg__lang-thumb" aria-hidden="true" />
-              {[['V', 'VN', 'Tiếng Việt'], ['E', 'EN', 'English']].map(([code, short, name]) => (
-                <button key={code} type="button" role="radio" aria-checked={lang === code} title={name}
-                  className={lang === code ? 'is-on' : ''} onClick={() => pickLang(code)}>
-                  <Flag code={code} /> {short}
-                </button>
-              ))}
+            <div className="lg__tools">
+              {/* Đổi ngôn ngữ: bấm là đổi ngay */}
+              <div className={`lg__lang lg__lang--${lang}`} role="radiogroup" aria-label="Ngôn ngữ / Language">
+                <span className="lg__lang-thumb" aria-hidden="true" />
+                {[['V', 'VN', 'Tiếng Việt'], ['E', 'EN', 'English']].map(([code, short, name]) => (
+                  <button key={code} type="button" role="radio" aria-checked={lang === code} title={name}
+                    className={lang === code ? 'is-on' : ''} onClick={() => pickLang(code)}>
+                    {short}
+                  </button>
+                ))}
+              </div>
+              {/* Sáng / tối */}
+              <button type="button" className={`lg__theme ${theme === 'dark' ? 'is-dark' : ''}`} onClick={toggleTheme}
+                title={theme === 'dark' ? t.toLight : t.toDark} aria-label={theme === 'dark' ? t.toLight : t.toDark}>
+                <Icon name="sun" size={17} className="lg__theme-sun" />
+                <Icon name="moon" size={16} className="lg__theme-moon" />
+              </button>
             </div>
           </div>
 
@@ -373,24 +361,6 @@ export default function LoginPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function Flag({ code }) {
-  if (code === 'E') {
-    return (
-      <svg viewBox="0 0 20 20" width="18" height="18" className="lg__flag" aria-hidden="true">
-        <circle cx="10" cy="10" r="10" fill="#1f4aa8" />
-        <path d="M0 10h20M10 0v20" stroke="#fff" strokeWidth="5" />
-        <path d="M0 10h20M10 0v20" stroke="#d6283a" strokeWidth="2.6" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 20 20" width="18" height="18" className="lg__flag" aria-hidden="true">
-      <circle cx="10" cy="10" r="10" fill="#da251d" />
-      <path d="M10 4.6l1.27 3.9h4.1l-3.32 2.41 1.27 3.9L10 12.4l-3.32 2.41 1.27-3.9L4.63 8.5h4.1z" fill="#ffcd00" />
-    </svg>
   );
 }
 
