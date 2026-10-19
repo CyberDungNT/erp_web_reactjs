@@ -202,9 +202,24 @@
 .cw.is-mobile .chat__input, .cw.is-mobile .chat__search input { font-size: 16px; }
 .cw.is-mobile .chat--compact .chat__msg { max-width: 85%; }
 
-/* Mở từ menu avatar: khung thả xuống dưới avatar -> hiệu ứng mở / đóng neo góc trên phải */
-.cw.side-top .cw__panel { transform-origin: 100% 0; }
-.cw.side-top:not(.is-mobile) .cw__panel { animation-name: cw-drop; }
-.cw.side-top:not(.is-mobile) .cw__panel.is-closing { animation-name: cw-lift; }
-@keyframes cw-drop { from { opacity: 0; transform: translateY(-8px) scale(.97); } }
-@keyframes cw-lift { to { opacity: 0; transform: translateY(-8px) scale(.97); } }
+/* ---------- Mở từ menu avatar: THANH DỌC BÁM MÉP PHẢI (giống menu bên trái) ----------
+   Từ dưới thanh trên cùng tới trên thanh tab (top / bottom tính trong ChatWidget.placePanel).
+   Mở: trượt từ mép phải vào; chọn 1 cuộc trò chuyện: thanh giãn sang trái, nội dung chat trượt từ phải ra. */
+.cw.side-dock:not(.is-mobile) .cw__panel {
+  border: 0; border-left: 1px solid var(--line); border-radius: 0;
+  box-shadow: -10px 0 28px -12px rgba(8, 28, 54, .28);
+  animation: cw-dock-in .3s cubic-bezier(.22, 1, .36, 1);
+  transition: width .34s cubic-bezier(.22, 1, .36, 1);
+}
+.cw.side-dock:not(.is-mobile) .cw__panel.is-closing { animation: cw-dock-out .26s cubic-bezier(.22, 1, .36, 1) forwards; }
+@keyframes cw-dock-in { from { transform: translateX(100%); } }
+@keyframes cw-dock-out { to { transform: translateX(100%); } }
+/* đầu thanh cao bằng đầu nhóm menu trái, nền giống thanh bên */
+.cw.side-dock:not(.is-mobile) .cw__head { height: 48px; border-bottom-color: var(--line); }
+/* nội dung cuộc trò chuyện trượt từ phải ra khi chọn phòng */
+.cw.side-dock:not(.is-mobile) .chat--compact.has-active .chat__main { animation: cw-chat-in .34s cubic-bezier(.22, 1, .36, 1); }
+@keyframes cw-chat-in { from { opacity: 0; transform: translateX(48px); } }
+.cw.side-dock:not(.is-mobile) .chat--compact .chat__side { border-right-color: var(--line); }
+@media (prefers-reduced-motion: reduce) {
+  .cw.side-dock .cw__panel, .cw.side-dock .cw__panel.is-closing, .cw.side-dock .chat__main { animation-duration: 1ms !important; transition: none !important; }
+}

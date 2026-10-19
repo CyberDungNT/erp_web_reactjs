@@ -8,7 +8,6 @@ import { chatBridge } from './chatBridge';
 import './chat-widget.css';
 
 const HIDE_ANIM_MS = 260;   // thời gian hiệu ứng ẩn khung (khớp .cw__panel.is-closing trong chat-widget.css)
-const MARGIN = 12;          // khung chat cách mép phải (thẳng hàng avatar)
 const TASKBAR_H = 42;       // thanh TaskBar dưới cùng
 const MOBILE_MAX_W = 640;   // màn hẹp hơn -> khung chat phủ toàn màn hình (khớp @media trong chat-widget.css)
 
@@ -127,7 +126,7 @@ export default function ChatWidget() {
 
   return createPortal(
     <div ref={rootRef}
-      className={`cw ${open ? 'is-open' : ''} ${hasChat ? 'has-chat' : ''} ${unread ? 'has-unread' : ''} side-top ${mobile ? 'is-mobile' : ''}`}>
+      className={`cw ${open ? 'is-open' : ''} ${hasChat ? 'has-chat' : ''} ${unread ? 'has-unread' : ''} side-dock ${mobile ? 'is-mobile' : ''}`}>
       <section ref={panelRef} className={`cw__panel ${closing ? 'is-closing' : ''}`} hidden={!shown} aria-hidden={closing || undefined} role="dialog" aria-label="Tin nhắn" style={panelStyle}>
         <header className="cw__head">
           <span className="cw__title">Tin nhắn</span>
@@ -215,8 +214,10 @@ function viewport() {
  */
 function placePanel(view, hasChat) {
   if (view.w <= MOBILE_MAX_W) return undefined;
-  const top = Math.round(document.querySelector('.mn__top')?.getBoundingClientRect().bottom ?? 64) + 6;
-  const width = Math.max(300, Math.min(hasChat ? 820 : 360, view.w - 24));
-  const height = Math.max(320, Math.min(640, view.h - top - TASKBAR_H - 12));
-  return { top, right: MARGIN, width, height };
+  // Thanh dọc bám mép phải như menu bên trái: từ dưới thanh trên cùng tới trên thanh tab dưới cùng
+  const top = Math.round(document.querySelector('.mn__top')?.getBoundingClientRect().bottom ?? 64);
+  const taskTop = document.querySelector('.mn__task')?.getBoundingClientRect().top;
+  const bottom = taskTop ? Math.max(0, Math.round(view.h - taskTop)) : TASKBAR_H;
+  const width = Math.min(hasChat ? 820 : 320, view.w - 40);
+  return { top, bottom, right: 0, width };
 }
