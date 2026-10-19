@@ -253,7 +253,7 @@ export default function DemoControlsPage() {
   return (
     <div className="page">
       <div className="page__title">
-        <h2>Test bộ control Cyber*</h2>
+        <h2>Test bộ control Cyber111111*</h2>
         <div className="page__actions">
           <button className="cy-btn" onClick={fillFromCode}>Gán giá trị từ code</button>
           <button className="cy-btn" onClick={() => { form.reset(); setErrors({}); addLog('Reset form'); }}>Reset</button>

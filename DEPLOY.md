@@ -34,6 +34,9 @@ File này **không bao giờ bị cập nhật ghi đè**, giữ cấu hình ri�
 ```
 - `Key`: khoá cập nhật – ai có khoá này là cập nhật được hệ thống, giữ bí mật.
 - `WebPath`: thư mục site IIS của giao diện web.
+- ⚠ Đường dẫn trong JSON phải viết **2 dấu `\`**: `"C:\\webreactjs\\dist"`. Viết `"C:\webreactjs\dist"` là sai cú pháp →
+  API không khởi động được (IIS báo **HTTP Error 500.30**). Khi đó API ghi rõ file / dòng lỗi vào
+  **`LOI-KHOI-DONG.txt`** trong thư mục API – sửa theo hướng dẫn trong file đó rồi Recycle Application Pool.
 
 ### 3. Cấp quyền ghi cho IIS (chạy CMD quyền Administrator)
 Thay `TenAppPoolApi` bằng tên Application Pool của site API và đường dẫn cho đúng:
@@ -63,7 +66,8 @@ Chép từ `.env.deploy.example`, điền `DEPLOY_URL` (địa chỉ API) và `D
 
 ## Khi bản API mới bị lỗi không khởi động được (không vào được màn cập nhật)
 
-Vào server **1 lần** và khôi phục bằng bản sao lưu:
+Trước tiên xem file **`LOI-KHOI-DONG.txt`** trong thư mục API (có khi lỗi do file cấu hình sai cú pháp – sửa là chạy lại).
+Nếu không phải, vào server **1 lần** và khôi phục bằng bản sao lưu:
 
 1. Mở thư mục `<thư mục API>\App_Data\deploy\backups`, lấy file `.zip` **mới nhất**.
 2. Giải nén **đè** vào thư mục API (PowerShell):

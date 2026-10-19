@@ -90,6 +90,8 @@ async function relayErrorDetail(src, url) {
   try { res = await fetch(url, { cache: 'no-store' }); } catch { return RELAY_DOWN(src.relay); }
   if (res.ok) return 'Ảnh từ camera không hiển thị được (dữ liệu ảnh lỗi).';
   const text = (await res.text().catch(() => '')).trim();
+  // camera nhận đăng nhập nhưng từ chối mở luồng video (bước SETUP) – Hikvision: thường do đã đủ số kết nối xem cùng lúc
+  if (/SETUP|453|not enough bandwidth|session/i.test(text)) return 'Camera từ chối mở luồng video (thường do camera đã đủ số người xem cùng lúc: đầu ghi, app điện thoại, go2rtc khác...). Tắt bớt nơi đang xem camera hoặc khởi động lại camera, rồi bấm Kết nối lại.';
   if (/401|unauthori/i.test(text)) return 'Sai tài khoản / mật khẩu camera (camera trả 401). Lưu ý: camera Hikvision khoá tài khoản sau vài lần sai liên tiếp.';
   if (/404|not found/i.test(text) && !/stream/i.test(text)) return 'Không tìm thấy luồng video trên camera (404) – kiểm tra đường dẫn sau cổng, vd /Streaming/Channels/101.';
   if (/timeout|i\/o|refused|unreachable|no route/i.test(text)) return 'Camera không phản hồi – kiểm tra IP, cổng RTSP và mạng giữa máy này với camera.';

@@ -45,6 +45,7 @@ Dahua: `rtsp://user:pass@IP:554/cam/realmonitor?channel=1&subtype=0`.
 | go2rtc thiếu ffmpeg | Đặt `ffmpeg.exe` cạnh `go2rtc.exe`, chạy lại go2rtc |
 | Sai tài khoản / mật khẩu camera | Kiểm tra lại link. **Hikvision khoá tài khoản ~30 phút sau vài lần sai liên tiếp** |
 | Camera không phản hồi | Kiểm tra IP, cổng RTSP, mạng giữa máy này và camera |
+| Camera từ chối mở luồng video – go2rtc ghi `wrong response on SETUP` | Camera đã nhận đăng nhập nhưng không cho mở thêm luồng: thường do **đủ số kết nối xem cùng lúc** (đầu ghi NVR, app Hik-Connect / iVMS, go2rtc chạy 2 lần...). Tắt bớt nơi đang xem, đảm bảo chỉ chạy 1 go2rtc, hoặc **khởi động lại camera** (xoá các phiên bị treo). Dùng luồng phụ `.../Streaming/Channels/102` để nhẹ hơn |
 | Chrome hỏi "cho phép truy cập thiết bị trong mạng nội bộ" | Bấm **Cho phép** (trang web https gọi tới localhost) |
 
 ## Ghi chú
