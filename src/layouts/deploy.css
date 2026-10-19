@@ -46,3 +46,13 @@
 .dp__note em { color: var(--warn-text); font-style: normal; }
 .dp__back { height: 26px; padding: 0 10px; font-size: 12px; }
 @media (max-width: 640px) { .dp__cards { grid-template-columns: 1fr; } }
+.dp__who { display: flex; align-items: center; gap: 6px; margin: 0 !important; }
+.dp__who .cy-icon { color: var(--brand); }
+.dp__unlock .mn-open__spin { width: 22px; height: 22px; }
+
+/* Lúc mở: 1 trạng thái chờ (cao gần bằng màn cập nhật -> khung không giật), xong thì nội dung hiện mờ dần */
+.dp__checking { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 420px; color: var(--muted); font-size: 13.5px; }
+.dp__checking p { margin: 0; }
+.dp__checking .mn-open__spin { width: 26px; height: 26px; }
+.dp, .dp__unlock { animation: dp-in .25s ease both; }
+@keyframes dp-in { from { opacity: 0; transform: translateY(4px); } }

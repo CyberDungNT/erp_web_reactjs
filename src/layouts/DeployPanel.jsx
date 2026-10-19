@@ -15,6 +15,14 @@ import './deploy.css';
  */
 const BASE = `${apiConfig.BASE_URL}/api/Deploy`;
 let sessionKey = ''; // chỉ giữ trong bộ nhớ (không lưu trình duyệt) – tải lại trang phải nhập lại
+// TokenKey của phiên đăng nhập – server bật Deploy:AdminLogin = true thì tài khoản Is_Admin = 1 cập nhật được không cần khoá
+let sessionToken = '';
+
+/** Header xác thực: có khoá -> gửi khoá (cách 1, như cũ); luôn gửi kèm TokenKey (cách 2 – server tự quyết có nhận không) */
+const authHeaders = () => ({
+  ...(sessionKey ? { 'X-Deploy-Key': sessionKey } : {}),
+  ...(sessionToken ? { 'X-Token-Key': sessionToken } : {}),
+});
 
 const TARGETS = [
   { key: 'web', text: 'Giao diện web', hint: 'nén thư mục dist sau khi npm run build' },
@@ -29,7 +37,7 @@ async function readError(res) {
 async function call(path, opts = {}) {
   let res;
   try {
-    res = await fetch(`${BASE}${path}`, { ...opts, headers: { 'X-Deploy-Key': sessionKey, ...(opts.headers || {}) } });
+    res = await fetch(`${BASE}${path}`, { ...opts, headers: { ...authHeaders(), ...(opts.headers || {}) } });
   } catch {
     throw new Error('Không kết nối được API.');
   }
@@ -42,7 +50,7 @@ function upload(target, file, query, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${BASE}/${target}?${new URLSearchParams(query)}`);
-    xhr.setRequestHeader('X-Deploy-Key', sessionKey);
+    Object.entries(authHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     xhr.setRequestHeader('Content-Type', 'application/zip');
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
     xhr.onload = () => {
@@ -83,16 +91,34 @@ export default function DeployPanel({ open, onClose, user }) {
   const fileRef = useRef(null);
   const busy = progress != null;
 
+  const [mode, setMode] = useState(null);           // { enabled, adminLogin, keyEnabled } – server trả (GET /api/Deploy/mode)
+  // Lúc mở: chỉ hiện 1 trạng thái "đang kiểm tra" tới khi biết kết quả (tránh nháy ô nhập khoá -> màn cập nhật)
+  const [checking, setChecking] = useState(true);
+
   const load = async () => {
     setLoading(true);
     try { setInfo(await call('/info')); }
     catch (e) {
-      if (e.status === 401) { sessionKey = ''; setInfo(null); }
+      if (e.status === 401) sessionKey = '';
+      setInfo(null);
       toast.error(e.message, { title: 'Cập nhật hệ thống' });
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { if (open && sessionKey) load(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Mở màn: hỏi server cách xác thực đang bật.
+  //   AdminLogin = true  -> dùng TokenKey phiên đăng nhập (tài khoản Is_Admin = 1) – KHÔNG hỏi khoá
+  //   ngược lại / bị từ chối -> màn nhập khoá như cũ
+  useEffect(() => {
+    if (!open) return;
+    sessionToken = user?.TokenKey || '';
+    (async () => {
+      let m = null;
+      try { const r = await fetch(`${BASE}/mode`); if (r.ok) m = await r.json(); } catch { /* API cũ chưa có /mode */ }
+      setMode(m);
+      if (sessionKey || m?.adminLogin) await load();
+      setChecking(false);
+    })();
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const unlock = (e) => {
     e?.preventDefault();
@@ -163,15 +189,22 @@ export default function DeployPanel({ open, onClose, user }) {
 
   return (
     <CyberPopup open={open} onClose={busy ? undefined : onClose} title="Cập nhật hệ thống" width={820}>
-      {!sessionKey || !info ? (
+      {checking ? (
+        <div className="dp__checking"><span className="mn-open__spin" /> <p>Đang kiểm tra quyền cập nhật...</p></div>
+      ) : !info ? (
         <form className="dp__unlock" onSubmit={unlock}>
           <Icon name="lock" size={30} />
+          {mode?.adminLogin && <p className="dp__warn">Tài khoản này không được cập nhật bằng quyền quản trị (xem thông báo) – có thể dùng khoá cập nhật.</p>}
           <p>Nhập <b>khoá cập nhật</b> (mục <code>Deploy:Key</code> cấu hình trên server) để tiếp tục.</p>
           <input className="cy-input" type="password" autoFocus value={key} onChange={(e) => setKey(e.target.value)} placeholder="Khoá cập nhật" autoComplete="off" />
           <button type="submit" className="cy-btn cy-btn--primary" disabled={loading}>{loading ? 'Đang kiểm tra...' : 'Mở'}</button>
         </form>
       ) : (
         <div className="dp">
+          <p className="hint dp__who">
+            <Icon name={info.user ? 'user' : 'lock'} size={14} />
+            {info.user ? <>Xác thực bằng tài khoản quản trị <b>{info.user}</b> (Is_Admin = 1)</> : 'Xác thực bằng khoá cập nhật'}
+          </p>
           <div className="dp__cards">
             <div className="dp__card">
               <h4><Icon name="dashboard" size={16} /> Giao diện web</h4>

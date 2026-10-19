@@ -27,12 +27,19 @@ File này **không bao giờ bị cập nhật ghi đè**, giữ cấu hình ri�
 ```json
 {
   "Deploy": {
+    "AdminLogin": true,
     "Key": "đặt-một-chuỗi-bí-mật-dài-ít-nhất-16-ký-tự",
     "WebPath": "C:\\inetpub\\wwwroot\\erp-web"
   }
 }
 ```
-- `Key`: khoá cập nhật – ai có khoá này là cập nhật được hệ thống, giữ bí mật.
+- `AdminLogin` – **biến chọn cách cập nhật**:
+  - `true`: tài khoản đăng nhập có **Is_Admin = 1** (CP_SysLogin) mở "Cập nhật hệ thống" là dùng được, **không cần nhập khoá**.
+    API tự kiểm tra TokenKey của phiên đăng nhập trong database (`SysLogin` + `SysUserinfo`: token còn hạn, Is_Admin = 1),
+    lịch sử ghi đúng tên tài khoản đó.
+  - `false`: chỉ cập nhật bằng khoá (như cũ).
+- `Key`: khoá cập nhật – luôn dùng được song song (lệnh `npm run deploy` dùng khoá này). Ai có khoá là cập nhật được, giữ bí mật.
+  Chỉ dùng cách tài khoản quản trị thì có thể bỏ trống `Key` (khi đó `npm run deploy` không dùng được).
 - `WebPath`: thư mục site IIS của giao diện web.
 - ⚠ Đường dẫn trong JSON phải viết **2 dấu `\`**: `"C:\\webreactjs\\dist"`. Viết `"C:\webreactjs\dist"` là sai cú pháp →
   API không khởi động được (IIS báo **HTTP Error 500.30**). Khi đó API ghi rõ file / dòng lỗi vào
