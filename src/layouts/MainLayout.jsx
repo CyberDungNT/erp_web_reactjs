@@ -28,7 +28,9 @@ import {
   LANG_MENU_IDS,
   HomePage,
   moduleWidgets,
+  screens as STATIC_SCREENS,
 } from "@/screens/registry";
+import { getMenuInfo, isMenuAllowed, forgetMenuInfo } from "@/screens/menuForm";
 // Cửa sổ chức năng: màn khai báo cứng (registry) hoặc gọi CP_SysGetMenu -> FormInPut -> mở file cùng tên
 import MenuScreen from "@/screens/MenuScreen";
 import { CyberContextMenu, msgbox, toast } from "@/components/cyber";
@@ -73,6 +75,7 @@ const USER_TEXT = {
     reload: "Tải lại ứng dụng",
     about: "Giới thiệu phần mềm",
     deploy: "Cập nhật hệ thống",
+    goHome: "Về trang chủ",
     newVersion: "Đã có phiên bản mới của phần mềm.",
     newVersionAct: "Tải lại",
     logout: "Đăng xuất",
@@ -113,6 +116,7 @@ const USER_TEXT = {
     reload: "Reload application",
     about: "About",
     deploy: "System update",
+    goHome: "Go to home",
     newVersion: "A new version of the app is available.",
     newVersionAct: "Reload",
     logout: "Sign out",
@@ -194,6 +198,12 @@ export default function MainLayout() {
   // nhìn URL không biết đang mở chức năng gì; copy URL sang trình duyệt khác -> không giải mã được -> về trang chủ.
   const [windows, setWindows] = useState([]); // cửa sổ chức năng đang mở [{ key, node }]
   const [activeKey, setActiveKey] = useState(HOME); // HOME = trang chủ (dashboard biểu đồ), còn lại = Menu_Id
+  // openMenu đọc giá trị mới nhất qua ref (không tạo lại hàm mỗi lần mở/đóng cửa sổ)
+  const windowsRef = useRef(windows);
+  windowsRef.current = windows;
+  const authUserRef = useRef(user);
+  authUserRef.current = user;
+  const openingRef = useRef(new Set()); // Menu_Id đang chờ CP_SysGetMenu
   const urlReady = useRef(false);   // đã đọc xong URL lúc vào trang chưa (trước đó không ghi đè URL)
   const urlPlain = useRef(null);    // nội dung (chưa mã hoá) đang nằm trên URL
   const urlSeq = useRef(0);         // chống ghi URL lộn thứ tự (mã hoá là bất đồng bộ)
@@ -394,14 +404,39 @@ export default function MainLayout() {
       )
         return doLogout();
       if (LANG_MENU_IDS.includes(node.id)) return toggleLang();
-      setWindows((ws) =>
-        ws.some((w) => w.key === node.id)
-          ? ws
-          : [...ws, { key: node.id, node }],
-      );
-      setActiveKey(node.id);
+      const show = () => {
+        setWindows((ws) =>
+          ws.some((w) => w.key === node.id)
+            ? ws
+            : [...ws, { key: node.id, node }],
+        );
+        setActiveKey(node.id);
+      };
+      // Đã mở / màn khai báo cứng -> mở luôn, không hỏi quyền
+      if (windowsRef.current.some((w) => w.key === node.id) || STATIC_SCREENS[node.id]) return show();
+      // Hỏi CP_SysGetMenu trước: Status = N -> không mở, báo Note bằng CyberMsgBox
+      if (openingRef.current.has(node.id)) return; // đang hỏi (bấm đúp) -> bỏ qua
+      openingRef.current.add(node.id);
+      document.body.classList.add("is-busy");
+      getMenuInfo(node.id, authUserRef.current)
+        .then((info) => {
+          if (isMenuAllowed(info)) return show();
+          forgetMenuInfo(node.id, authUserRef.current); // lần sau hỏi lại (quyền có thể đã được cấp)
+          msgbox.warning(
+            String(info?.Note || "").trim() ||
+              (lang === "E"
+                ? "You are not allowed to use this function."
+                : "Bạn không có quyền sử dụng chức năng này."),
+            { title: node.text },
+          );
+        })
+        .catch((err) => toast.error(err?.message || String(err)))
+        .finally(() => {
+          openingRef.current.delete(node.id);
+          if (!openingRef.current.size) document.body.classList.remove("is-busy");
+        });
     },
-    [doLogout, toggleLang],
+    [doLogout, toggleLang, lang],
   );
 
   const closeWindows = useCallback(
@@ -446,6 +481,7 @@ export default function MainLayout() {
           text: "Đóng",
           icon: "✕",
           shortcut: "Ctrl+Alt+W",
+          disabled: w.key === HOME, // Trang chủ không đóng được
           onClick: () => closeWindows([w.key]),
         },
         {
@@ -455,6 +491,7 @@ export default function MainLayout() {
         },
         {
           text: "Đóng tất cả",
+          disabled: !windows.length,
           onClick: () => closeWindows(windows.map((x) => x.key)),
         },
       ],
@@ -469,6 +506,13 @@ export default function MainLayout() {
   const initial =
     displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || "?";
   const UT = USER_TEXT[lang === "E" ? "E" : "V"];
+
+  // Logo góc trên trái: logo đơn vị (BRAND.headerLogo) – link ảnh lỗi thì quay về logo mặc định
+  const DEFAULT_LOGO = "/icons/favicon.svg";
+  const logoSrc = BRAND.headerLogo || DEFAULT_LOGO;
+  const onLogoError = (e) => {
+    if (!e.currentTarget.src.endsWith(DEFAULT_LOGO)) e.currentTarget.src = DEFAULT_LOGO;
+  };
 
   // Có bản giao diện mới trên server (vừa "Cập nhật hệ thống") -> nhắc tải lại (kiểm tra 5 phút / lần và khi quay lại tab)
   const utRef = useRef(UT);
@@ -538,11 +582,19 @@ export default function MainLayout() {
           >
             <Icon name="menu" size={20} />
           </button>
-          <div className="mn__logo" title={user?.Title}>
-            <img className="mn__logo-mark" src="/icons/favicon.svg" alt="" width="30" height="30" />
-            <b>{BRAND.appName.main}</b>
-            <span>{BRAND.appName.sub}</span>
-          </div>
+          {/* Logo đơn vị – bấm về Trang chủ. Đổi ảnh: BRAND.headerLogo (src/config/brand.js) */}
+          <button
+            type="button"
+            className="mn__logo"
+            title={UT.goHome}
+            aria-label={UT.goHome}
+            onClick={() => {
+              setActiveKey(HOME);
+              if (isMobile) setDrawer(false);
+            }}
+          >
+            <img className="mn__logo-img" src={logoSrc} alt={user?.Ten_Dvcs || BRAND.unitName} onError={onLogoError} />
+          </button>
           <div className="mn__menu">
             <MenuStrip tree={topTree} onOpen={openMenu} variant="header" />
           </div>

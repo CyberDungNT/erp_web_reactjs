@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import CyberContextMenu from './CyberContextMenu';
 import { formatNumber } from './CyberNumeric';
+import Icon from '@/components/icons/Icon';
 
 /**
  * Bảng hiển thị dữ liệu.
@@ -30,6 +31,7 @@ import { formatNumber } from './CyberNumeric';
  *   Sum       true -> hiện tổng ở dòng cuối
  *   Visible   false -> ẩn cột
  *   Fixed     'left' (hoặc true/1) | 'right' -> cố định cột này khi cuộn ngang
+ *   Group     tiêu đề nhóm: các cột liền nhau cùng Group -> gộp 1 ô tiêu đề phía trên (tiêu đề 2 tầng)
  *   render    (value, row, index) => JSX   (chỉ khi khai báo bằng code)
  * Không truyền head -> tự sinh cột từ dòng đầu tiên của data.
  *
@@ -46,7 +48,10 @@ import { formatNumber } from './CyberNumeric';
  *   height           chiều cao vùng cuộn (mặc định 360)
  *   showRowNumber    cột STT (mặc định true)
  *   showSearch       ô lọc nhanh trên bảng
+ *   filterRow        dòng lọc theo từng cột ngay dưới tiêu đề (cột bool: bấm ô vuông xoay Tất cả / Có / Không)
+ *   showNavigator    thanh dưới bảng: ⏮ ◀ Bản ghi x / n ▶ ⏭
  *   sortable         bấm tiêu đề để sắp xếp (mặc định true)
+ *   rowStyle(row, index) -> style của dòng. Biến riêng: '--row-bg' (màu nền), '--row-fg' (màu chữ)
  *   loading, emptyText, rowClassName(row, index)
  */
 const pick = (o, ...keys) => {
@@ -74,6 +79,7 @@ export function normalizeColumns(head, data) {
         sum: !!pick(h, 'sum', 'Sum', 'SUM'),
         visible: pick(h, 'visible', 'Visible', 'VISIBLE') !== false && pick(h, 'visible', 'Visible', 'VISIBLE') !== 0,
         fixed: parseFixed(pick(h, 'fixed', 'Fixed', 'FIXED', 'frozen', 'Frozen')),
+        group: pick(h, 'group', 'Group', 'GROUP') || null,
         render: h.render,
       }))
       .filter((c) => c.field && c.visible);
@@ -117,19 +123,32 @@ function formatCell(v, col) {
       return isNaN(d) ? String(v) : d.toLocaleString('vi-VN');
     }
     case 'bool':
-      return v === true || v === 1 || v === '1' || v === 'True' ? '✔' : '';
+      return isTrue(v) ? '✔' : '';
     default:
       return String(v);
   }
 }
 
-const sameArr = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+const isTrue = (v) => v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
+
+/** Ô vuông hiển thị cột bool (chỉ xem) */
+const BoolBox = ({ on }) => <span className={`cy-table__chk${on ? ' is-on' : ''}`} aria-label={on ? '✔' : ''} />;
+
+/** Khớp 1 ô với giá trị dòng lọc: bool so đúng/sai, còn lại chứa chuỗi (không phân biệt hoa thường) */
+function matchFilter(v, col, f) {
+  if (col.type === 'bool') return isTrue(v) === f;
+  return formatCell(v, col).toLowerCase().includes(String(f).trim().toLowerCase());
+}
+
+// So sánh số đo (lẻ subpixel) có sai số rất nhỏ -> không setState lặp vì dao động 0.00x px
+const sameArr = (a, b) => a.length === b.length && a.every((x, i) => Math.abs(x - b[i]) < 0.01);
 
 export default function CyberTable({
   head, columns, data = [], onRowClick, onRowDoubleClick, onSelectionChange, contextMenu,
   height = 360, showRowNumber = true, showSearch = false, sortable = true,
+  filterRow = false, showNavigator = false,
   frozenColumns = 0, frozenRightColumns = 0, frozenRows = 0, isRowFrozen,
-  loading = false, emptyText = 'Không có dữ liệu', rowClassName, className = '',
+  loading = false, emptyText = 'Không có dữ liệu', rowClassName, rowStyle, className = '',
 }) {
   const cols = useMemo(
     () => arrangeColumns(normalizeColumns(columns || head, data), frozenColumns, frozenRightColumns),
@@ -137,6 +156,7 @@ export default function CyberTable({
   );
   const [sort, setSort] = useState({ field: null, dir: 1 });
   const [keyword, setKeyword] = useState('');
+  const [filters, setFilters] = useState({}); // dòng lọc theo cột: field -> chuỗi | true/false (cột bool)
   const [selected, setSelected] = useState(null); // giữ chính object dòng
   const [menu, setMenu] = useState(null);
   const bodyRef = useRef(null);
@@ -149,6 +169,10 @@ export default function CyberTable({
     const k = keyword.trim().toLowerCase();
     if (k) {
       list = list.filter(({ row }) => cols.some((c) => formatCell(row[c.field], c).toLowerCase().includes(k)));
+    }
+    const active = cols.filter((c) => filters[c.field] !== undefined && filters[c.field] !== '');
+    if (active.length) {
+      list = list.filter(({ row }) => active.every((c) => matchFilter(row[c.field], c, filters[c.field])));
     }
     if (sort.field) {
       const col = cols.find((c) => c.field === sort.field);
@@ -171,7 +195,7 @@ export default function CyberTable({
     const all = [...pinned, ...list];
     const pinnedCount = Math.min(all.length, pinned.length + Math.max(0, frozenRows));
     return { rows: all, pinnedCount };
-  }, [data, cols, keyword, sort, frozenRows, isRowFrozen]);
+  }, [data, cols, keyword, filters, sort, frozenRows, isRowFrozen]);
 
   const rows = view.rows;
   const pinnedCount = view.pinnedCount;
@@ -179,7 +203,11 @@ export default function CyberTable({
   // ===== Đo kích thước để tính vị trí sticky của cột/dòng cố định =====
   const hasFrozenCols = cols.some((c) => c.fixed);
   const stickyStt = showRowNumber && cols.some((c) => c.fixed === 'left');
-  const [metrics, setMetrics] = useState({ lefts: [], rights: [], tops: [], headH: 0 });
+  const hasGroups = cols.some((c) => c.group);
+  // Tiêu đề nhiều tầng (nhóm cột / dòng lọc) -> phải đo chiều cao từng tầng để ghim đúng chỗ
+  const multiHead = hasGroups || filterRow;
+  const [metrics, setMetrics] = useState({ lefts: [], rights: [], tops: [], headH: 0, headTops: [] });
+  const metricsRef = useRef(metrics);
 
   // Luôn đọc số dòng ghim mới nhất (tránh closure cũ trong ResizeObserver)
   const pinnedRef = useRef(pinnedCount);
@@ -192,8 +220,10 @@ export default function CyberTable({
     // Bảng đang bị ẩn (tab không active, popup đóng...) -> kích thước = 0, không đo để tránh ghi đè số liệu đúng
     if (!headRow.getClientRects().length) return;
     const ths = Array.from(headRow.children);
-    const r2 = (n) => Math.round(n * 2) / 2; // làm tròn 0.5px, tránh dao động do lệch subpixel
-    const widths = ths.map((th) => r2(th.getBoundingClientRect().width));
+    // KHÔNG làm tròn: độ rộng cột thật có thể lẻ (zoom 125%, cột giãn theo nội dung). Làm tròn rồi cộng dồn
+    // khiến vị trí cột cố định lệch vài px so với vị trí tự nhiên -> vừa cuộn ngang là cột + chữ bị xê dịch.
+    // (Cộng dồn ĐỘ RỘNG, không đọc vị trí: đang cuộn thì ô cố định nằm ở chỗ "dính", không phải chỗ tự nhiên)
+    const widths = ths.map((th) => th.getBoundingClientRect().width);
     const lefts = [];
     const rights = [];
     let acc = 0;
@@ -201,31 +231,36 @@ export default function CyberTable({
     acc = 0;
     for (let i = ths.length - 1; i >= 0; i--) { rights[i] = acc; acc += widths[i]; }
 
-    const headH = r2(headRow.getBoundingClientRect().height);
+    // headRow = tầng cuối của tiêu đề (đủ 1 ô cho mỗi cột) -> đo độ rộng; chiều cao lấy cả thead
+    const headRows = Array.from(tableRef.current?.tHead?.rows || [headRow]);
+    const headTops = [];
+    let headH = 0;
+    for (const tr of headRows) { headTops.push(headH); headH += tr.getBoundingClientRect().height; }
     const tops = [];
     const trs = tableRef.current?.tBodies[0]?.rows || [];
     let top = headH;
     for (let i = 0; i < pinnedCount && i < trs.length; i++) {
       tops[i] = top;
-      top += r2(trs[i].getBoundingClientRect().height);
+      top += trs[i].getBoundingClientRect().height;
     }
-    setMetrics((m) =>
-      sameArr(m.lefts, lefts) && sameArr(m.rights, rights) && sameArr(m.tops, tops) && m.headH === headH
-        ? m
-        : { lefts, rights, tops, headH }
-    );
+    // Không đổi -> KHÔNG gọi setState (gọi cả khi giống nhau vẫn có thể kích thêm lượt render -> lặp vô hạn)
+    const m = metricsRef.current;
+    if (sameArr(m.lefts, lefts) && sameArr(m.rights, rights) && sameArr(m.tops, tops) && Math.abs(m.headH - headH) < 0.01 && sameArr(m.headTops, headTops)) return;
+    metricsRef.current = { lefts, rights, tops, headH, headTops };
+    setMetrics(metricsRef.current);
   }, []);
 
+  const needMeasure = hasFrozenCols || pinnedCount > 0 || multiHead;
   useLayoutEffect(() => {
-    if (hasFrozenCols || pinnedCount > 0) measure();
+    if (needMeasure) measure();
   });
 
   useEffect(() => {
-    if (!(hasFrozenCols || pinnedCount > 0) || !tableRef.current || typeof ResizeObserver === 'undefined') return;
+    if (!needMeasure || !tableRef.current || typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(() => measure());
     ro.observe(tableRef.current);
     return () => ro.disconnect();
-  }, [hasFrozenCols, pinnedCount > 0, measure]);
+  }, [needMeasure, measure]);
 
   // Vị trí cột trong hàng (tính cả cột STT)
   const offset = showRowNumber ? 1 : 0;
@@ -315,6 +350,31 @@ export default function CyberTable({
     setSort((s) => (s.field !== field ? { field, dir: 1 } : s.dir === 1 ? { field, dir: -1 } : { field: null, dir: 1 }));
   };
 
+  /** Thanh chuyển bản ghi: chọn dòng thứ i (theo thứ tự đang hiển thị) */
+  const curPos = rows.findIndex((v) => v.row === selected);
+  const goTo = (i) => {
+    if (!rows.length) return;
+    const n = Math.max(0, Math.min(rows.length - 1, i));
+    selectRow(rows[n].row, rows[n].index);
+    onRowClick?.(rows[n].row, rows[n].index);
+    scrollRowIntoView(n);
+  };
+
+  const setFilter = (field, v) => setFilters((f) => ({ ...f, [field]: v }));
+  // Cột bool: Tất cả -> Có -> Không -> Tất cả
+  const cycleBool = (field) => setFilters((f) => ({ ...f, [field]: f[field] === undefined ? true : f[field] === true ? false : undefined }));
+
+  // Gộp các cột liền nhau cùng Group thành 1 ô tiêu đề nhóm
+  const segments = useMemo(() => {
+    const segs = [];
+    cols.forEach((c, ci) => {
+      const last = segs[segs.length - 1];
+      if (c.group && last?.group === c.group && last.fixed === c.fixed) last.span += 1;
+      else segs.push({ group: c.group, fixed: c.fixed, ci, span: 1 });
+    });
+    return segs;
+  }, [cols]);
+
   const align = (c) => c.align || (c.type === 'number' ? 'right' : c.type === 'bool' ? 'center' : 'left');
 
   const renderCell = (ci, content, extraStyle, extraCls = '', Tag = 'td', key, props = {}) => {
@@ -325,6 +385,20 @@ export default function CyberTable({
       </Tag>
     );
   };
+
+  /** Ô tiêu đề của 1 cột (bấm để sắp xếp) */
+  const headCell = (c, ci, style, props = {}) => renderCell(
+    ci,
+    <>
+      {c.caption ?? c.field}
+      {sort.field === c.field && <span className="cy-sort">{sort.dir === 1 ? '▲' : '▼'}</span>}
+    </>,
+    { width: c.width, minWidth: c.width, textAlign: align(c), ...style },
+    sortable ? 'is-sortable' : '',
+    'th',
+    c.field,
+    { onClick: () => toggleSort(c.field), ...props }
+  );
 
   return (
     <div className={`cy-table ${className}`}>
@@ -338,23 +412,49 @@ export default function CyberTable({
       <div className="cy-table__scroll" style={{ height }} ref={bodyRef} tabIndex={0} onKeyDown={handleKeyDown}>
         <table ref={tableRef}>
           <thead>
-            <tr ref={headRowRef}>
-              {showRowNumber && renderCell(-1, 'STT', null, 'cy-table__stt', 'th', 'stt')}
-              {cols.map((c, ci) =>
-                renderCell(
-                  ci,
-                  <>
-                    {c.caption ?? c.field}
-                    {sort.field === c.field && <span className="cy-sort">{sort.dir === 1 ? '▲' : '▼'}</span>}
-                  </>,
-                  { width: c.width, minWidth: c.width, textAlign: align(c) },
-                  sortable ? 'is-sortable' : '',
-                  'th',
-                  c.field,
-                  { onClick: () => toggleSort(c.field) }
-                )
-              )}
-            </tr>
+            {hasGroups ? (
+              <>
+                {/* Tầng 1: ô nhóm (gộp ngang) + cột không nhóm (gộp dọc 2 tầng) */}
+                <tr>
+                  {showRowNumber && renderCell(-1, 'STT', { top: 0 }, 'cy-table__stt', 'th', 'stt', { rowSpan: 2 })}
+                  {segments.map((s) => (s.group
+                    ? renderCell(s.ci, s.group, { top: 0, textAlign: 'center' },
+                      `cy-table__group${s.ci + s.span - 1 === lastLeftIdx ? ' is-fixed-left-last' : ''}`, 'th', `g${s.ci}`, { colSpan: s.span })
+                    : headCell(cols[s.ci], s.ci, { top: 0 }, { rowSpan: 2 })))}
+                </tr>
+                {/* Tầng 2: các cột thuộc nhóm */}
+                <tr>
+                  {cols.map((c, ci) => c.group && headCell(c, ci, { top: metrics.headTops[1] }))}
+                </tr>
+              </>
+            ) : (
+              <tr ref={filterRow ? undefined : headRowRef}>
+                {showRowNumber && renderCell(-1, 'STT', { top: 0 }, 'cy-table__stt', 'th', 'stt')}
+                {cols.map((c, ci) => headCell(c, ci, { top: 0 }))}
+              </tr>
+            )}
+            {/* Tầng cuối luôn đủ 1 ô / cột (để đo độ rộng): dòng lọc, hoặc dòng đệm cao 0 khi có nhóm */}
+            {(filterRow || hasGroups) && (
+              <tr ref={headRowRef} className={filterRow ? 'cy-table__filter' : 'cy-table__sizer'}>
+                {showRowNumber && renderCell(-1, filterRow ? <Icon name="filter" size={12} /> : null,
+                  { top: metrics.headTops[metrics.headTops.length - 1] }, 'cy-table__stt', 'th', 'stt')}
+                {cols.map((c, ci) => {
+                  const top = metrics.headTops[metrics.headTops.length - 1];
+                  const style = { top, width: c.width, minWidth: c.width, textAlign: 'center' };
+                  if (!filterRow) return renderCell(ci, null, style, '', 'th', c.field);
+                  const f = filters[c.field];
+                  return renderCell(ci, c.type === 'bool'
+                    ? (
+                      <button type="button" className={`cy-table__chk cy-table__chk--btn${f === true ? ' is-on' : f === false ? ' is-off' : ''}`}
+                        title={f === true ? 'Đang lọc: Có' : f === false ? 'Đang lọc: Không' : 'Lọc: Tất cả'} onClick={() => cycleBool(c.field)} />
+                    )
+                    : (
+                      <input className="cy-table__filter-input" value={f ?? ''} aria-label={`Lọc ${c.caption ?? c.field}`}
+                        onChange={(e) => setFilter(c.field, e.target.value)} />
+                    ), style, '', 'th', c.field);
+                })}
+              </tr>
+            )}
           </thead>
           <tbody>
             {rows.map(({ row, index }, i) => {
@@ -367,7 +467,7 @@ export default function CyberTable({
                 rowClassName?.(row, index) || '',
               ].join(' ').trim();
               return (
-                <tr key={index} className={cls || undefined}
+                <tr key={index} className={cls || undefined} style={rowStyle?.(row, index)}
                   onClick={() => { selectRow(row, index); onRowClick?.(row, index); }}
                   onDoubleClick={() => onRowDoubleClick?.(row, index)}
                   onContextMenu={(e) => handleContextMenu(e, row, index)}>
@@ -375,7 +475,8 @@ export default function CyberTable({
                   {cols.map((c, ci) =>
                     renderCell(
                       ci,
-                      c.render ? c.render(row[c.field], row, index) : formatCell(row[c.field], c),
+                      c.render ? c.render(row[c.field], row, index)
+                        : c.type === 'bool' ? <BoolBox on={isTrue(row[c.field])} /> : formatCell(row[c.field], c),
                       { textAlign: align(c), ...pinStyle },
                       '',
                       'td',
@@ -407,6 +508,15 @@ export default function CyberTable({
         {!loading && rows.length === 0 && <div className="cy-table__empty">{emptyText}</div>}
         {loading && <div className="cy-table__loading">Đang tải dữ liệu...</div>}
       </div>
+      {showNavigator && (
+        <div className="cy-table__nav">
+          <button type="button" title="Bản ghi đầu" disabled={!rows.length || curPos === 0} onClick={() => goTo(0)}>⏮</button>
+          <button type="button" title="Bản ghi trước" disabled={!rows.length || curPos === 0} onClick={() => goTo(curPos - 1)}>◀</button>
+          <span className="cy-table__nav-text">Bản ghi <b>{curPos >= 0 ? curPos + 1 : 0}</b> / {rows.length}{rows.length !== data.length && <span className="cy-muted"> (lọc từ {data.length})</span>}</span>
+          <button type="button" title="Bản ghi sau" disabled={!rows.length || curPos === rows.length - 1} onClick={() => goTo(curPos + 1)}>▶</button>
+          <button type="button" title="Bản ghi cuối" disabled={!rows.length || curPos === rows.length - 1} onClick={() => goTo(rows.length - 1)}>⏭</button>
+        </div>
+      )}
       {menu && <CyberContextMenu {...menu} onClose={() => setMenu(null)} />}
     </div>
   );

@@ -18,18 +18,21 @@ import { createPortal } from 'react-dom';
  *   closeOnEsc       phím Esc để đóng (mặc định true)
  *   draggable        kéo tiêu đề để di chuyển (mặc định true)
  *   maximizable      nút phóng to (mặc định true)
+ *   resizable        kéo cạnh / góc để đổi kích thước (mặc định true) – minWidth (320), minHeight (180)
  */
 export default function CyberPopup({
   open, onClose, title, width = 560, height, footer, children,
-  closeOnBackdrop = false, closeOnEsc = true, draggable = true, maximizable = true, className = '',
+  closeOnBackdrop = false, closeOnEsc = true, draggable = true, maximizable = true, resizable = true,
+  minWidth = 320, minHeight = 180, className = '',
 }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [maximized, setMaximized] = useState(false);
+  const [size, setSize] = useState(null); // { w, h } sau khi người dùng kéo giãn
   const drag = useRef(null);
   const boxRef = useRef(null);
 
   useEffect(() => {
-    if (!open) { setOffset({ x: 0, y: 0 }); setMaximized(false); return; }
+    if (!open) { setOffset({ x: 0, y: 0 }); setMaximized(false); setSize(null); return; }
     const onKey = (e) => {
       // Chỉ popup trên cùng mới xử lý Esc
       const all = document.querySelectorAll('.cy-popup');
@@ -57,9 +60,42 @@ export default function CyberPopup({
     document.addEventListener('mouseup', up);
   };
 
+  /**
+   * Kéo giãn theo hướng dir (n s e w ne nw se sw). Popup nằm giữa màn hình (flex center) nên đổi rộng d px
+   * thì 2 bên cùng nở d/2 -> dịch offset thêm d/2 để cạnh đang kéo bám đúng con trỏ, cạnh đối diện đứng yên.
+   */
+  const startResize = (e, dir) => {
+    if (e.button !== 0 || maximized) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = boxRef.current.getBoundingClientRect();
+    const s0 = { x: e.clientX, y: e.clientY, w: r.width, h: r.height, ox: offset.x, oy: offset.y };
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    const maxW = window.innerWidth - 16;
+    const maxH = window.innerHeight - 16;
+    const sx = dir.includes('w') ? -1 : dir.includes('e') ? 1 : 0;
+    const sy = dir.includes('n') ? -1 : dir.includes('s') ? 1 : 0;
+    const move = (ev) => {
+      const w = sx ? clamp(s0.w + sx * (ev.clientX - s0.x), minWidth, maxW) : s0.w;
+      const h = sy ? clamp(s0.h + sy * (ev.clientY - s0.y), minHeight, maxH) : s0.h;
+      setSize({ w, h });
+      setOffset({ x: s0.ox + (sx * (w - s0.w)) / 2, y: s0.oy + (sy * (h - s0.h)) / 2 });
+    };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      document.body.classList.remove('cy-resizing');
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = getComputedStyle(e.currentTarget).cursor; // giữ con trỏ kể cả khi chuột ra khỏi mép
+    document.body.classList.add('cy-resizing');
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  };
+
   const style = maximized
     ? { width: '100vw', height: '100vh', maxWidth: '100vw', maxHeight: '100vh', borderRadius: 0 }
-    : { width, height, transform: `translate(${offset.x}px, ${offset.y}px)` };
+    : { width: size?.w ?? width, height: size?.h ?? height, transform: `translate(${offset.x}px, ${offset.y}px)` };
 
   return createPortal(
     <div className="cy-overlay" onMouseDown={(e) => closeOnBackdrop && e.target === e.currentTarget && onClose?.()}>
@@ -75,6 +111,9 @@ export default function CyberPopup({
         </div>
         <div className="cy-popup__body">{children}</div>
         {footer && <div className="cy-popup__footer">{footer}</div>}
+        {resizable && !maximized && ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].map((d) => (
+          <span key={d} className={`cy-popup__rz cy-popup__rz--${d}`} onMouseDown={(e) => startResize(e, d)} aria-hidden="true" />
+        ))}
       </div>
     </div>,
     document.body

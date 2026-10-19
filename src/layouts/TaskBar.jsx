@@ -144,7 +144,7 @@ export default function TaskBar({
 
   return (
     <footer className="mn__task">
-      <button type="button" className={`mn__task-home ${activeKey === homeKey ? 'is-active' : ''}`} onClick={() => onActivate(homeKey)}>
+      <button type="button" className={`mn__task-home ${activeKey === homeKey ? 'is-active' : ''}`} onClick={() => onActivate(homeKey)} onContextMenu={(e) => onContextMenu(e, { key: homeKey })}>
         <Icon name="home" size={15} />
         <span>{E ? 'Home' : 'Trang chủ'}</span>
       </button>

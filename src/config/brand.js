@@ -12,7 +12,11 @@ export const BRAND = {
   tagline: 'SOFTWARE SOLUTION PROVIDER',
   webName: 'WebDemo',                            // tiêu đề tab trình duyệt (đổi cả index.html + public/manifest.webmanifest)
   product: 'WebDemo',                            // dòng nhỏ trên thẻ đăng nhập / hộp "Giới thiệu"
-  appName: { main: 'Web', sub: 'Demo' },         // logo trên thanh màn chính
+  appName: { main: 'Web', sub: 'Demo' },         // tên phần mềm (hộp "Giới thiệu"...)
+  // Logo góc trên bên trái màn chính (bấm vào -> về Trang chủ). '' = logo mặc định /icons/favicon.svg
+  // Logo đơn vị: chép ảnh vào public (vd public/logo-don-vi.png) rồi đặt '/logo-don-vi.png', hoặc 1 link ảnh đầy đủ.
+  // Logo dài / vuông đều được: ảnh tự co vừa khung (cao tối đa 40px, rộng tối đa 200px).
+  headerLogo: '',
   version: '4.0.7',
   company: UNIT_NAME,
   copyright: UNIT_NAME,

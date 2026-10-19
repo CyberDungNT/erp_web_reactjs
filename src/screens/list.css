@@ -1,0 +1,54 @@
+/* ===== Màn danh mục chung (ListScreen – CP_SysList) ===== */
+.ls { position: relative; display: flex; flex-direction: column; gap: 8px; height: 100%; min-height: 0; padding: 8px 10px 10px; box-sizing: border-box; }
+
+/* Thanh công cụ + tìm kiếm: khung nổi (giống thanh tiêu đề CyberForm) */
+.ls__bar {
+  display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; padding: 8px 10px;
+  background: var(--cy-bg); border: 1px solid var(--cy-border); border-radius: 10px; box-shadow: 0 1px 3px rgba(15, 47, 71, .06);
+}
+.ls__tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+/* Nút dùng .cy-btn (viền + nền + nổi khi hover); thêm: chữ đậm vừa, icon màu thương hiệu */
+.ls__btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; font-weight: 600; white-space: nowrap; }
+.ls__btn:not(.cy-btn--primary):not(.cy-btn--danger) .cy-icon { color: var(--brand-text, var(--cy-primary)); }
+.ls__sep { width: 1px; height: 22px; margin: 0 2px; background: var(--line); }
+
+.ls__search { flex: 1; min-width: 280px; display: flex; align-items: center; gap: 6px; }
+.ls__select {
+  height: 30px; padding: 0 6px; border: 1px solid var(--cy-border); border-radius: 6px; background: var(--cy-bg);
+  color: var(--cy-text); font: inherit; font-size: 13px; max-width: 170px; outline: none;
+}
+.ls__select:focus { border-color: var(--cy-primary); }
+.ls__select--op { width: 92px; }
+.ls__input {
+  flex: 1; min-width: 120px; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 8px;
+  border: 1px solid var(--cy-border); border-radius: 6px; background: var(--cy-bg); color: var(--cy-text-muted);
+}
+.ls__input:focus-within { border-color: var(--cy-primary); box-shadow: 0 0 0 3px var(--cy-primary-soft); }
+.ls__input input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--cy-text); font: inherit; font-size: 13px; }
+
+/* Hiệu ứng tải (giống CyberForm): thanh chạy trên đỉnh, khung xương lần đầu, mờ khi tải lại, hiện dần khi xong */
+.ls > .cf__progress { z-index: 30; }
+.ls.is-busy > .cf__progress { opacity: 1; }
+.ls__body { flex: 1; min-height: 0; display: flex; flex-direction: column; animation: cf-in .35s var(--cy-ease) both; transition: opacity .2s; }
+.ls__body.is-reloading { opacity: .55; pointer-events: none; }
+.ls__skeleton { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--cy-border); border-radius: var(--cy-radius); background: var(--cy-bg); }
+.ls__sk-head { height: 52px; border-radius: 6px; }
+.ls__sk-row { display: flex; gap: 10px; }
+.ls__sk-row .cf__sk { height: 22px; border-radius: 5px; animation-delay: calc(var(--i, 0) * 60ms); }
+
+/* Bảng chiếm hết phần còn lại; giữ khoảng trắng đầu dòng (thụt lề tài khoản cấp con) */
+.ls__table { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.ls__table .cy-table__scroll { flex: 1; min-height: 0; border-radius: var(--cy-radius) var(--cy-radius) 0 0; }
+.ls__table td { white-space: pre; max-width: none; }
+
+@media (max-width: 800px) {
+  .ls { padding: 6px; }
+  .ls__bar { padding: 6px; }
+  .ls__btn span { display: none; }
+  .ls__btn { padding: 0 9px; }
+  .ls__search { min-width: 100%; }
+  .ls__select { max-width: 110px; }
+}
+
+/* Đang hỏi quyền mở chức năng (CP_SysGetMenu) */
+body.is-busy, body.is-busy * { cursor: progress !important; }

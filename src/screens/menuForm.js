@@ -44,8 +44,15 @@ const cache = new Map();
  * @param {object} user    dòng thông tin đăng nhập (useAuth().user): Ma_TTCP, User_name, TokenKey
  * @returns {Promise<object>} dòng đầu tiên của bảng kết quả (Status, Note, FormInPut...)
  */
+const cacheKey = (menuId, user) => `${user?.User_name}|${user?.Ma_TTCP}|${menuId}`;
+
+/** Xoá kết quả đã nhớ của 1 chức năng (vd bị từ chối -> lần bấm sau hỏi lại server) */
+export function forgetMenuInfo(menuId, user) {
+  cache.delete(cacheKey(menuId, user));
+}
+
 export function getMenuInfo(menuId, user, { refresh = false } = {}) {
-  const key = `${user?.User_name}|${user?.Ma_TTCP}|${menuId}`;
+  const key = cacheKey(menuId, user);
   if (!refresh && cache.has(key)) return cache.get(key);
   const run = callProc(MENU_PROC, [
     menuId,               // @M_Menu_Id
@@ -66,3 +73,37 @@ export function getMenuInfo(menuId, user, { refresh = false } = {}) {
 
 /** Thủ tục cho phép mở? (Status = 'Y') */
 export const isMenuAllowed = (info) => String(info?.Status ?? 'Y').trim().toUpperCase() === 'Y';
+
+/** Chức năng là danh mục? (IsList = 1) -> mở màn danh mục chung (ListScreen, gọi CP_SysList) */
+export const isListMenu = (info) => ['1', 'true'].includes(String(info?.IsList ?? '').trim().toLowerCase());
+
+// ----- Danh mục: CP_SysList -----
+export const LIST_PROC = 'CP_SysList';
+
+/**
+ * Mã danh mục truyền vào CP_SysList (vd 'DMTK0'): lấy FormInPut, không có thì Ma_Ct / HelpName của CP_SysGetMenu
+ */
+export const listCodeOf = (info) => String(info?.FormInPut || info?.Ma_Ct || info?.HelpName || '').trim();
+
+/**
+ * Gọi CP_SysList (thứ tự = khai báo thủ tục):
+ *   @M_Load      '0' load dữ liệu / '1' load / '2' load 1 bản ghi
+ *   @M_LookUp    '1' lookup / '0' danh mục
+ *   @M_Nam, @M_Tb_Name (mã danh mục, vd DMTK0), @M_strSearch, @M_strkey,
+ *   @M_Ma_TTCP, @M_User_Name, @M_TokenKey, @M_Id_Device (để trống)
+ * @returns {Promise<object[][]>} tất cả các bảng trả về
+ */
+export function loadList(code, user, { load = '1', lookup = '0', search = '', key = '' } = {}) {
+  return callProc(LIST_PROC, [
+    load,                                  // @M_Load
+    lookup,                                // @M_LookUp
+    user?.Nam || new Date().getFullYear(), // @M_Nam
+    code,                                  // @M_Tb_Name
+    search,                                // @M_strSearch
+    key,                                   // @M_strkey
+    user?.Ma_TTCP || '',                   // @M_Ma_TTCP
+    user?.User_name || '',                 // @M_User_Name
+    user?.TokenKey || '',                  // @M_TokenKey
+    '',                                    // @M_Id_Device – để trống
+  ], { silent: true }).then(({ tables }) => tables);
+}

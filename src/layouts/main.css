@@ -44,10 +44,17 @@
 }
 .mn__burger:hover { background: var(--brand-50); color: var(--brand-text); }
 .mn__burger:active { transform: scale(.92); }
-.mn__logo { display: flex; align-items: baseline; gap: 0; padding: 0 22px 0 14px; flex-shrink: 0; font-size: 23px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
-.mn__logo b { color: var(--brand); }
-.mn__logo-mark { align-self: center; width: 30px; height: 30px; margin-right: 10px; flex-shrink: 0; }
-.mn__logo span { color: var(--accent); }
+/* Logo đơn vị – bấm về Trang chủ (logo dài / vuông đều co vừa khung, giữ tỉ lệ) */
+.mn__logo {
+  /* khung rộng cố định (= khối chữ "WebDemo" cũ) -> menu bên cạnh luôn đứng yên dù logo dài / ngắn */
+  display: flex; align-items: center; justify-content: flex-start; width: 198px; height: 48px; padding: 4px 10px; margin: 0; flex-shrink: 0;
+  border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+  transition: background-color .2s, transform .15s var(--ease);
+}
+.mn__logo:hover { background: var(--brand-50); }
+.mn__logo:active { transform: scale(.96); }
+.mn__logo:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.mn__logo-img { display: block; height: 40px; width: auto; max-width: 100%; object-fit: contain; }
 .mn__menu { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; }
 .mn__menu .menustrip { height: auto; }
 
@@ -180,9 +187,9 @@
   font: inherit; font-size: 14px; color: var(--ink-2); transition: background-color .18s, color .18s;
 }
 .sidemenu__item.is-root { min-height: 39px; font-size: 15px; font-weight: 500; color: var(--ink); }
-.sidemenu__item.is-root > .cy-icon, .sidemenu__item.is-root > .cy-icon-letter { color: var(--ink-3); transition: transform .3s var(--ease-spring), color .2s; }
+.sidemenu__item.is-root > .cy-icon, .sidemenu__item.is-root > .cy-icon-letter { color: var(--ink-3); transition: color .2s; }
 .sidemenu__item:hover { background: var(--brand-50); color: var(--brand-text); }
-.sidemenu__item.is-root:hover > .cy-icon { transform: scale(1.12); color: var(--brand-text); }
+.sidemenu__item.is-root:hover > .cy-icon { color: var(--brand-text); }
 .sidemenu__item[aria-expanded='true'].is-root { color: var(--brand-text); }
 .sidemenu__item[aria-expanded='true'].is-root > .cy-icon { color: var(--brand-text); }
 .sidemenu__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: transform .2s var(--ease); }
@@ -398,7 +405,7 @@
 
 @media (max-width: 1100px) {
   .mn__user-text { display: none; }
-  .mn__logo { font-size: 19px; padding-right: 10px; }
+  .mn__logo { width: 165px; }
 }
 /* ---------- Mobile (≤ 800px – khớp MOBILE_MQ trong MainLayout) ----------
    - Thanh trên 2 hàng: [☰ logo ... tài khoản] + hàng menu trên rộng hết màn hình (vuốt ngang)
@@ -413,7 +420,8 @@
   .mn__top { flex-wrap: wrap; gap: 4px; padding: env(safe-area-inset-top, 0px) 8px 0; }
   .mn__burger, .mn__user { height: 56px; display: flex; align-items: center; }
   .mn__burger { justify-content: center; height: 40px; margin-block: 8px; }
-  .mn__logo { flex: 1; min-width: 0; padding: 0 6px; font-size: 18px; overflow: hidden; }
+  .mn__logo { width: auto; margin: 0 auto 0 0; padding: 4px 6px; }
+  .mn__logo-img { height: 34px; max-width: 160px; }
   .mn__user { margin-left: 0; }
   .mn__menu {
     order: 3; flex: 0 0 calc(100% + 16px); height: 44px; margin: 0 -8px;
@@ -457,7 +465,6 @@
 .sidemenu__item.is-active::after { transform: scaleX(1); opacity: 1; background: var(--brand-100); }
 .sidemenu__item.is-active { background: transparent; }
 .sidemenu__item:active { transform: scale(.985); }
-.sidemenu__item.is-root:hover > .cy-icon { transform: scale(1.15) rotate(-6deg); }
 .sidemenu__chev, .sidemenu__chev--root { transition: transform .4s var(--ease-spring) !important; }
 .sidemenu__item.is-active::before { animation: sm-bar .4s var(--ease-spring); }
 @keyframes sm-bar { from { transform: scaleY(0); } }

@@ -6,6 +6,7 @@
 import { mockLogin, mockDashboard } from './login';
 import { mockGetUnits } from './units';
 import { mockDashboardHome } from './dashboard';
+import { mockSysList, mockSysListSave } from './sysList';
 
 const khachHang = [
   { MaKH: 'KH001', TenKH: 'Công ty TNHH Minh Phát', DiaChi: 'Q.1, TP.HCM', DienThoai: '0901234567' },
@@ -53,18 +54,21 @@ const procs = {
       '02.02.01': 'PhieuNhapPage',     // có file -> mở màn
       '02.29.24': 'HangHoa',           // bỏ đuôi "Page" vẫn tìm ra HangHoaPage.jsx
       '02.03.01': 'PhieuThuTienMat',   // chưa có file -> trang hướng dẫn tạo file
+      '05.01.01': 'DMTK0',             // danh mục (IsList = 1) -> ListScreen gọi CP_SysList
     };
     if (menuId === '02.02.30') {
       return { Table: [{ Status: 'N', Msg: 'Y', Note: 'Bạn không có quyền sử dụng chức năng Đóng sổ cuối kỳ.' }] };
     }
     return {
       Table: [{
-        Status: 'Y', Msg: 'N', Note: 'OK', Name: `CP_${menuId}`, Ma_Ct: '', IsVoucher: 0, IsList: 0, IsReport: 0, IsCaculator: 0,
+        Status: 'Y', Msg: 'N', Note: 'OK', Name: `CP_${menuId}`, Ma_Ct: '', IsVoucher: 0, IsList: menuId === '05.01.01' ? 1 : 0, IsReport: 0, IsCaculator: 0,
         IsSystem: 0, FormInPut: MOCK_FORMS[menuId] || '', Menu_Id: menuId, IsMaxForm: 1, Chk_Pass: 0, HelpName: '', Para: '',
         IsShowTab: 0, Cp_NameCaculator: null, isShowPopupCaculator: 0, FormCaculatorNext: null,
       }],
     };
   },
+  CP_SysList: mockSysList,
+  CP_SysListSave: mockSysListSave,
   CP_ToanLC: mockDashboard,
   CP_DashboardBE_Sales: mockDashboard,
   CP_DashboardRO_DsLichHen: mockDashboard,
@@ -109,7 +113,8 @@ procs.Demo_SavePhieuNhap = ([soCT, , maKH, maKho, , chiTiet = '[]']) => {
 procs.CP_DashboardHome = mockDashboardHome;
 
 export async function mockExecute({ Name, Para }) {
-  await new Promise((r) => setTimeout(r, 250)); // giả lập độ trễ mạng
+  // giả lập độ trễ mạng (danh mục chậm hơn để xem hiệu ứng tải)
+  await new Promise((r) => setTimeout(r, Name === 'CP_SysList' ? 1200 : 250));
   const fn = procs[Name];
   if (!fn) {
     return { status: false, message: `[MOCK] Không có proc '${Name}'. Đặt VITE_USE_MOCK=false để gọi server thật.`, data: null };
