@@ -380,7 +380,16 @@
   border-radius: 16px; padding: 36px 32px; box-shadow: var(--shadow-md);
 }
 .placeholder__icon { width: 60px; height: 60px; margin: 0 auto 14px; border-radius: 16px; background: var(--brand-50); color: var(--brand-text); display: grid; place-items: center; border: 1px solid var(--brand-200); }
+.placeholder__icon--warn { background: var(--warn-50); color: var(--warn-text); border-color: transparent; }
 .placeholder h2 { margin: 0 0 6px; font-size: 19px; font-weight: 800; }
+
+/* Đang mở chức năng (gọi CP_SysGetMenu – screens/MenuScreen.jsx) */
+.mn-open { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 56px 20px; color: var(--muted); font-size: 13.5px; }
+.mn-open b { color: var(--ink); font-weight: 600; }
+.mn-open__spin {
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--brand-100); border-top-color: var(--brand);
+  animation: mn-bye-spin .7s linear infinite;
+}
 .placeholder p { color: var(--muted); margin: 0 0 18px; }
 .placeholder__info { margin: 0 auto 18px; border-collapse: collapse; font-size: 13px; text-align: left; }
 .placeholder__info th { color: var(--muted); font-weight: 500; padding: 4px 16px 4px 0; }
@@ -491,7 +500,8 @@
 .mn--intro .unit { animation: mn-in-up .5s var(--ease) .7s backwards; }
 .mn--intro .mn__dtabs { animation: mn-in-fade .45s var(--ease) .3s backwards; }
 .mn--intro .mn__task { animation: mn-in-up .5s var(--ease) .55s backwards; }
-.mn--intro .mn__pane { animation: none; }
+/* KHÔNG tắt hiệu ứng của .mn__pane trong lúc intro: nếu tắt (animation: none) thì khi bỏ class .mn--intro (~2s)
+   animation đổi từ none -> mn-pane-in và chạy lại -> trang chủ nháy 1 lần. Để nó hiện mờ dần ngay từ đầu cùng intro. */
 
 /* Trang chủ */
 .mn--intro .hl__title { animation: mn-in-up .6s var(--ease) .35s backwards; }

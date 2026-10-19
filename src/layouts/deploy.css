@@ -1,0 +1,48 @@
+/* ===== Cập nhật hệ thống (DeployPanel.jsx) ===== */
+.dp__unlock { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 10px 10px; text-align: center; color: var(--ink-2); }
+.dp__unlock .cy-icon { color: var(--brand); }
+.dp__unlock p { margin: 0; font-size: 13.5px; }
+.dp__unlock .cy-input { width: 320px; max-width: 100%; height: 36px; }
+
+.dp { display: flex; flex-direction: column; gap: 14px; }
+.dp__cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dp__card { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); min-width: 0; }
+.dp__card h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: var(--ink); }
+.dp__card h4 .cy-icon { color: var(--brand); }
+.dp__card p { display: flex; gap: 8px; margin: 4px 0; font-size: 12.5px; min-width: 0; }
+.dp__card p span { flex: 0 0 76px; color: var(--muted); }
+.dp__card p b, .dp__card p code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--ink); }
+.dp__warn { color: var(--warn-text) !important; display: block !important; }
+
+.dp__up { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+.dp__targets { display: inline-flex; align-self: flex-start; padding: 3px; border-radius: 9px; background: var(--surface-2); border: 1px solid var(--line); }
+.dp__targets button {
+  height: 30px; padding: 0 14px; border: 0; border-radius: 7px; background: none; color: var(--ink-2);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.dp__targets button.is-on { background: var(--brand); color: #fff; }
+.dp__drop {
+  display: flex; align-items: center; gap: 12px; padding: 16px; border: 1.5px dashed var(--line-strong); border-radius: 10px;
+  background: var(--surface-2); color: var(--muted); font-size: 13px; cursor: pointer; transition: border-color .15s, background-color .15s;
+}
+.dp__drop:hover, .dp__drop.is-drag { border-color: var(--brand); background: var(--brand-50); }
+.dp__drop.has-file { border-style: solid; color: var(--ink); }
+.dp__drop .cy-icon { color: var(--brand); flex-shrink: 0; }
+.dp__row { display: flex; gap: 8px; }
+.dp__row .cy-input { flex: 1; height: 32px; }
+.dp__bar { height: 6px; border-radius: 6px; background: var(--line-2); overflow: hidden; }
+.dp__bar i { display: block; height: 100%; background: var(--brand); transition: width .2s; }
+.dp__bar.is-indeterminate i { width: 35%; animation: dp-slide 1.1s ease-in-out infinite; }
+@keyframes dp-slide { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+.dp .hint { margin: 0; }
+
+.dp__h { margin: 2px 0 -4px; font-size: 14px; color: var(--ink); }
+.dp__hist { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+.dp__hist table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dp__hist th { position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600; color: var(--ink-2); padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.dp__hist td { padding: 6px 10px; border-bottom: 1px solid var(--line-2); color: var(--ink); white-space: nowrap; }
+.dp__hist tr.is-off td { color: var(--muted); }
+.dp__note { white-space: normal !important; max-width: 220px; }
+.dp__note em { color: var(--warn-text); font-style: normal; }
+.dp__back { height: 26px; padding: 0 10px; font-size: 12px; }
+@media (max-width: 640px) { .dp__cards { grid-template-columns: 1fr; } }

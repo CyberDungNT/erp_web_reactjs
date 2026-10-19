@@ -1,6 +1,7 @@
 import {
   Component,
   Suspense,
+  lazy,
   createContext,
   useCallback,
   useContext,
@@ -21,8 +22,6 @@ import { clearPushOnLogout } from "@/realtime/push";
 import { decryptText, encryptText } from "@/auth/tokenVault";
 import { buildMenuTree } from "@/utils/menuTree";
 import {
-  screens,
-  Placeholder,
   devMenu,
   SHOW_DEV_MENU,
   EXIT_MENU_IDS,
@@ -30,13 +29,18 @@ import {
   HomePage,
   moduleWidgets,
 } from "@/screens/registry";
-import { CyberContextMenu, msgbox } from "@/components/cyber";
+// Cửa sổ chức năng: màn khai báo cứng (registry) hoặc gọi CP_SysGetMenu -> FormInPut -> mở file cùng tên
+import MenuScreen from "@/screens/MenuScreen";
+import { CyberContextMenu, msgbox, toast } from "@/components/cyber";
 import Icon from "@/components/icons/Icon";
 import { BRAND } from "@/config/brand";
 import MenuStrip from "./MenuStrip";
 import SideMenu from "./SideMenu";
 import UnitSwitcher from "./UnitSwitcher";
 import TaskBar from "./TaskBar";
+import { watchNewVersion } from "@/utils/appVersion";
+// Cập nhật hệ thống (menu avatar, chỉ quản trị) – tải code khi mở
+const DeployPanel = lazy(() => import("./DeployPanel"));
 import "./main.css";
 
 const SIDEBAR_KEY = LOCAL_KEYS.SIDEBAR_COLLAPSED;
@@ -68,6 +72,9 @@ const USER_TEXT = {
     keys: "Phím tắt",
     reload: "Tải lại ứng dụng",
     about: "Giới thiệu phần mềm",
+    deploy: "Cập nhật hệ thống",
+    newVersion: "Đã có phiên bản mới của phần mềm.",
+    newVersionAct: "Tải lại",
     logout: "Đăng xuất",
     userName: "Tài khoản",
     company: "Công ty",
@@ -105,6 +112,9 @@ const USER_TEXT = {
     keys: "Keyboard shortcuts",
     reload: "Reload application",
     about: "About",
+    deploy: "System update",
+    newVersion: "A new version of the app is available.",
+    newVersionAct: "Reload",
     logout: "Sign out",
     userName: "Username",
     company: "Company",
@@ -245,6 +255,7 @@ export default function MainLayout() {
   }, [drawer]);
   const [ctxMenu, setCtxMenu] = useState(null);
   const [userOpen, setUserOpen] = useState(false);
+  const [deployOpen, setDeployOpen] = useState(false);
   const userRef = useRef(null);
 
   useEffect(() => {
@@ -458,6 +469,20 @@ export default function MainLayout() {
   const initial =
     displayName.trim().split(/\s+/).pop()?.charAt(0).toUpperCase() || "?";
   const UT = USER_TEXT[lang === "E" ? "E" : "V"];
+
+  // Có bản giao diện mới trên server (vừa "Cập nhật hệ thống") -> nhắc tải lại (kiểm tra 5 phút / lần và khi quay lại tab)
+  const utRef = useRef(UT);
+  utRef.current = UT;
+  useEffect(
+    () =>
+      watchNewVersion(() =>
+        toast.info(utRef.current.newVersion, {
+          duration: 0,
+          action: { text: utRef.current.newVersionAct, onClick: () => window.location.reload() },
+        }),
+      ),
+    [],
+  );
 
   // ----- Chức năng trong menu người dùng -----
   const showAccount = () =>
@@ -709,6 +734,20 @@ export default function MainLayout() {
                   >
                     <Icon name="info" size={16} /> <span>{UT.about}</span>
                   </button>
+                  {/* Cập nhật phiên bản web / API trực tiếp lên server – chỉ quản trị viên */}
+                  {user?.is_Admin && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="mn__user-act"
+                      onClick={() => {
+                        setUserOpen(false);
+                        setDeployOpen(true);
+                      }}
+                    >
+                      <Icon name="upload" size={16} /> <span>{UT.deploy}</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="mn__user-foot">
@@ -784,7 +823,6 @@ export default function MainLayout() {
               </PaneBoundary>
             </div>
             {windows.map((w) => {
-              const Screen = screens[w.key] || Placeholder;
               return (
                 <div
                   key={w.key}
@@ -798,7 +836,7 @@ export default function MainLayout() {
                       }
                     >
                       <ScreenContext.Provider value={screenCtx(w.key)}>
-                        <Screen menu={nodeMap.get(w.key) || w.node} />
+                        <MenuScreen menu={nodeMap.get(w.key) || w.node} />
                       </ScreenContext.Provider>
                     </Suspense>
                   </PaneBoundary>
@@ -828,6 +866,12 @@ export default function MainLayout() {
 
         {ctxMenu && (
           <CyberContextMenu {...ctxMenu} onClose={() => setCtxMenu(null)} />
+        )}
+
+        {deployOpen && (
+          <Suspense fallback={null}>
+            <DeployPanel open={deployOpen} onClose={() => setDeployOpen(false)} user={user} />
+          </Suspense>
         )}
 
         {/* Thành phần chạy nền của các module (popup tin nhắn...) – khai báo "widgets" trong index.js của từng phân hệ */}

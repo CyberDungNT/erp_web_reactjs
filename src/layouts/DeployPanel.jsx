@@ -1,0 +1,247 @@
+import { useEffect, useRef, useState } from 'react';
+import { CyberPopup, msgbox, toast, formatSize } from '@/components/cyber';
+import Icon from '@/components/icons/Icon';
+import { apiConfig } from '@/api/apiClient';
+import { APP_BUILD, formatBuild } from '@/utils/appVersion';
+import './deploy.css';
+
+/**
+ * CẬP NHẬT HỆ THỐNG (menu avatar – chỉ quản trị viên)
+ *   - Xem phiên bản giao diện web / API đang chạy trên server
+ *   - Tải lên gói .zip để cập nhật (web: thư mục dist, API: thư mục publish) -> server tự chép file, API tự khởi động lại
+ *   - Lịch sử cập nhật + quay lại bản trước
+ * Server: API_App_Demo/Controllers/DeployController.cs – cần cấu hình Deploy:Key (+ Deploy:WebPath) trên server.
+ * Làm từ máy dev bằng 1 lệnh: npm run deploy (scripts/deploy.mjs)
+ */
+const BASE = `${apiConfig.BASE_URL}/api/Deploy`;
+let sessionKey = ''; // chỉ giữ trong bộ nhớ (không lưu trình duyệt) – tải lại trang phải nhập lại
+
+const TARGETS = [
+  { key: 'web', text: 'Giao diện web', hint: 'nén thư mục dist sau khi npm run build' },
+  { key: 'api', text: 'API (máy chủ)', hint: 'nén thư mục kết quả dotnet publish – API tự khởi động lại' },
+];
+
+async function readError(res) {
+  const body = await res.json().catch(() => null);
+  return body?.detail || body?.title || `Lỗi ${res.status}`;
+}
+
+async function call(path, opts = {}) {
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...opts, headers: { 'X-Deploy-Key': sessionKey, ...(opts.headers || {}) } });
+  } catch {
+    throw new Error('Không kết nối được API.');
+  }
+  if (!res.ok) { const e = new Error(await readError(res)); e.status = res.status; throw e; }
+  return res.json();
+}
+
+/** Tải gói lên có tiến độ (fetch chưa báo được % tải lên) */
+function upload(target, file, query, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${BASE}/${target}?${new URLSearchParams(query)}`);
+    xhr.setRequestHeader('X-Deploy-Key', sessionKey);
+    xhr.setRequestHeader('Content-Type', 'application/zip');
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(Math.round((e.loaded / e.total) * 100));
+    xhr.onload = () => {
+      let body = null; try { body = JSON.parse(xhr.responseText); } catch { /* không phải json */ }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+      else reject(new Error(body?.detail || body?.title || `Lỗi ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error('Mất kết nối khi tải gói cập nhật lên.'));
+    xhr.send(file);
+  });
+}
+
+/** Chờ API khởi động lại xong (startedAt đổi) */
+async function waitApiRestart(prevStartedAt, timeoutMs = 90000) {
+  const end = Date.now() + timeoutMs;
+  await new Promise((r) => setTimeout(r, 2500));
+  while (Date.now() < end) {
+    try {
+      const info = await call('/info');
+      if (info.api?.startedAt !== prevStartedAt) return info;
+    } catch { /* đang khởi động */ }
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+  return null;
+}
+
+const fmt = (d) => (d ? new Date(d).toLocaleString('vi-VN') : '—');
+
+export default function DeployPanel({ open, onClose, user }) {
+  const [key, setKey] = useState(sessionKey);
+  const [info, setInfo] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [target, setTarget] = useState('web');
+  const [file, setFile] = useState(null);
+  const [note, setNote] = useState('');
+  const [progress, setProgress] = useState(null);   // null | 0..100 | 'restart'
+  const [drag, setDrag] = useState(false);
+  const fileRef = useRef(null);
+  const busy = progress != null;
+
+  const load = async () => {
+    setLoading(true);
+    try { setInfo(await call('/info')); }
+    catch (e) {
+      if (e.status === 401) { sessionKey = ''; setInfo(null); }
+      toast.error(e.message, { title: 'Cập nhật hệ thống' });
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { if (open && sessionKey) load(); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const unlock = (e) => {
+    e?.preventDefault();
+    if (!key.trim()) { toast.warning('Nhập khoá cập nhật (Deploy:Key cấu hình trên server).'); return; }
+    sessionKey = key.trim();
+    load();
+  };
+
+  const pick = (f) => {
+    if (!f) return;
+    if (!/\.zip$/i.test(f.name)) { toast.warning('Chọn file .zip (gói cập nhật).'); return; }
+    setFile(f);
+  };
+
+  const deploy = async () => {
+    if (!file) { toast.warning('Chọn gói cập nhật (.zip) trước.'); return; }
+    const t = TARGETS.find((x) => x.key === target);
+    const ok = await msgbox.yesNo(`Cập nhật ${t.text} bằng gói "${file.name}"?`, {
+      title: 'Cập nhật hệ thống',
+      detail: target === 'api' ? 'API sẽ tự khởi động lại (vài giây) – người đang dùng có thể bị gián đoạn ngắn.' : 'Người đang mở web sẽ được nhắc tải lại trang để dùng bản mới.',
+      yesText: 'Cập nhật', noText: 'Huỷ',
+    });
+    if (!ok) return;
+    const prevStarted = info?.api?.startedAt;
+    try {
+      setProgress(0);
+      const rec = await upload(target, file, { by: user?.User_name || '', note }, setProgress);
+      if (!rec.files) {
+        toast.info('Gói cập nhật giống hệt bản đang chạy – không có file nào thay đổi.', { title: 'Cập nhật hệ thống' });
+      } else if (target === 'api') {
+        setProgress('restart');
+        const after = await waitApiRestart(prevStarted);
+        if (after) { setInfo(after); toast.success(`Đã cập nhật API (${rec.files} file) và khởi động lại.`, { title: 'Cập nhật hệ thống' }); }
+        else toast.warning('Đã chép file nhưng chưa thấy API khởi động lại – kiểm tra trên server.', { title: 'Cập nhật hệ thống' });
+      } else {
+        toast.success(`Đã cập nhật giao diện web (${rec.files} file).`, {
+          title: 'Cập nhật hệ thống', duration: 0, action: { text: 'Tải lại trang', onClick: () => window.location.reload() },
+        });
+      }
+      setFile(null); setNote('');
+      if (target !== 'api' || !rec.files) await load();
+    } catch (e) {
+      toast.error(e.message, { title: 'Cập nhật thất bại' });
+    } finally { setProgress(null); }
+  };
+
+  const rollback = async (rec) => {
+    const ok = await msgbox.yesNo(`Quay lại trạng thái trước lượt cập nhật ${rec.target === 'api' ? 'API' : 'giao diện web'} lúc ${fmt(rec.at)}?`, {
+      title: 'Quay lại bản trước', danger: true, yesText: 'Quay lại', noText: 'Huỷ',
+      detail: `${rec.added?.length || 0} file thêm mới sẽ bị xoá, ${rec.replaced?.length || 0} file được khôi phục bản cũ.`,
+    });
+    if (!ok) return;
+    const prevStarted = info?.api?.startedAt;
+    try {
+      setProgress('restart');
+      await call(`/rollback/${encodeURIComponent(rec.id)}?by=${encodeURIComponent(user?.User_name || '')}`, { method: 'POST' });
+      if (rec.target === 'api') await waitApiRestart(prevStarted);
+      toast.success('Đã quay lại bản trước.', { title: 'Cập nhật hệ thống' });
+      await load();
+    } catch (e) {
+      toast.error(e.message, { title: 'Quay lại thất bại' });
+    } finally { setProgress(null); }
+  };
+
+  // lượt cập nhật mới nhất còn hiệu lực của mỗi loại -> được quay lại
+  const latestId = {};
+  for (const r of info?.history || []) if (r.kind === 'deploy' && !r.rolledBack && !latestId[r.target]) latestId[r.target] = r.id;
+
+  return (
+    <CyberPopup open={open} onClose={busy ? undefined : onClose} title="Cập nhật hệ thống" width={820}>
+      {!sessionKey || !info ? (
+        <form className="dp__unlock" onSubmit={unlock}>
+          <Icon name="lock" size={30} />
+          <p>Nhập <b>khoá cập nhật</b> (mục <code>Deploy:Key</code> cấu hình trên server) để tiếp tục.</p>
+          <input className="cy-input" type="password" autoFocus value={key} onChange={(e) => setKey(e.target.value)} placeholder="Khoá cập nhật" autoComplete="off" />
+          <button type="submit" className="cy-btn cy-btn--primary" disabled={loading}>{loading ? 'Đang kiểm tra...' : 'Mở'}</button>
+        </form>
+      ) : (
+        <div className="dp">
+          <div className="dp__cards">
+            <div className="dp__card">
+              <h4><Icon name="dashboard" size={16} /> Giao diện web</h4>
+              {info.web ? (
+                <>
+                  <p><span>Trên server</span><b>{formatBuild(info.web.version)}</b></p>
+                  <p><span>Đang mở</span><b>{APP_BUILD.id === 'dev' ? 'bản dev (npm run dev)' : formatBuild(APP_BUILD)}</b></p>
+                  <p><span>Thư mục</span><code>{info.web.path}</code></p>
+                </>
+              ) : <p className="dp__warn">Chưa cấu hình <code>Deploy:WebPath</code> trên server – chưa cập nhật giao diện được.</p>}
+            </div>
+            <div className="dp__card">
+              <h4><Icon name="database" size={16} /> API</h4>
+              <p><span>Bản build</span><b>{fmt(info.api.builtAt)}</b></p>
+              <p><span>Chạy từ</span><b>{fmt(info.api.startedAt)}</b></p>
+              <p><span>Thư mục</span><code>{info.api.path}</code></p>
+            </div>
+          </div>
+
+          <div className="dp__up">
+            <div className="dp__targets" role="radiogroup">
+              {TARGETS.map((t) => (
+                <button key={t.key} type="button" role="radio" aria-checked={target === t.key} className={target === t.key ? 'is-on' : ''}
+                  disabled={busy} onClick={() => setTarget(t.key)}>{t.text}</button>
+              ))}
+            </div>
+            <div className={`dp__drop ${drag ? 'is-drag' : ''} ${file ? 'has-file' : ''}`}
+              onClick={() => !busy && fileRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
+              onDrop={(e) => { e.preventDefault(); setDrag(false); if (!busy) pick(e.dataTransfer.files?.[0]); }}>
+              <input ref={fileRef} type="file" accept=".zip,application/zip" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
+              <Icon name={file ? 'file' : 'folder'} size={26} />
+              {file ? <span><b>{file.name}</b> · {formatSize(file.size)}</span>
+                : <span>Kéo thả gói <b>.zip</b> vào đây hoặc bấm để chọn – {TARGETS.find((t) => t.key === target).hint}</span>}
+            </div>
+            <div className="dp__row">
+              <input className="cy-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Ghi chú (vd: sửa lỗi in phiếu)" disabled={busy} />
+              <button type="button" className="cy-btn cy-btn--primary" disabled={!file || busy} onClick={deploy}>
+                {progress === 'restart' ? 'Đang khởi động lại...' : typeof progress === 'number' ? `Đang tải lên ${progress}%` : 'Cập nhật'}
+              </button>
+            </div>
+            {typeof progress === 'number' && <div className="dp__bar"><i style={{ width: `${progress}%` }} /></div>}
+            {progress === 'restart' && <div className="dp__bar is-indeterminate"><i /></div>}
+            <p className="hint">Nhanh hơn: chạy <code>npm run deploy</code> (giao diện) hoặc <code>npm run deploy -- api</code> ở máy dev – tự build và đẩy lên (scripts/deploy.mjs).</p>
+          </div>
+
+          <h4 className="dp__h">Lịch sử cập nhật</h4>
+          {!info.history?.length ? <p className="hint">Chưa có lượt cập nhật nào.</p> : (
+            <div className="dp__hist">
+              <table>
+                <thead><tr><th>Thời gian</th><th>Loại</th><th>Người</th><th>Ghi chú</th><th>File</th><th /></tr></thead>
+                <tbody>
+                  {info.history.map((r) => (
+                    <tr key={r.id} className={r.rolledBack ? 'is-off' : ''}>
+                      <td>{fmt(r.at)}</td>
+                      <td>{r.kind === 'rollback' ? 'Quay lại · ' : ''}{r.target === 'api' ? 'API' : 'Web'}</td>
+                      <td>{r.by || '—'}</td>
+                      <td className="dp__note">{r.note || ''}{r.rolledBack ? <em> (đã quay lại)</em> : ''}</td>
+                      <td>{r.kind === 'deploy' ? `${r.added?.length || 0} mới · ${r.replaced?.length || 0} sửa` : `${r.replaced?.length || 0} khôi phục`}</td>
+                      <td>{latestId[r.target] === r.id && (
+                        <button type="button" className="cy-btn dp__back" disabled={busy} onClick={() => rollback(r)}>Quay lại</button>
+                      )}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </CyberPopup>
+  );
+}

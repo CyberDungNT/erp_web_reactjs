@@ -47,6 +47,24 @@ const hangHoaHead = [
 const procs = {
   CP_SysLogin: mockLogin,
   CP_SysGetUnits: mockGetUnits,
+  // Mở chức năng: FormInPut = tên file màn hình trong src/modules (screens/menuForm.js)
+  CP_SysGetMenu: ([menuId = '']) => {
+    const MOCK_FORMS = {
+      '02.02.01': 'PhieuNhapPage',     // có file -> mở màn
+      '02.29.24': 'HangHoa',           // bỏ đuôi "Page" vẫn tìm ra HangHoaPage.jsx
+      '02.03.01': 'PhieuThuTienMat',   // chưa có file -> trang hướng dẫn tạo file
+    };
+    if (menuId === '02.02.30') {
+      return { Table: [{ Status: 'N', Msg: 'Y', Note: 'Bạn không có quyền sử dụng chức năng Đóng sổ cuối kỳ.' }] };
+    }
+    return {
+      Table: [{
+        Status: 'Y', Msg: 'N', Note: 'OK', Name: `CP_${menuId}`, Ma_Ct: '', IsVoucher: 0, IsList: 0, IsReport: 0, IsCaculator: 0,
+        IsSystem: 0, FormInPut: MOCK_FORMS[menuId] || '', Menu_Id: menuId, IsMaxForm: 1, Chk_Pass: 0, HelpName: '', Para: '',
+        IsShowTab: 0, Cp_NameCaculator: null, isShowPopupCaculator: 0, FormCaculatorNext: null,
+      }],
+    };
+  },
   CP_ToanLC: mockDashboard,
   CP_DashboardBE_Sales: mockDashboard,
   CP_DashboardRO_DsLichHen: mockDashboard,

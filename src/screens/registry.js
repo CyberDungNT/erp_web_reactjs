@@ -1,7 +1,12 @@
 import { lazy } from 'react';
 
 /**
- * DANH MỤC MÀN HÌNH: Menu_Id -> component.
+ * CÁCH MỞ MÀN HÌNH KHI BẤM MENU (screens/MenuScreen.jsx):
+ *   1. Menu_Id khai báo cứng ở mục `screens` dưới đây (các module) -> mở luôn
+ *   2. Còn lại: gọi CP_SysGetMenu -> cột FormInPut = TÊN FILE màn hình -> tự tìm file đó trong src/modules và mở
+ *      (thường dùng cách 2: chỉ cần tạo src/modules/<phân-hệ>/<FormInPut>.jsx, KHÔNG cần khai báo gì – xem screens/menuForm.js)
+ *
+ * DANH MỤC MÀN HÌNH KHAI BÁO CỨNG: Menu_Id -> component.
  *
  * Màn hình nghiệp vụ nằm trong src/modules/<phân-hệ>/, mỗi phân hệ có 1 file index.js khai báo:
  *   export const screens = { '02.02.01': lazy(() => import('./PhieuKeToanPage')) };

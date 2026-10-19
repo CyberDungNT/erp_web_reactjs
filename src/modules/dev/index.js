@@ -11,6 +11,7 @@ export const screens = {
   'DEV.HANGHOA': lazy(() => import('./HangHoaPage')),
   'DEV.PHIEUNHAP': lazy(() => import('./PhieuNhapPage')),
   'DEV.PROC': lazy(() => import('./ProcTesterPage')),
+  'DEV.PLATE': lazy(() => import('./BienSoXePage')),
 };
 
 /**
@@ -33,6 +34,7 @@ export const menu = [
       { id: 'DEV.HANGHOA', parentId: 'DEV', text: 'Danh mục hàng hoá (mẫu)', icon: '', separator: false, children: [] },
       { id: 'DEV.PHIEUNHAP', parentId: 'DEV', text: 'Phiếu nhập kho (mẫu CyberForm)', icon: '', separator: false, children: [] },
       { id: 'DEV.PROC', parentId: 'DEV', text: 'Gọi proc tuỳ ý', icon: '', separator: false, children: [] },
+      { id: 'DEV.PLATE', parentId: 'DEV', text: 'Đọc biển số xe (mẫu)', icon: '', separator: false, children: [] },
     ],
   },
 ];

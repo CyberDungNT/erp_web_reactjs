@@ -1,0 +1,23 @@
+# go2rtc cho chức năng ĐỌC BIỂN SỐ XE của erp-web – chạy trên CHÍNH MÁY mở web (máy ở cổng)
+# Trình duyệt không mở được rtsp:// -> go2rtc nhận rtsp từ camera, trả ảnh JPEG cho web. Nhận dạng vẫn chạy trên trình duyệt.
+
+api:
+  listen: "127.0.0.1:1984"   # chỉ chính máy này dùng được (máy khác trong mạng không gọi vào được)
+  origin: "*"                # cho phép trang web đọc ảnh (CORS)
+
+rtsp:
+  listen: "127.0.0.1:8554"   # dịch vụ rtsp nội bộ của go2rtc – chỉ trong máy
+
+webrtc:
+  listen: ""                 # không dùng
+
+# ffmpeg: start.bat đã đưa thư mục này vào PATH -> chỉ cần đặt ffmpeg.exe cạnh go2rtc.exe
+# (camera H.265 / H.264 cần ffmpeg để đổi sang ảnh JPEG)
+
+log:
+  level: warn
+
+# Camera: web TỰ đăng ký khi bấm "Kết nối" với link rtsp:// – không cần khai báo ở đây.
+# Muốn khai báo cố định (rồi dùng link http://localhost:1984/api/frame.jpeg?src=cong1 trên web):
+# streams:
+#   cong1: rtsp://admin:matkhau@192.168.1.64:554/Streaming/Channels/101

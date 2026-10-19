@@ -1,3 +1,13 @@
 node_modules
 dist
 
+
+# go2rtc / ffmpeg tải về theo tools/go2rtc/README.md – không đưa file chạy vào git
+tools/go2rtc/**/*.exe
+tools/go2rtc/**/*.dll
+tools/go2rtc/bin/
+tools/go2rtc/*.zip
+tools/go2rtc/go2rtc.run.yaml
+
+# khoá cập nhật server (npm run deploy) – không đưa vào git
+.env.deploy
