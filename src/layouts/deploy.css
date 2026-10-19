@@ -45,6 +45,15 @@
 .dp__note { white-space: normal !important; max-width: 220px; }
 .dp__note em { color: var(--warn-text); font-style: normal; }
 .dp__back { height: 26px; padding: 0 10px; font-size: 12px; }
+/* Các bản giao diện web – chọn bản chạy chính */
+.dp__h--row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: -6px; }
+.dp__h--row h4 { margin: 0; font-size: 14px; color: var(--ink); display: flex; align-items: center; gap: 6px; }
+.dp__h--row .hint { font-size: 12px; }
+.dp__count { min-width: 20px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--brand-50); color: var(--brand-text); font-size: 11.5px; display: inline-grid; place-items: center; }
+.dp__rel { max-height: 220px; }
+.dp__rel tr.is-current td { background: var(--brand-50); }
+.dp__live { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px; background: var(--ok-50, #e7f6ec); color: var(--ok-text, #157a3c); font-size: 12px; font-weight: 600; }
+.dp__tag { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted) !important; font-size: 11px; }
 @media (max-width: 640px) { .dp__cards { grid-template-columns: 1fr; } }
 .dp__who { display: flex; align-items: center; gap: 6px; margin: 0 !important; }
 .dp__who .cy-icon { color: var(--brand); }
@@ -56,3 +65,8 @@
 .dp__checking .mn-open__spin { width: 26px; height: 26px; }
 .dp, .dp__unlock { animation: dp-in .25s ease both; }
 @keyframes dp-in { from { opacity: 0; transform: translateY(4px); } }
+.dp__acts { display: inline-flex; align-items: center; gap: 6px; }
+.dp__del { display: inline-flex; align-items: center; gap: 4px; }
+/* Cột nút (Đặt làm bản chính / Xoá / Đang chạy) sát bên phải */
+.dp__rel td.dp__act-cell { width: 1%; text-align: right; }
+.dp__rel .dp__acts { justify-content: flex-end; }

@@ -6,7 +6,13 @@
  *   npm run deploy -- api          dotnet publish API -> đẩy lên server -> chờ API khởi động lại
  *   npm run deploy -- all          cả 2
  *   thêm:  --note "sửa lỗi in phiếu"   ghi chú lượt cập nhật
- *          --skip-build                dùng sẵn dist / bản publish cũ (không build lại)
+ *          --skip-build                dùng sẵn dist / bản publish cũ (không build lại, KHÔNG tăng phiên bản)
+ *          --no-bump                   build nhưng giữ nguyên số phiên bản
+ *
+ *   npm run release                build web -> tạo releases/erp-web-v1.0.n.zip để kéo vào màn "Cập nhật hệ thống" (không đẩy lên)
+ *
+ * TỰ TĂNG PHIÊN BẢN: mỗi lần build web để cập nhật (deploy / release), "version" trong package.json tăng 1.0.n -> 1.0.(n+1)
+ * (ghi cả package-lock.json). Build / tải lên lỗi -> trả lại số cũ. Số này hiện ở màn cập nhật + version.json của bản web.
  *
  * Cấu hình: file .env.deploy (KHÔNG đưa vào git – xem .env.deploy.example) hoặc biến môi trường:
  *   DEPLOY_URL          địa chỉ API, vd https://apiweb.shopphanmem.io.vn  (bỏ trống -> lấy VITE_API_BASE_URL trong .env)
@@ -27,8 +33,24 @@ const args = process.argv.slice(2);
 const flag = (name) => { const i = args.indexOf(name); return i >= 0 ? (args.splice(i, 2)[1] ?? '') : undefined; };
 const note = flag('--note') || '';
 const skipBuild = args.includes('--skip-build');
+const noBump = args.includes('--no-bump');
+const zipOnly = args.includes('--zip-only'); // npm run release: chỉ build + tạo file zip, không đẩy lên server
 const target = (args.find((a) => !a.startsWith('--')) || 'web').toLowerCase();
 if (!['web', 'api', 'all'].includes(target)) die(`Không hiểu "${target}" – dùng: web | api | all`);
+let restoreVersion = null; // tăng phiên bản rồi mà lỗi -> trả lại số cũ (die gọi)
+
+if (zipOnly) {
+  const v = bumpVersion();
+  run('Build giao diện web', process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'], ROOT);
+  const dist = path.join(ROOT, 'dist');
+  if (!fs.existsSync(path.join(dist, 'index.html'))) die('Không thấy dist/index.html – build lỗi?');
+  const dir = path.join(ROOT, 'releases');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, `erp-web-v${v}.zip`);
+  fs.writeFileSync(file, zipFolder(dist));
+  console.log(`\n✔ Phiên bản ${v} – kéo file này vào màn "Cập nhật hệ thống":\n  ${file}\n`);
+  process.exit(0);
+}
 
 // ---------- cấu hình ----------
 const readEnv = (file) => {
@@ -60,11 +82,15 @@ console.log(`\n✔ Xong sau ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
 
 async function deployWeb() {
   const dist = path.join(ROOT, 'dist');
-  if (!skipBuild) run('Build giao diện web', process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'], ROOT);
+  if (!skipBuild) {
+    if (!noBump) bumpVersion();
+    run('Build giao diện web', process.execPath, [path.join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'], ROOT);
+  }
   if (!fs.existsSync(path.join(dist, 'index.html'))) die('Không thấy dist/index.html – build lỗi?');
   const zip = zipFolder(dist);
   const rec = await upload('web', zip);
-  console.log(`  ✔ Giao diện web: ${rec.files} file thay đổi (${rec.added.length} mới, ${rec.replaced.length} sửa)${rec.files ? '' : ' – không có gì mới'}`);
+  restoreVersion = null; // đã lên server -> giữ số mới
+  console.log(`  ✔ Giao diện web v${readPkg().version}: ${rec.files} file thay đổi (${rec.added.length} mới, ${rec.replaced.length} sửa)${rec.files ? '' : ' – không có gì mới'}`);
 }
 
 async function deployApi() {
@@ -128,7 +154,34 @@ function run(title, cmd, cmdArgs, cwd) {
 
 function die(msg) {
   console.error(`\n✖ ${msg}\n`);
+  if (restoreVersion) { restoreVersion(); console.error('  (đã trả lại số phiên bản cũ)\n'); }
   process.exit(1);
+}
+
+// ---------- phiên bản 1.0.n ----------
+// (hàm – không dùng const ở đây: bumpVersion được gọi từ đầu file, const khai báo sau sẽ lỗi TDZ)
+function readPkg() { return JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')); }
+
+/** Tăng số cuối của "version": 1.0.7 -> 1.0.8 (package.json + package-lock.json). Trả về số mới. */
+function bumpVersion() {
+  const PKG = path.join(ROOT, 'package.json');
+  const LOCK = path.join(ROOT, 'package-lock.json');
+  const pkgText = fs.readFileSync(PKG, 'utf8');
+  const lockText = fs.existsSync(LOCK) ? fs.readFileSync(LOCK, 'utf8') : null;
+  const old = readPkg().version || '1.0.0';
+  const m = /^(\d+)\.(\d+)\.(\d+)/.exec(old) || [null, 1, 0, 0];
+  const next = `${m[1]}.${m[2]}.${Number(m[3]) + 1}`;
+  // chỉ thay đúng dòng "version" (giữ nguyên định dạng file)
+  fs.writeFileSync(PKG, pkgText.replace(/("version"\s*:\s*")[^"]*(")/, `$1${next}$2`));
+  if (lockText) {
+    const lock = JSON.parse(lockText);
+    lock.version = next;
+    if (lock.packages?.['']) lock.packages[''].version = next;
+    fs.writeFileSync(LOCK, JSON.stringify(lock, null, 2) + (lockText.endsWith('\n') ? '\n' : ''));
+  }
+  restoreVersion = () => { fs.writeFileSync(PKG, pkgText); if (lockText) fs.writeFileSync(LOCK, lockText); };
+  console.log(`  • Phiên bản ${old} → ${next}`);
+  return next;
 }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }

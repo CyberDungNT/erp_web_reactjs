@@ -11,3 +11,6 @@ tools/go2rtc/go2rtc.run.yaml
 
 # khoá cập nhật server (npm run deploy) – không đưa vào git
 .env.deploy
+
+# gói web tạo bởi npm run release (kéo vào màn Cập nhật hệ thống)
+releases/

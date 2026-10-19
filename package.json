@@ -1,13 +1,14 @@
 {
   "name": "erp-web",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "node scripts/deploy.mjs"
+    "deploy": "node scripts/deploy.mjs",
+    "release": "node scripts/deploy.mjs web --zip-only"
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7",

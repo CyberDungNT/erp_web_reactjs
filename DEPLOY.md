@@ -7,9 +7,15 @@ npm run deploy               # build giao diện web + đẩy lên server
 npm run deploy -- api        # publish API + đẩy lên server + chờ API khởi động lại
 npm run deploy -- all        # cả hai
 npm run deploy -- --note "sửa lỗi in phiếu"   # kèm ghi chú (hiện trong lịch sử)
+npm run release              # chỉ build + tạo releases/erp-web-v1.0.n.zip (để kéo vào màn Cập nhật hệ thống)
 ```
 
-Hoặc trên web: **bấm avatar → Cập nhật hệ thống** (chỉ quản trị viên) → nhập khoá → kéo thả gói `.zip` → Cập nhật.
+**Phiên bản tự tăng**: mỗi lần `npm run deploy` (web) / `npm run release`, `version` trong `package.json` tăng
+`1.0.n → 1.0.(n+1)` rồi mới build (build hoặc tải lên lỗi → tự trả lại số cũ). Giữ nguyên số: thêm `--no-bump`.
+Muốn lên 1.1.0 / 2.0.0: sửa tay `version` trong `package.json`, các lần sau tiếp tục tăng từ đó.
+
+Hoặc trên web: **bấm avatar → Cập nhật hệ thống** (chỉ quản trị viên) → nhập khoá → kéo thả gói `.zip`
+(tạo bằng `npm run release`) → Cập nhật.
 Màn này cũng xem phiên bản đang chạy, lịch sử cập nhật và **Quay lại** bản trước.
 
 Người đang mở web sẽ tự được nhắc **"Đã có phiên bản mới – Tải lại"** (kiểm tra 5 phút/lần và khi quay lại tab).
@@ -68,6 +74,12 @@ Chép từ `.env.deploy.example`, điền `DEPLOY_URL` (địa chỉ API) và `D
   (API) và `web.config` (web) – đổi danh sách ở `Deploy:ApiKeepFiles` / `Deploy:WebKeepFiles`.
 - Kiểm tra gói trước khi ghi: web phải có `index.html`, API phải có `API_App_Demo.dll` hợp lệ; chặn đường dẫn `../`; tối đa 400 MB.
 - Mỗi lượt cập nhật **sao lưu file bị ghi đè** vào `App_Data\deploy\backups` (giữ 5 bản mới nhất) → nút **Quay lại**.
+- **Chọn bản web chạy chính**: mỗi lượt cập nhật giao diện web lưu trọn gói vào `App_Data\deploy\releases\web`
+  (giữ `Deploy:KeepReleases` bản, mặc định 10 – không bao giờ xoá bản đang chạy). Mục **Các bản giao diện web** trong màn
+  "Cập nhật hệ thống" → **Đặt làm bản chính** ở bất kỳ bản nào (mới hơn hay cũ hơn đều được).
+  **Tự lưu, không cần bấm gì**: mỗi lượt cập nhật web (màn cập nhật / `npm run deploy`) là 1 bản; ngoài ra lúc API khởi động
+  và trước mỗi lượt cập nhật, nếu bản web đang chạy chưa có trong danh sách (vd chép tay lên server) thì cũng tự lưu thành 1 bản
+  (nhận diện bản theo `id` trong `version.json` – không lưu trùng).
 - API: DLL đang chạy bị Windows khoá → đổi tên file cũ thành `*.deploy-old`, ghi file mới, rồi API tự dừng;
   IIS chạy lại bằng file mới ở request kế tiếp. Lần khởi động sau tự xoá `*.deploy-old`.
 
