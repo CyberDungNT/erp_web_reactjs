@@ -107,6 +107,7 @@
 .mn__user-row { display: flex; align-items: center; gap: 9px; padding: 5px 8px; font-size: 12.5px; color: var(--ink-2); }
 .mn__user-row .cy-icon { color: var(--muted); flex-shrink: 0; }
 .mn__user-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mn__user-ver b { color: var(--brand-text, var(--ink)); font-weight: 700; }
 
 /* Ngôn ngữ: công tắc 2 nấc có nền trượt */
 .mn__user-sec { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line-2); }

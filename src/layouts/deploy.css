@@ -68,5 +68,18 @@
 .dp__acts { display: inline-flex; align-items: center; gap: 6px; }
 .dp__del { display: inline-flex; align-items: center; gap: 4px; }
 /* Cột nút (Đặt làm bản chính / Xoá / Đang chạy) sát bên phải */
-.dp__rel td.dp__act-cell { width: 1%; text-align: right; }
+.dp__hist td.dp__act-cell { width: 1%; text-align: right; }
 .dp__rel .dp__acts { justify-content: flex-end; }
+
+/* ---- 2 tab (Các bản giao diện web | Lịch sử cập nhật): popup không cuộn, chỉ bảng trong tab cuộn ---- */
+.cy-popup__body:has(> .dp) { overflow: hidden; display: flex; flex-direction: column; }
+.dp { flex: 1; min-height: 0; }
+.dp > * { flex-shrink: 0; }
+.dp__tabs { display: flex; align-items: center; gap: 10px; }
+/* nút tab dùng chung kiểu .dp__targets; thêm: chữ + số đếm trên 1 hàng, số đếm trên nút đang chọn màu trắng */
+.dp__tabs .dp__targets button { display: inline-flex; align-items: center; gap: 7px; }
+.dp__tabs .dp__targets button.is-on .dp__count { background: rgba(255, 255, 255, .22); color: #fff; }
+.dp__tabs-hint { margin-left: auto !important; font-size: 12px; }
+.dp > .dp__pane { flex: 1 1 auto; min-height: 120px; display: flex; flex-direction: column; animation: dp-in .2s ease both; }
+.dp__pane .dp__hist, .dp__pane .dp__rel { flex: 1; min-height: 0; max-height: none; }
+.dp__hist th { z-index: 1; }

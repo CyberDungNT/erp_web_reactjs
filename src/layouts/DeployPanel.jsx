@@ -88,6 +88,7 @@ export default function DeployPanel({ open, onClose, user }) {
   const [note, setNote] = useState('');
   const [progress, setProgress] = useState(null);   // null | 0..100 | 'restart'
   const [drag, setDrag] = useState(false);
+  const [tab, setTab] = useState('rel');
   const fileRef = useRef(null);
   const busy = progress != null;
 
@@ -219,6 +220,9 @@ export default function DeployPanel({ open, onClose, user }) {
     } finally { setProgress(null); }
   };
 
+  // Tab dưới: 'rel' các bản giao diện web | 'hist' lịch sử cập nhật (chưa cấu hình WebPath -> chỉ có lịch sử)
+  const curTab = info?.web ? tab : 'hist';
+
   // lượt cập nhật mới nhất còn hiệu lực của mỗi loại -> được quay lại
   const latestId = {};
   // (sau lượt đó đã "Đặt làm bản chính" thì không quay lại kiểu này nữa – chọn bản ở danh sách bản web)
@@ -229,7 +233,7 @@ export default function DeployPanel({ open, onClose, user }) {
   }
 
   return (
-    <CyberPopup open={open} onClose={busy ? undefined : onClose} title="Cập nhật hệ thống" width="80%">
+    <CyberPopup open={open} onClose={busy ? undefined : onClose} title="Cập nhật hệ thống" width="80%" height="92vh">
       {checking ? (
         <div className="dp__checking"><span className="mn-open__spin" /> <p>Đang kiểm tra quyền cập nhật...</p></div>
       ) : !info ? (
@@ -292,13 +296,25 @@ export default function DeployPanel({ open, onClose, user }) {
             <p className="hint">Nhanh hơn: chạy <code>npm run deploy</code> (giao diện) hoặc <code>npm run deploy -- api</code> ở máy dev – tự build và đẩy lên (scripts/deploy.mjs).</p>
           </div>
 
-          {info.web && (
-            <>
-              <div className="dp__h dp__h--row">
-                <h4>Các bản giao diện web <span className="dp__count">{info.web.releases?.length || 0}</span></h4>
-                <span className="hint">Mỗi lần cập nhật tự lưu thành 1 bản</span>
-              </div>
-              {!info.web.releases?.length ? (
+          {/* 2 tab: Các bản giao diện web | Lịch sử cập nhật – bảng cuộn bên trong, cả popup không cuộn */}
+          <div className="dp__tabs">
+            {/* cùng kiểu nút chọn "Giao diện web / API (máy chủ)" ở trên (.dp__targets) */}
+            <div className="dp__targets" role="tablist">
+              {info.web && (
+                <button type="button" role="tab" aria-selected={curTab === 'rel'} className={curTab === 'rel' ? 'is-on' : ''} onClick={() => setTab('rel')}>
+                  Các bản giao diện web <span className="dp__count">{info.web.releases?.length || 0}</span>
+                </button>
+              )}
+              <button type="button" role="tab" aria-selected={curTab === 'hist'} className={curTab === 'hist' ? 'is-on' : ''} onClick={() => setTab('hist')}>
+                Lịch sử cập nhật <span className="dp__count">{info.history?.length || 0}</span>
+              </button>
+            </div>
+            {curTab === 'rel' && <span className="hint dp__tabs-hint">Mỗi lần cập nhật tự lưu thành 1 bản</span>}
+          </div>
+
+          <div className="dp__pane" role="tabpanel" key={curTab}>
+            {curTab === 'rel' ? (
+              !info.web.releases?.length ? (
                 <p className="hint">Chưa có bản nào – bản đang chạy được tự lưu khi API khởi động lại hoặc ở lần cập nhật web tới.</p>
               ) : (
                 <div className="dp__hist dp__rel">
@@ -328,32 +344,29 @@ export default function DeployPanel({ open, onClose, user }) {
                     </tbody>
                   </table>
                 </div>
-              )}
-            </>
-          )}
-
-          <h4 className="dp__h">Lịch sử cập nhật</h4>
-          {!info.history?.length ? <p className="hint">Chưa có lượt cập nhật nào.</p> : (
-            <div className="dp__hist">
-              <table>
-                <thead><tr><th>Thời gian</th><th>Loại</th><th>Người</th><th>Ghi chú</th><th>File</th><th /></tr></thead>
-                <tbody>
-                  {info.history.map((r) => (
-                    <tr key={r.id} className={r.rolledBack ? 'is-off' : ''}>
-                      <td>{fmt(r.at)}</td>
-                      <td>{r.kind === 'rollback' ? 'Quay lại · ' : r.kind === 'activate' ? 'Đổi bản chính · ' : ''}{r.target === 'api' ? 'API' : 'Web'}</td>
-                      <td>{r.by || '—'}</td>
-                      <td className="dp__note">{r.note || ''}{r.rolledBack ? <em> (đã quay lại)</em> : ''}</td>
-                      <td>{r.kind === 'rollback' ? `${r.replaced?.length || 0} khôi phục` : `${r.added?.length || 0} mới · ${r.replaced?.length || 0} sửa`}</td>
-                      <td>{latestId[r.target] === r.id && (
-                        <button type="button" className="cy-btn dp__back" disabled={busy} onClick={() => rollback(r)}>Quay lại</button>
-                      )}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+              )
+            ) : !info.history?.length ? <p className="hint">Chưa có lượt cập nhật nào.</p> : (
+              <div className="dp__hist">
+                <table>
+                  <thead><tr><th>Thời gian</th><th>Loại</th><th>Người</th><th>Ghi chú</th><th>File</th><th /></tr></thead>
+                  <tbody>
+                    {info.history.map((r) => (
+                      <tr key={r.id} className={r.rolledBack ? 'is-off' : ''}>
+                        <td>{fmt(r.at)}</td>
+                        <td>{r.kind === 'rollback' ? 'Quay lại · ' : r.kind === 'activate' ? 'Đổi bản chính · ' : ''}{r.target === 'api' ? 'API' : 'Web'}</td>
+                        <td>{r.by || '—'}</td>
+                        <td className="dp__note">{r.note || ''}{r.rolledBack ? <em> (đã quay lại)</em> : ''}</td>
+                        <td>{r.kind === 'rollback' ? `${r.replaced?.length || 0} khôi phục` : `${r.added?.length || 0} mới · ${r.replaced?.length || 0} sửa`}</td>
+                        <td className="dp__act-cell">{latestId[r.target] === r.id && (
+                          <button type="button" className="cy-btn dp__back" disabled={busy} onClick={() => rollback(r)}>Quay lại</button>
+                        )}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </CyberPopup>

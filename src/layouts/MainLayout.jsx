@@ -40,7 +40,7 @@ import MenuStrip from "./MenuStrip";
 import SideMenu from "./SideMenu";
 import UnitSwitcher from "./UnitSwitcher";
 import TaskBar from "./TaskBar";
-import { watchNewVersion } from "@/utils/appVersion";
+import { APP_BUILD, watchNewVersion } from "@/utils/appVersion";
 // Cập nhật hệ thống (menu avatar, chỉ quản trị) – tải code khi mở
 const DeployPanel = lazy(() => import("./DeployPanel"));
 import "./main.css";
@@ -60,6 +60,8 @@ const USER_TEXT = {
     admin: "Quản trị viên",
     member: "Người dùng",
     lockDate: "Ngày khoá sổ",
+    appVer: "Phiên bản",
+    devBuild: "bản dev",
     mock: "Đang dùng dữ liệu giả",
     lang: "Ngôn ngữ",
     theme: "Giao diện",
@@ -101,6 +103,8 @@ const USER_TEXT = {
     admin: "Administrator",
     member: "User",
     lockDate: "Lock date",
+    appVer: "Version",
+    devBuild: "dev build",
     mock: "Using mock data",
     lang: "Language",
     theme: "Appearance",
@@ -659,6 +663,14 @@ export default function MainLayout() {
                       </span>
                     </div>
                   )}
+                  {/* Phiên bản giao diện web đang chạy (tự tăng 1.0.n mỗi lần deploy) – rê chuột: commit + thời điểm build */}
+                  <div className="mn__user-row mn__user-ver"
+                    title={APP_BUILD.id === "dev" ? undefined : [APP_BUILD.commit, APP_BUILD.builtAt && new Date(APP_BUILD.builtAt).toLocaleString(lang === "E" ? "en-GB" : "vi-VN")].filter(Boolean).join(" · ")}>
+                    <Icon name="info" size={14} />{" "}
+                    <span>
+                      {UT.appVer}: <b>{APP_BUILD.id === "dev" || !APP_BUILD.version ? UT.devBuild : `v${APP_BUILD.version}`}</b>
+                    </span>
+                  </div>
                   {apiConfig.USE_MOCK && (
                     <div className="mn__user-row">
                       <span className="badge badge--warn">MOCK</span> {UT.mock}
