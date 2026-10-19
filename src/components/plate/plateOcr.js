@@ -41,10 +41,35 @@ function getWorker() {
 /** Tải sẵn bộ nhận dạng (gọi khi mở màn để lần đọc đầu nhanh hơn) */
 export const preloadPlateOcr = () => getWorker().then(() => true);
 
-/** Giải phóng bộ nhận dạng (thường không cần) */
+/** Giải phóng bộ nhận dạng: tắt web worker + bộ nhớ WASM (vài chục MB) */
 export async function disposePlateOcr() {
   const w = workerPromise; workerPromise = null;
-  if (w) (await w).terminate();
+  if (w) { try { (await w).terminate(); } catch { /* worker lỗi lúc tạo – không còn gì để tắt */ } }
+}
+
+// ----- Đếm số nơi đang dùng (CyberPlateReader đang mở) – không còn ai dùng thì tự tắt worker -----
+let users = 0;
+let idleTimer = null;
+const IDLE_MS = 3000; // đóng rồi mở lại ngay (chuyển qua lại) không phải nạp lại worker
+
+/** Gọi khi mở màn đọc biển số; trả hàm gọi khi đóng màn. Đóng hết -> sau 3 giây tắt worker giải phóng RAM */
+export function acquirePlateOcr() {
+  users += 1;
+  clearTimeout(idleTimer);
+  preloadPlateOcr().catch(() => {});
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    users -= 1;
+    if (users > 0) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(async () => {
+      if (users > 0) return;
+      await queue.catch(() => {}); // chờ ảnh đang đọc dở xong rồi mới tắt
+      if (users === 0) disposePlateOcr();
+    }, IDLE_MS);
+  };
 }
 
 // ===================== Xử lý ảnh =====================

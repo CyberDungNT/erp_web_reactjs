@@ -45,6 +45,11 @@ export default function BienSoXePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind, deviceId]);
 
+  // Đóng tab: thu hồi ảnh đã chọn từ máy (blob URL giữ cả file ảnh trong RAM tới khi revoke)
+  const imageRef = useRef('');
+  imageRef.current = imageSrc;
+  useEffect(() => () => { if (imageRef.current.startsWith('blob:')) URL.revokeObjectURL(imageRef.current); }, []);
+
   useEffect(() => {
     if (kind === 'image') setSource(imageSrc ? { type: 'image', src: imageSrc } : null);
     if (kind === 'url') setSource(null);

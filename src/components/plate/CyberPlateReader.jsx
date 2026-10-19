@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { toast } from '@/components/cyber';
-import { preloadPlateOcr, readPlate } from './plateOcr';
+import { acquirePlateOcr, readPlate } from './plateOcr';
 import './plate.css';
 
 /**
@@ -138,7 +138,8 @@ const CyberPlateReader = forwardRef(function CyberPlateReader({
   }, []);
 
   // Tải sẵn bộ nhận dạng khi control xuất hiện
-  useEffect(() => { preloadPlateOcr().catch(() => {}); }, []);
+  // Mở màn: nạp sẵn bộ nhận dạng. Đóng màn (đóng tab): trả lại – không còn màn nào dùng thì tắt worker, giải phóng RAM
+  useEffect(() => acquirePlateOcr(), []);
 
   // ----- Đổi nguồn hình -----
   useEffect(() => {
