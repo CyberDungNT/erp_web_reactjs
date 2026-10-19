@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import { chatBridge, useChatUnread } from './chatBridge';
 
 /**
  * PHÂN HỆ "Công cụ phát triển" – các màn test / màn mẫu.
@@ -16,10 +17,15 @@ export const screens = {
 
 /**
  * Thành phần chạy NỀN trong màn chính (không phải màn hình) – MainLayout tự gắn khi đăng nhập.
- * ChatWidget  : bong bóng chat ở góc dưới phải, có ở mọi màn hình (rê chuột vào -> mở khung chat).
+ * ChatWidget  : khung chat (mở từ menu avatar -> "Tin nhắn"), luôn chạy nền để đếm tin chưa đọc.
  * ChatNotifier: popup tin nhắn mới khi khung chat đang đóng.
  */
 export const widgets = [lazy(() => import('./ChatWidget')), lazy(() => import('./ChatNotifier'))];
+
+/** Mục trong menu avatar: "Tin nhắn" (số tin chưa đọc hiện trên mục + chấm đỏ trên avatar) */
+export const userMenu = [
+  { key: 'chat', icon: 'chat', text: { V: 'Tin nhắn', E: 'Messages' }, onClick: () => chatBridge.openWidget(), useBadge: useChatUnread },
+];
 
 /**
  * Menu thêm vào cuối menu trái (chỉ dùng cho màn KHÔNG có trong menu hệ thống trả về từ CP_SysLogin).

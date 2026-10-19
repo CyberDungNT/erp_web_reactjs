@@ -548,3 +548,17 @@
 @keyframes mn-bye-spin { to { transform: rotate(360deg); } }
 .mn--bye { overflow: hidden; }
 html:has(.mn--bye), html:has(.lg--bye) { overflow: hidden; }
+
+/* Số tin chưa đọc (mục "Tin nhắn" trong menu avatar) – chấm đỏ trên ảnh avatar + số bên phải mục menu */
+.mn__avatar { position: relative; }
+.mn__avatar-badge {
+  position: absolute; top: -5px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box;
+  border-radius: 9px; background: #e5383b; color: #fff; border: 2px solid var(--surface, #fff);
+  font: 700 10.5px/14px system-ui, sans-serif; font-style: normal; text-align: center;
+  animation: mn-badge-pop .35s var(--ease) both;
+}
+.mn__act-badge {
+  margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 10px;
+  background: #e5383b; color: #fff; font: 700 11px/20px system-ui, sans-serif; font-style: normal; text-align: center;
+}
+@keyframes mn-badge-pop { from { transform: scale(.4); opacity: 0; } }

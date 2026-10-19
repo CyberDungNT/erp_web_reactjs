@@ -201,3 +201,10 @@
 /* chữ < 16px làm iPhone tự phóng to trang khi chạm vào ô nhập */
 .cw.is-mobile .chat__input, .cw.is-mobile .chat__search input { font-size: 16px; }
 .cw.is-mobile .chat--compact .chat__msg { max-width: 85%; }
+
+/* Mở từ menu avatar: khung thả xuống dưới avatar -> hiệu ứng mở / đóng neo góc trên phải */
+.cw.side-top .cw__panel { transform-origin: 100% 0; }
+.cw.side-top:not(.is-mobile) .cw__panel { animation-name: cw-drop; }
+.cw.side-top:not(.is-mobile) .cw__panel.is-closing { animation-name: cw-lift; }
+@keyframes cw-drop { from { opacity: 0; transform: translateY(-8px) scale(.97); } }
+@keyframes cw-lift { to { opacity: 0; transform: translateY(-8px) scale(.97); } }

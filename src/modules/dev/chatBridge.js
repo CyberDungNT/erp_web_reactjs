@@ -11,6 +11,16 @@ let openedByClick = false;
 const roomSubs = new Set();
 const visibleSubs = new Set();
 const openSubs = new Set();
+let unread = 0;
+const unreadSubs = new Set();
+
+/** Số tin nhắn chưa đọc (cập nhật tức thì) */
+export function useChatUnread() {
+  return useSyncExternalStore(
+    (fn) => { unreadSubs.add(fn); return () => unreadSubs.delete(fn); },
+    () => unread,
+  );
+}
 
 export const chatBridge = {
   /** ChatPage gọi khi hiện / ẩn */
@@ -49,6 +59,13 @@ export const chatBridge = {
   onRoomRequest(fn) {
     roomSubs.add(fn);
     return () => roomSubs.delete(fn);
+  },
+
+  /** Số tin chưa đọc (khung chat báo lên) – menu avatar / chấm đỏ trên avatar đọc qua useChatUnread() */
+  setUnread(n) {
+    if (unread === n) return;
+    unread = n;
+    unreadSubs.forEach((fn) => fn());
   },
 
   /** Mở khung chat nổi (ghim mở), vào thẳng phòng room nếu truyền */

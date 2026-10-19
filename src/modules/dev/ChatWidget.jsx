@@ -7,23 +7,17 @@ import ChatPage from './ChatPage';
 import { chatBridge } from './chatBridge';
 import './chat-widget.css';
 
-const OPEN_DELAY_MS = 120;  // rê chuột vào bong bóng bao lâu thì mở (tránh mở nhầm khi lướt chuột qua)
-const CLOSE_DELAY_MS = 450; // rời chuột bao lâu thì thu lại (nếu không ghim / không đang gõ)
 const HIDE_ANIM_MS = 260;   // thời gian hiệu ứng ẩn khung (khớp .cw__panel.is-closing trong chat-widget.css)
-const SIZE = 56;            // đường kính bong bóng
-const GAP = 12;             // khoảng cách bong bóng – khung chat
-const MARGIN = 20;          // cách mép phải
+const MARGIN = 12;          // khung chat cách mép phải (thẳng hàng avatar)
 const TASKBAR_H = 42;       // thanh TaskBar dưới cùng
 const MOBILE_MAX_W = 640;   // màn hẹp hơn -> khung chat phủ toàn màn hình (khớp @media trong chat-widget.css)
 
 /**
- * CHAT NỔI – có ở mọi màn hình (khai báo widgets trong modules/dev/index.js).
- *   - Bong bóng cố định ở góc dưới phải (không kéo đi được).
- *   - Rê chuột vào -> hiện danh sách cuộc trò chuyện; chọn 1 cuộc -> giãn 2 cột kiểu Zalo (trái danh sách, phải nội dung).
- *     Khung mở phía trên, bên trái bong bóng.
- *   - Bấm bong bóng -> GHIM mở. Bấm lại / ✕ / Esc / bấm ra ngoài -> đóng. Đang gõ trong khung thì không tự thu.
- *   - Popup tin nhắn mới "Mở chat"/"Trả lời" -> chatBridge.openWidget(room) mở ghim, vào thẳng phòng.
- * Khung chat luôn được giữ (chỉ ẩn) để vẫn đếm tin chưa đọc, giữ cuộc trò chuyện đang mở.
+ * KHUNG CHAT – mở từ MENU AVATAR -> "Tin nhắn" (userMenu trong modules/dev/index.js), không còn bong bóng nổi.
+ *   - Khung thả xuống ngay dưới avatar (góc trên phải); chọn 1 cuộc -> giãn 2 cột kiểu Zalo (trái danh sách, phải nội dung).
+ *   - ✕ / Esc / bấm ra ngoài -> đóng. Mobile: phủ toàn màn hình, đóng bằng ✕.
+ *   - Popup tin nhắn mới "Mở chat"/"Trả lời" -> chatBridge.openWidget(room) mở khung, vào thẳng phòng.
+ * Khung chat luôn được giữ (chỉ ẩn) để vẫn đếm tin chưa đọc (chatBridge.setUnread -> số trên menu avatar), giữ cuộc đang mở.
  */
 export default function ChatWidget() {
   const { lang } = useAuth();
@@ -39,7 +33,6 @@ export default function ChatWidget() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  const [pinned, setPinned] = useState(false);
   const [unread, setUnread] = useState(0);
   const [hasChat, setHasChat] = useState(false); // đang mở 1 cuộc trò chuyện -> khung giãn 2 cột
   const onActiveChange = useCallback((room) => setHasChat(!!room), []);
@@ -47,37 +40,23 @@ export default function ChatWidget() {
   const rootRef = useRef(null);
   const panelRef = useRef(null);
   const timer = useRef(null);
-  const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
-  const show = useCallback((pin = false) => {
+  const show = useCallback(() => {
     clearTimeout(timer.current);
     setOpen(true);
-    if (pin) setPinned(true);
   }, []);
   const hide = useCallback(() => {
     clearTimeout(timer.current);
     setOpen(false);
-    setPinned(false);
   }, []);
 
-  // ----- Hover: vào -> mở sau chút; ra -> thu lại nếu không ghim và không đang gõ trong khung -----
-  const onEnter = () => {
-    if (coarse) return;
-    clearTimeout(timer.current);
-    if (!open) timer.current = setTimeout(() => setOpen(true), OPEN_DELAY_MS);
-  };
-  const onLeave = () => {
-    if (coarse) return;
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => {
-      const focusInside = rootRef.current?.contains(document.activeElement) && document.activeElement !== document.body;
-      if (!pinned && !focusInside) setOpen(false);
-    }, CLOSE_DELAY_MS);
-  };
   useEffect(() => () => clearTimeout(timer.current), []);
+  // Số tin chưa đọc -> menu avatar (mục "Tin nhắn" + chấm đỏ trên avatar)
+  useEffect(() => { chatBridge.setUnread(unread); }, [unread]);
+  useEffect(() => () => chatBridge.setUnread(0), []);
 
-  // Mở từ nơi khác (popup tin nhắn...) -> ghim mở
-  useEffect(() => chatBridge.onOpenWidget(() => show(true)), [show]);
+  // Mở từ menu avatar "Tin nhắn" / popup tin nhắn mới ("Mở chat", "Trả lời")
+  useEffect(() => chatBridge.onOpenWidget(() => show()), [show]);
 
   // Esc / bấm ra ngoài -> đóng
   useEffect(() => {
@@ -86,7 +65,7 @@ export default function ChatWidget() {
     const onDown = (e) => {
       if (window.innerWidth <= MOBILE_MAX_W) return; // mobile: khung toàn màn hình, chỉ đóng bằng nút ✕
       if (rootRef.current?.contains(e.target)) return;
-      if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup, .cy-menu')) return; // popup tin nhắn / toast / hộp thoại / menu chuột phải
+      if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup, .cy-menu, .mn__user')) return; // + menu avatar (nơi mở khung) // popup tin nhắn / toast / hộp thoại / menu chuột phải
       hide();
     };
     document.addEventListener('keydown', onKey);
@@ -97,7 +76,7 @@ export default function ChatWidget() {
     };
   }, [open, hide]);
 
-  // Đổi kích thước cửa sổ / xoay màn hình -> bong bóng luôn ở góc dưới phải
+  // Đổi kích thước cửa sổ / xoay màn hình -> đặt lại khung
   useEffect(() => {
     const onResize = () => setView(viewport());
     window.addEventListener('resize', onResize);
@@ -144,29 +123,17 @@ export default function ChatWidget() {
     };
   }, [mobile, shown]);
 
-  const onBubbleClick = () => {
-    if (open && pinned) hide(); else show(true);
-  };
-
-  const pos = bubblePos(view);
-  const panelStyle = placePanel(pos, view, hasChat);
+  const panelStyle = placePanel(view, hasChat);
 
   return createPortal(
     <div ref={rootRef}
-      className={`cw ${open ? 'is-open' : ''} ${pinned ? 'is-pinned' : ''} ${hasChat ? 'has-chat' : ''} ${unread ? 'has-unread' : ''} side-right ${mobile ? 'is-mobile' : ''}`}
-      onMouseEnter={onEnter} onMouseLeave={onLeave}>
+      className={`cw ${open ? 'is-open' : ''} ${hasChat ? 'has-chat' : ''} ${unread ? 'has-unread' : ''} side-top ${mobile ? 'is-mobile' : ''}`}>
       <section ref={panelRef} className={`cw__panel ${closing ? 'is-closing' : ''}`} hidden={!shown} aria-hidden={closing || undefined} role="dialog" aria-label="Tin nhắn" style={panelStyle}>
         <header className="cw__head">
           <span className="cw__title">Tin nhắn</span>
           <SocketStatus lang={lang} />
           <span className="cw__spacer" />
           <PushButton />
-          <button type="button" className={`cw__icon ${pinned ? 'is-on' : ''}`} onClick={() => setPinned((p) => !p)}
-            title={pinned ? 'Bỏ ghim (rời chuột sẽ thu lại)' : 'Ghim mở'} aria-pressed={pinned}>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 4h6l-1 6 3 3H7l3-3-1-6z" /><path d="M12 13v7" />
-            </svg>
-          </button>
           <button type="button" className="cw__icon" onClick={hide} title="Đóng (Esc)" aria-label="Đóng khung chat">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M7 7l10 10M17 7L7 17" /></svg>
           </button>
@@ -177,20 +144,6 @@ export default function ChatWidget() {
         </div>
       </section>
 
-      <button type="button" className="cw__bubble" style={{ left: pos.x, top: pos.y }} aria-expanded={open}
-        aria-label={unread ? `Tin nhắn – ${unread} tin chưa đọc` : 'Tin nhắn'}
-        title="Tin nhắn" onClick={onBubbleClick}>
-        <span className="cw__face" aria-hidden="true">
-          <svg className="cw__ico-chat" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 11.5a8.5 8.5 0 0 1-12.4 7.6L3 20.5l1.4-5.1A8.5 8.5 0 1 1 21 11.5z" fill="rgba(255,255,255,.18)" />
-            <path d="M8 11.5h.01M12 11.5h.01M16 11.5h.01" strokeWidth="2.6" />
-          </svg>
-          <svg className="cw__ico-close" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
-            <path d="M7 7l10 10M17 7L7 17" />
-          </svg>
-        </span>
-        {unread > 0 && <span className="cw__badge">{unread > 99 ? '99+' : unread}</span>}
-      </button>
     </div>,
     document.body
   );
@@ -256,34 +209,14 @@ function viewport() {
   return { w: window.innerWidth, h: window.innerHeight };
 }
 
-/** Cố định góc dưới phải, ngay trên thanh TaskBar */
-function bubblePos(view) {
-  return { x: view.w - SIZE - MARGIN, y: Math.max(8, view.h - TASKBAR_H - SIZE - 20) };
-}
-
 /**
- * Đặt khung chat cạnh bong bóng, về phía còn trống:
- *   bong bóng ở nửa phải -> khung bên trái bong bóng (neo mép phải để giãn 2 cột mượt sang trái), ngược lại bên phải;
- *   bong bóng ở nửa dưới -> khung mọc lên trên (neo đáy), ngược lại mọc xuống.
+ * Khung thả xuống ngay dưới thanh trên cùng, sát phải (dưới avatar). Có cuộc trò chuyện đang mở -> rộng ra 2 cột.
+ * Mobile: vị trí / kích thước do CSS lo (.cw.is-mobile .cw__panel – phủ kín màn hình).
  */
-function placePanel(pos, view, hasChat) {
-  // Mobile: vị trí / kích thước do CSS lo (.cw.is-mobile .cw__panel – phủ kín màn hình)
+function placePanel(view, hasChat) {
   if (view.w <= MOBILE_MAX_W) return undefined;
-  const want = hasChat ? 820 : 340;
-  const onRight = pos.x + SIZE / 2 > view.w / 2;
-  const onBottom = pos.y + SIZE / 2 > view.h / 2;
-  const space = onRight ? pos.x - GAP - 8 : view.w - (pos.x + SIZE) - GAP - 8;
-  // không đủ chỗ cạnh bong bóng (màn hẹp) -> cho phép đè lên bong bóng, vẫn nằm trong màn hình
-  const width = Math.max(260, Math.min(want, space >= 300 ? space : view.w - 16));
-  const style = { width };
-  if (space >= 300) {
-    if (onRight) style.right = view.w - pos.x + GAP; else style.left = pos.x + SIZE + GAP;
-  } else if (onRight) style.right = 8; else style.left = 8;
-
-  const room = onBottom ? pos.y + SIZE - 8 : view.h - pos.y - 8;
-  const height = Math.max(320, Math.min(620, room, view.h - 16));
-  style.height = height;
-  if (onBottom) style.bottom = Math.max(8, view.h - (pos.y + SIZE));
-  else style.top = Math.max(8, Math.min(pos.y, view.h - height - 8));
-  return style;
+  const top = Math.round(document.querySelector('.mn__top')?.getBoundingClientRect().bottom ?? 64) + 6;
+  const width = Math.max(300, Math.min(hasChat ? 820 : 360, view.w - 24));
+  const height = Math.max(320, Math.min(640, view.h - top - TASKBAR_H - 12));
+  return { top, right: MARGIN, width, height };
 }

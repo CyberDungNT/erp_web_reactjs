@@ -28,6 +28,7 @@ import {
   LANG_MENU_IDS,
   HomePage,
   moduleWidgets,
+  moduleUserMenu,
   screens as STATIC_SCREENS,
 } from "@/screens/registry";
 import { getMenuInfo, isMenuAllowed, forgetMenuInfo } from "@/screens/menuForm";
@@ -620,7 +621,10 @@ export default function MainLayout() {
               onClick={() => setUserOpen((v) => !v)}
               aria-expanded={userOpen}
             >
-              <span className="mn__avatar">{initial}</span>
+              <span className="mn__avatar">
+                {initial}
+                <UserMenuBadge items={moduleUserMenu} />
+              </span>
               <span className="mn__user-text">
                 <b>{displayName}</b>
                 <small>
@@ -735,6 +739,14 @@ export default function MainLayout() {
                 </div>
 
                 <div className="mn__user-list">
+                  {/* Mục của các module (vd "Tin nhắn" – số tin chưa đọc) */}
+                  {moduleUserMenu.map((it) => (
+                    <button key={it.key} type="button" role="menuitem" className="mn__user-act"
+                      onClick={() => { setUserOpen(false); it.onClick?.(); }}>
+                      <Icon name={it.icon} size={16} /> <span>{it.text?.[lang] || it.text?.V || it.text}</span>
+                      {it.useBadge && <UserMenuBadge items={[it]} inline />}
+                    </button>
+                  ))}
                   <button
                     type="button"
                     role="menuitem"
@@ -957,6 +969,17 @@ export default function MainLayout() {
 
 // ----- URL <-> cửa sổ đang mở -----
 const HOME_SCREEN = { id: HOME };
+/**
+ * Số trên mục menu avatar (inline) / chấm đỏ trên ảnh avatar (tổng các mục).
+ * items là danh sách CỐ ĐỊNH (khai báo trong module) -> gọi hook theo vòng lặp vẫn đúng thứ tự.
+ */
+function UserMenuBadge({ items, inline = false }) {
+  let n = 0;
+  for (const it of items) if (it.useBadge) n += Number(it.useBadge()) || 0;
+  if (!n) return null;
+  return <i className={inline ? "mn__act-badge" : "mn__avatar-badge"}>{n > 99 ? "99+" : n}</i>;
+}
+
 const screenCtxCache = new Map();
 /** Giá trị ScreenContext ổn định theo Menu_Id (không tạo object mới mỗi lần render) */
 function screenCtx(id) {
