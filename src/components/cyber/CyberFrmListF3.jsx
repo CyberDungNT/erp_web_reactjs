@@ -54,6 +54,9 @@ export default function CyberFrmListF3({
   const start = isNew ? freshNew() : { ...row };
   const form = useCyberForm(start, { draft: false });
   const [saving, setSaving] = useState(false);
+  // đóng: tắt popup trước (chạy hiệu ứng thu lại của CyberPopup) rồi mới báo màn danh mục gỡ form
+  const [open, setOpen] = useState(true);
+  const finish = useCallback(() => { setOpen(false); setTimeout(() => onClose?.(), 180); }, [onClose]);
   const firstData = useRef(form.data);
   const dirty = form.data !== firstData.current;
 
@@ -63,8 +66,8 @@ export default function CyberFrmListF3({
       const ok = await msgbox.yesNo('Dữ liệu đã thay đổi nhưng chưa lưu. Quay ra và bỏ thay đổi?', { title: title || list?.title });
       if (!ok) return;
     }
-    onClose?.();
-  }, [saving, dirty, onClose, title, list]);
+    finish();
+  }, [saving, dirty, finish, title, list]);
 
   const ctx = { ...ctxBase, close };
 
@@ -87,7 +90,7 @@ export default function CyberFrmListF3({
         firstData.current = fresh;
       } else {
         firstData.current = form.data;
-        onClose?.();
+        finish();
       }
     } catch (e) {
       toast.error(e?.message || String(e));
@@ -115,7 +118,7 @@ export default function CyberFrmListF3({
   const heading = title || `${isNew ? 'Thêm mới' : isView ? 'Xem' : 'Sửa'} – ${list?.title || ''}`;
 
   return (
-    <CyberPopup open onClose={close} title={heading} width={width} height={height} className={`f3 ${saving ? 'is-busy' : ''}`}
+    <CyberPopup open={open} onClose={close} title={heading} width={width} height={height} className={`f3 ${saving ? 'is-busy' : ''}`}
       footer={(
         <div className="f3__foot">
           <span className="f3__hint">{dirty ? 'Có thay đổi chưa lưu' : ''}</span>

@@ -230,9 +230,26 @@ textarea.cy-input { height: auto; padding: 6px 8px; resize: vertical; }
 
 /* ---- Popup ---- */
 .cy-overlay {
-  position: fixed; inset: 0; z-index: 2000; background: rgba(15, 47, 71, .45);
-  backdrop-filter: blur(2px);
+  position: fixed; inset: 0; z-index: 2000;
   display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;
+}
+/* nền mờ tách ra ::before -> mờ dần độc lập với popup (đổi opacity cả lớp phủ thì popup cũng mờ theo) */
+.cy-overlay::before {
+  content: ''; position: absolute; inset: 0; background: rgba(15, 47, 71, .45); backdrop-filter: blur(2px);
+  animation: cy-ov-in .22s ease-out both;
+}
+.cy-overlay.is-closing { pointer-events: none; }
+.cy-overlay.is-closing::before { animation: cy-ov-out .17s ease-in forwards; }
+@keyframes cy-ov-in { from { opacity: 0; } }
+@keyframes cy-ov-out { to { opacity: 0; } }
+/* popup xuất hiện: hiện dần + trượt nhẹ lên + phóng 96% -> 100%, đường cong chậm dần cuối ("đáp nhẹ").
+   Dùng thuộc tính translate / scale riêng – KHÔNG đè transform inline (vị trí khi kéo di chuyển popup) */
+.cy-popup { animation: cy-pop-in .32s cubic-bezier(.16, 1, .3, 1) both; }
+.cy-popup.is-closing { animation: cy-pop-out .17s cubic-bezier(.4, 0, 1, 1) forwards; }
+@keyframes cy-pop-in { from { opacity: 0; translate: 0 14px; scale: .96; } }
+@keyframes cy-pop-out { to { opacity: 0; translate: 0 8px; scale: .97; } }
+@media (prefers-reduced-motion: reduce) {
+  .cy-overlay::before, .cy-overlay.is-closing::before, .cy-popup, .cy-popup.is-closing { animation-duration: 1ms; }
 }
 .cy-popup {
   max-width: 100%; max-height: 100%; display: flex; flex-direction: column; background: var(--cy-bg);
@@ -589,3 +606,28 @@ a.cy-upload__name:hover { color: var(--brand); text-decoration: underline; }
 .cy-upload__btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 .cy-upload__busy { font-size: 12px; color: var(--muted); }
 .f3__body.is-view:disabled { opacity: 1; } /* Xem bản ghi: ô chỉ đọc nhưng không làm mờ cả form */
+
+/* CyberLookup: đang gọi CP_SysListLookup -> vòng quay ở nút ▾ */
+.cy-lookup__spin {
+  display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid var(--cy-primary-soft); border-top-color: var(--cy-primary); animation: cy-spin .7s linear infinite;
+}
+/* CyberLookup – danh sách thả xuống dưới ô (cột theo head CP_SysListLookup) */
+.cy-dropdown--lookup { max-height: none; overflow: hidden; z-index: 3500; display: flex; flex-direction: column; }
+/* vùng cuộn riêng (dòng chân ở ngoài); chừa chỗ dòng tiêu đề dính -> dòng được chọn khi ↑ không bị tiêu đề che */
+.cy-lookup__scroll { max-height: 300px; overflow: auto; scroll-padding-top: 32px; }
+/* kẻ ô: separate (không dùng collapse – viền tiêu đề dính trên cùng khi cuộn mới giữ được) */
+.cy-dropdown--lookup .cy-dropdown__table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; }
+.cy-dropdown--lookup th {
+  z-index: 1; padding: 6px 8px; color: var(--ink-2); background: var(--line-2);
+  border-right: 1px solid var(--cy-border); border-bottom: 1px solid var(--cy-border-strong);
+}
+.cy-dropdown--lookup td {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 5px 8px;
+  border-right: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2);
+}
+.cy-dropdown--lookup th:last-child, .cy-dropdown--lookup td:last-child { border-right: 0; }
+.cy-dropdown--lookup tbody tr:nth-child(even) td { background: var(--surface-2); }  /* sọc xen kẽ dễ dò dòng */
+.cy-dropdown--lookup tbody tr.is-active td { background: var(--cy-primary-soft); color: var(--cy-primary-text); border-bottom-color: var(--cy-primary-soft); }
+.cy-dropdown--lookup tbody tr.is-active td:first-child { box-shadow: inset 3px 0 0 var(--cy-primary); }
+.cy-dropdown__foot { flex-shrink: 0; padding: 4px 8px; font-size: 11.5px; color: var(--cy-text-muted); background: var(--cy-bg-muted); border-top: 1px solid var(--cy-border); }

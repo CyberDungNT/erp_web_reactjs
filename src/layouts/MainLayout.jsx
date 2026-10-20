@@ -44,6 +44,10 @@ import TaskBar from "./TaskBar";
 import { APP_BUILD, watchNewVersion } from "@/utils/appVersion";
 // Cập nhật hệ thống (menu avatar, chỉ quản trị) – tải code khi mở
 const DeployPanel = lazy(() => import("./DeployPanel"));
+// Popup tài khoản (đổi mật khẩu, ảnh đại diện) – nạp khi mở
+const ChangePasswordPopup = lazy(() => import("./AccountPopups").then((m) => ({ default: m.ChangePasswordPopup })));
+const AvatarPopup = lazy(() => import("./AccountPopups").then((m) => ({ default: m.AvatarPopup })));
+import AvatarImage from "./AvatarImage";
 import "./main.css";
 
 const SIDEBAR_KEY = LOCAL_KEYS.SIDEBAR_COLLAPSED;
@@ -70,6 +74,9 @@ const USER_TEXT = {
     toDark: "Chuyển sang giao diện tối",
     toLight: "Chuyển sang giao diện sáng",
     account: "Thông tin tài khoản",
+    changePw: "Đổi mật khẩu",
+    avatar: "Đổi ảnh đại diện",
+    avatarEdit: "Đổi ảnh",
     fs: "Toàn màn hình",
     exitFs: "Thoát toàn màn hình",
     collapseSide: "Thu gọn menu trái",
@@ -113,6 +120,9 @@ const USER_TEXT = {
     toDark: "Switch to dark mode",
     toLight: "Switch to light mode",
     account: "Account information",
+    changePw: "Change password",
+    avatar: "Change profile picture",
+    avatarEdit: "Edit",
     fs: "Full screen",
     exitFs: "Exit full screen",
     collapseSide: "Collapse sidebar",
@@ -271,6 +281,14 @@ export default function MainLayout() {
   const [ctxMenu, setCtxMenu] = useState(null);
   const [userOpen, setUserOpen] = useState(false);
   const [deployOpen, setDeployOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);         // popup đổi mật khẩu
+  const [avatarOpen, setAvatarOpen] = useState(false); // popup ảnh đại diện
+  // Popup đã mở ít nhất 1 lần -> giữ lại (chỉ đổi open), để khi đóng CyberPopup còn chạy hiệu ứng thu lại
+  // (gỡ component ngay khi đóng thì popup biến mất đột ngột). Chưa mở lần nào -> chưa nạp code popup.
+  const [seen, setSeen] = useState({});
+  useEffect(() => {
+    setSeen((s) => ({ ...s, ...(pwOpen && { pw: true }), ...(avatarOpen && { avatar: true }), ...(deployOpen && { deploy: true }) }));
+  }, [pwOpen, avatarOpen, deployOpen]);
   const userRef = useRef(null);
 
   useEffect(() => {
@@ -630,7 +648,7 @@ export default function MainLayout() {
               aria-expanded={userOpen}
             >
               <span className="mn__avatar">
-                {initial}
+                <AvatarImage url={user?.Url_Avatar} initial={initial} />
                 <UserMenuBadge items={moduleUserMenu} />
               </span>
               <span className="mn__user-text">
@@ -645,10 +663,14 @@ export default function MainLayout() {
             {userOpen && (
               <div className="mn__user-pop" role="menu">
                 <div className="mn__user-head">
-                  <span className="mn__avatar mn__avatar--lg">
-                    {initial}
+                  {/* Ảnh đại diện: bấm vào avatar / nút máy ảnh cạnh avatar -> đổi ảnh (không để trong danh sách menu) */}
+                  <button type="button" className="mn__avatar mn__avatar--lg mn__avatar--btn" title={UT.avatar} aria-label={UT.avatar}
+                    onClick={() => { setUserOpen(false); setAvatarOpen(true); }}>
+                    <AvatarImage url={user?.Url_Avatar} initial={initial} />
+                    <span className="mn__avatar-edit" aria-hidden="true">{UT.avatarEdit}</span>
+                    <span className="mn__avatar-cam" aria-hidden="true"><Icon name="camera" size={12} strokeWidth={2} /></span>
                     <i className="mn__online" />
-                  </span>
+                  </button>
                   <div className="mn__user-id">
                     <b>{displayName}</b>
                     <small>{user?.EMail || user?.User_name}</small>
@@ -765,6 +787,10 @@ export default function MainLayout() {
                     }}
                   >
                     <Icon name="user" size={16} /> <span>{UT.account}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="mn__user-act"
+                    onClick={() => { setUserOpen(false); setPwOpen(true); }}>
+                    <Icon name="lock" size={16} /> <span>{UT.changePw}</span>
                   </button>
                   <button
                     type="button"
@@ -952,7 +978,18 @@ export default function MainLayout() {
           <CyberContextMenu {...ctxMenu} onClose={() => setCtxMenu(null)} />
         )}
 
-        {deployOpen && (
+        {(pwOpen || seen.pw) && (
+          <Suspense fallback={null}>
+            <ChangePasswordPopup open={pwOpen} onClose={() => setPwOpen(false)} />
+          </Suspense>
+        )}
+        {(avatarOpen || seen.avatar) && (
+          <Suspense fallback={null}>
+            <AvatarPopup open={avatarOpen} onClose={() => setAvatarOpen(false)} initial={initial} />
+          </Suspense>
+        )}
+
+        {(deployOpen || seen.deploy) && (
           <Suspense fallback={null}>
             <DeployPanel open={deployOpen} onClose={() => setDeployOpen(false)} user={user} />
           </Suspense>

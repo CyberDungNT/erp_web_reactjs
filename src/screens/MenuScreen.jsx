@@ -11,8 +11,9 @@ const ListScreen = lazy(() => import('./ListScreen'));
  * Cửa sổ chức năng trong màn chính (MainLayout dùng cho mọi Menu_Id):
  *   1. Menu_Id khai báo cứng trong src/modules/<phân-hệ>/index.js (screens) -> mở luôn (màn DEV, màn đặc biệt)
  *   2. Còn lại: gọi CP_SysGetMenu (MainLayout đã hỏi trước khi mở: Status = N -> không mở, CyberMsgBox báo Note)
- *        IsList = 1 -> màn danh mục chung ListScreen (gọi CP_SysList)
- *        còn lại    -> FormInPut -> mở file cùng tên (screens/menuForm.js)
+ *        IsList = 1 -> màn danh mục chung ListScreen (gọi CP_SysList; form Sửa/Thêm ở src/modules/danhmuc)
+ *        còn lại    -> FormInPut -> mở file cùng tên trong thư mục của loại (screens/menuForm.js – FORM_KINDS):
+ *                      IsReport -> modules/baocao, IsVoucher -> modules/chungtu, IsCaculator -> modules/calculator, khác -> modules/other
  */
 export default function MenuScreen({ menu }) {
   const Static = screens[menu?.id];
@@ -45,7 +46,7 @@ function DbScreen({ menu }) {
     return <ScreenMessage menu={menu} icon="lock" title="Không mở được chức năng" detail={info.Note || 'Bạn không có quyền sử dụng chức năng này.'} onRetry={() => setReload((n) => n + 1)} />;
   }
   if (isListMenu(info)) return <ListScreen menu={menu} menuInfo={info} />;
-  const form = findForm(info.FormInPut);
+  const form = findForm(info.FormInPut, info); // tìm theo loại (cờ IsReport / IsVoucher / IsCaculator...)
   if (!form) return <Placeholder menu={menu} menuInfo={info} />;
   const { Component } = form;
   return <Component menu={menu} menuInfo={info} />;

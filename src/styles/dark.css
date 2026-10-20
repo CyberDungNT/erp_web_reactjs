@@ -161,7 +161,7 @@
 /* ===== CyberPopup nổi bật ở chế độ tối =====
    Mặc định popup cùng màu nền với trang -> chìm. Ở đây: lớp phủ tối hơn, popup "nổi" lên 1 tầng sáng hơn
    (đổi biến màu trong popup -> mọi ô nhập / bảng bên trong sáng theo), viền sáng nhẹ, bóng sâu + quầng xanh thương hiệu. */
-:root[data-theme='dark'] .cy-overlay { background: rgba(3, 8, 14, .66); backdrop-filter: blur(3px); }
+:root[data-theme='dark'] .cy-overlay::before { background: rgba(3, 8, 14, .66); backdrop-filter: blur(3px); }
 :root[data-theme='dark'] .cy-popup {
   --surface: #1c2a37; --surface-2: #223243; --cy-bg: #1c2a37; --cy-bg-muted: #223243;
   --line: #34495c; --line-2: #2b3d4e; --cy-border: #3a5166;

@@ -2,35 +2,68 @@ import { lazy } from 'react';
 import { callProc } from '@/api/apiClient';
 
 /**
- * MỞ MÀN HÌNH THEO KHAI BÁO TRONG DB
+ * MỞ MÀN HÌNH THEO KHAI BÁO TRONG DB (xem thêm src/modules/README.md)
  *
- * Bấm 1 chức năng trên menu -> gọi CP_SysGetMenu -> cột FormInPut = TÊN FILE màn hình trong project
- * -> tự tìm file đó trong src/modules (mọi thư mục con, không cần khai báo ở đâu) và mở.
+ * Bấm 1 chức năng trên menu -> gọi CP_SysGetMenu -> cờ loại (IsList / IsReport / IsVoucher / IsCaculator)
+ * + cột FormInPut = TÊN FILE màn hình -> mở file đó trong THƯ MỤC CỦA LOẠI:
  *
- *   FormInPut = 'ReportGLSO1'  ->  mở src/modules/<bất kỳ>/ReportGLSO1.jsx  (export default component)
+ *   Loại        Cờ CP_SysGetMenu   Thư mục                   Mở thế nào
+ *   Danh mục    IsList = 1         src/modules/danhmuc/      màn danh mục chung (ListScreen, CP_SysList); file trong
+ *                                                            danhmuc/ = form Sửa / Thêm (FormInPut bảng cấu hình CP_SysList)
+ *   Báo cáo     IsReport = 1       src/modules/baocao/       file <FormInPut>.jsx
+ *   Chứng từ    IsVoucher = 1      src/modules/chungtu/      file <FormInPut>.jsx
+ *   Tính toán   IsCaculator = 1    src/modules/calculator/   file <FormInPut>.jsx
+ *   Khác        (không cờ nào)     src/modules/other/        file <FormInPut>.jsx
  *
+ *   FormInPut = 'BcSoCaiTk' + IsReport = 1  ->  src/modules/baocao/BcSoCaiTk.jsx  (export default component)
+ *
+ * Tìm trong thư mục của loại trước; không thấy thì tìm các thư mục khác (trùng tên giữa 2 loại vẫn đúng file).
  * Tên file không phân biệt hoa thường, có thể bỏ đuôi "Page" (FormInPut 'HangHoa' tìm cả HangHoa.jsx lẫn HangHoaPage.jsx).
+ * Thư mục / file bắt đầu bằng "_" (vd src/modules/_mau – file mẫu) KHÔNG được nạp.
  * Màn hình nhận props: { menu, menuInfo }  – menuInfo = nguyên dòng CP_SysGetMenu trả về
  *   (Name, Ma_Ct, IsVoucher, IsList, IsReport, IsCaculator, IsSystem, FormInPut, IsMaxForm, Chk_Pass, HelpName, Para, ...).
  */
 export const MENU_PROC = 'CP_SysGetMenu';
 
-// ----- Danh mục file màn hình: tên file (chữ thường) -> nạp file khi cần -----
-const files = import.meta.glob(['../modules/**/*.jsx', '!../modules/_*/**']);
-const loaders = new Map();
+/** 5 loại chức năng: cờ trong CP_SysGetMenu -> thư mục chứa form + file mẫu (src/modules/_mau) */
+export const FORM_KINDS = [
+  { key: 'list', flag: 'IsList', folder: 'danhmuc', text: 'Danh mục', sample: 'MauDanhMuc' },
+  { key: 'report', flag: 'IsReport', folder: 'baocao', text: 'Báo cáo', sample: 'MauBaoCao' },
+  { key: 'voucher', flag: 'IsVoucher', folder: 'chungtu', text: 'Chứng từ', sample: 'MauChungTu' },
+  { key: 'calculator', flag: 'IsCaculator', folder: 'calculator', text: 'Tính toán', sample: 'MauCalculator' },
+  { key: 'other', flag: null, folder: 'other', text: 'Khác', sample: 'MauKhac' },
+];
+const isOn = (v) => ['1', 'true'].includes(String(v ?? '').trim().toLowerCase());
+
+/** Loại của 1 chức năng theo dòng CP_SysGetMenu (không cờ nào -> 'other') */
+export const kindOf = (info) => FORM_KINDS.find((k) => k.flag && isOn(info?.[k.flag])) || FORM_KINDS[FORM_KINDS.length - 1];
+
+// ----- Danh mục file màn hình: thư mục -> (tên file chữ thường -> nạp file khi cần) -----
+const files = import.meta.glob(['../modules/**/*.jsx', '!../modules/_*/**', '!../modules/**/_*.jsx']);
+const byFolder = new Map(); // 'baocao' -> Map(name -> loader)
 for (const [path, load] of Object.entries(files)) {
-  const name = path.split('/').pop().replace(/\.jsx$/i, '').toLowerCase();
-  if (loaders.has(name)) console.warn(`[menuForm] Trùng tên file màn hình '${name}': ${path} – FormInPut sẽ mở file gặp trước`);
-  else loaders.set(name, { load, path: path.replace(/^\.\.\//, 'src/') });
+  const parts = path.replace(/^\.\.\/modules\//, '').split('/');
+  const folder = parts.length > 1 ? parts[0].toLowerCase() : '';
+  const name = parts[parts.length - 1].replace(/\.jsx$/i, '').toLowerCase();
+  if (!byFolder.has(folder)) byFolder.set(folder, new Map());
+  const map = byFolder.get(folder);
+  if (map.has(name)) console.warn(`[menuForm] Trùng tên file '${name}' trong src/modules/${folder}: ${path} – mở file gặp trước`);
+  else map.set(name, { load, path: path.replace(/^\.\.\//, 'src/') });
 }
 
 const components = new Map(); // giữ nguyên 1 component lazy cho mỗi file (không tạo lại mỗi lần render)
 
-/** Tìm màn hình theo FormInPut. Không có file -> null */
-export function findForm(formName) {
+/**
+ * Tìm màn hình theo FormInPut. kind = 'list' | 'report' | 'voucher' | 'calculator' | 'other' (hoặc dòng CP_SysGetMenu).
+ * Tìm thư mục của loại trước, rồi mọi thư mục khác. Không có file -> null
+ */
+export function findForm(formName, kind) {
   const key = String(formName || '').trim().toLowerCase();
   if (!key) return null;
-  const hit = loaders.get(key) || loaders.get(`${key}page`);
+  const k = typeof kind === 'string' ? FORM_KINDS.find((x) => x.key === kind) : kind ? kindOf(kind) : null;
+  const look = (map) => map?.get(key) || map?.get(`${key}page`);
+  let hit = k && look(byFolder.get(k.folder));
+  if (!hit) for (const map of byFolder.values()) { hit = look(map); if (hit) break; }
   if (!hit) return null;
   if (!components.has(hit.path)) components.set(hit.path, { Component: lazy(hit.load), path: hit.path });
   return components.get(hit.path);
@@ -75,7 +108,7 @@ export function getMenuInfo(menuId, user, { refresh = false } = {}) {
 export const isMenuAllowed = (info) => String(info?.Status ?? 'Y').trim().toUpperCase() === 'Y';
 
 /** Chức năng là danh mục? (IsList = 1) -> mở màn danh mục chung (ListScreen, gọi CP_SysList) */
-export const isListMenu = (info) => ['1', 'true'].includes(String(info?.IsList ?? '').trim().toLowerCase());
+export const isListMenu = (info) => kindOf(info).key === 'list';
 
 // ----- Danh mục: CP_SysList -----
 export const LIST_PROC = 'CP_SysList';

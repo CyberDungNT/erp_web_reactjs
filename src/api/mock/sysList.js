@@ -82,3 +82,42 @@ export function mockSysListSave([, mode = 'N', json = '{}']) {
   if (i >= 0) data[i] = full; else data.push(full);
   return { Table: [{ Status: 'Y', Msg: 'N', Note: 'OK' }] };
 }
+
+/**
+ * Giả lập CP_SysListLookup (CyberLookup): [@M_Load, @M_strValue, @M_strKeyFilter, @M_Tb_Name, @M_Ma_TTCP, @M_User_Name]
+ *   Table = các dòng có mã / tên chứa giá trị đã nhập (rỗng = tất cả), Table1 = head (Field_Name...), Table2 = Order (cột mã)
+ */
+// cấu trúc giống thủ tục thật: cột dữ liệu viết thường (ma_kh), head viết hoa (Ma_KH), bảng Order = cột mã
+const KH = [
+  ['001050010486', 'Dương Hồng Khánh', '12a Lý Nam Đế, Phường Hoàn Kiếm, Thành phố Hà Nội', '', '0913210084'],
+  ['001055012703', 'Vũ Hữu Hùng', '12 Bà Triệu, Phường Cửa Nam, Thành phố Hà Nội', '', '0912364755'],
+  ['001058010526', 'Nguyễn Văn Nghĩa', '1 Đại Cồ Việt, Phường Bạch Mai, Thành phố Hà Nội', '', '0983168411'],
+  ['001058033640', 'Phạm Ngọc Toàn', '162 Phố Huế, Phường Hai Bà Trưng, Thành phố Hà Nội', '', '0836500982'],
+  ['001060001456', 'Nguyễn Tiến Lập', '102 Tổ 12 Lạc Trung A, Thanh Lương, Hai Bà Trưng, Hà Nội', '', '0904629589'],
+  ['001060006703', 'Nguyễn Mạnh Cương', '10A Ngõ Đồng Nhân, Phường Hai Bà Trưng, Thành phố Hà Nội', '', '0396070737'],
+  ['001065010525', 'NGUYỄN VIỆT CƯỜNG', '12 ngõ 210 Đường Láng, Phường Đống Đa, Thành phố Hà Nội', '0101419580', '0913359177'],
+  ['NTT', 'Nguyễn Thành Tân', 'Đống Đa, Hà Nội', '', '0978901234'],
+].map(([ma, ten, dc, mst, dt]) => ({ ma_kh: ma, ten_kh: ten, dia_chi: dc, Ma_So_Thue: mst, Dien_thoai: dt }));
+const LH = (n, h, w) => ({ Field_ban: n, Field_ban0: '', Field_Name: n, Field_Head: h, Field_Type: 'C', Field_ReOnly: 1, Field_Width: w, Format: '', Carry: 0, TextAlign: '', SumAvgCountMinMax: '', CaptionGroup: '', Upper: 0, View: 0 });
+const LOOKUPS = {
+  dmkh: {
+    rows: () => KH, code: 'ma_kh', name: 'ten_kh', order: 'Ma_KH',
+    head: [LH('Ma_KH', 'Mã', 120), LH('Ten_KH', 'Tên', 300), LH('Dia_Chi', 'Địa chỉ', 300), LH('Ma_So_Thue', 'Mã số thuế', 120), LH('Dien_Thoai', 'Điện thoại', 120)],
+  },
+  dmtk0: {
+    rows: () => data.map((r) => ({ tk0: r.Tk0, ten_tk0: r.TEN_TK0, tk_me: r.TK_ME })), code: 'tk0', name: 'ten_tk0', order: 'Tk0',
+    head: [LH('Tk0', 'Tài khoản', 100), LH('Ten_Tk0', 'Tên tài khoản', 300), LH('Tk_Me', 'TK mẹ', 80)],
+  },
+};
+const fold = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase();
+
+export function mockSysListLookup([, value = '', , tbName = '']) {
+  const L = LOOKUPS[String(tbName).toLowerCase()];
+  if (!L) return { Table: [{ Status: 'N', Msg: 'Y', Note: `[MOCK] Chưa có dữ liệu giả cho danh mục "${tbName}"` }] };
+  const k = fold(value).trim();
+  return {
+    Table: L.rows().filter((r) => !k || fold(r[L.code]).includes(k) || fold(r[L.name]).includes(k)),
+    Table1: L.head,
+    Table2: [{ Order: L.order }],
+  };
+}

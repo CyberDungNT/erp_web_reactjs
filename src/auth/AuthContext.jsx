@@ -93,9 +93,14 @@ export function AuthProvider({ children }) {
     auth.updateSavedToken({ lang }).catch(() => {});
   }, []);
 
+  /** Cập nhật thông tin tài khoản đang đăng nhập (vd Url_Avatar sau khi đổi ảnh) – không cần đăng nhập lại */
+  const updateUser = useCallback((patch) => {
+    setSession((s) => (s ? { ...s, info: { ...s.info, ...patch } } : s));
+  }, []);
+
   const value = useMemo(
-    () => ({ session, user: session?.info || null, lang: session?.lang || 'V', login, logout, setLang, restoring, notice }),
-    [session, login, logout, setLang, restoring, notice]
+    () => ({ session, user: session?.info || null, lang: session?.lang || 'V', login, logout, setLang, updateUser, restoring, notice }),
+    [session, login, logout, setLang, updateUser, restoring, notice]
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -562,3 +562,21 @@ html:has(.mn--bye), html:has(.lg--bye) { overflow: hidden; }
   background: #e5383b; color: #fff; font: 700 11px/20px system-ui, sans-serif; font-style: normal; text-align: center;
 }
 @keyframes mn-badge-pop { from { transform: scale(.4); opacity: 0; } }
+
+/* Ảnh đại diện (Url_Avatar) trên avatar thanh trên / menu; avatar lớn trong menu bấm được -> đổi ảnh */
+.mn__avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.mn__avatar--btn { border: 0; padding: 0; cursor: pointer; font: inherit; }
+.mn__avatar--btn:hover { box-shadow: 0 0 0 3px var(--brand); }
+/* nút máy ảnh gắn cạnh avatar lớn (góc dưới trái – góc dưới phải là chấm trực tuyến) + lớp "Đổi ảnh" khi rê chuột */
+.mn__avatar--btn { position: relative; }
+.mn__avatar-cam {
+  position: absolute; left: -4px; bottom: -4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); color: var(--brand); border: 1px solid var(--line); box-shadow: 0 2px 5px rgba(15, 47, 71, .22);
+  transition: transform .15s var(--ease), background-color .15s, color .15s;
+}
+.mn__avatar--btn:hover .mn__avatar-cam { transform: scale(1.12); background: var(--brand); color: #fff; border-color: var(--brand); }
+.mn__avatar-edit {
+  position: absolute; inset: 0; border-radius: 50%; display: grid; place-items: center; font-size: 10.5px; font-weight: 600; color: #fff;
+  background: rgba(8, 28, 54, .5); opacity: 0; transition: opacity .15s; pointer-events: none; text-shadow: none;
+}
+.mn__avatar--btn:hover .mn__avatar-edit, .mn__avatar--btn:focus-visible .mn__avatar-edit { opacity: 1; }

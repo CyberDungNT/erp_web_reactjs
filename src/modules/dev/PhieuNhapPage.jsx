@@ -132,14 +132,9 @@ export default function PhieuNhapPage({ menu }) {
                 </div>
                 <div>
                   <CyberLookup {...f.bind('MaKH')} textField="TenKH" label="Nhà cung cấp" required error={errors.MaKH}
-                    procName="Demo_LookupKhachHang" valueField="MaKH" displayField="TenKH"
-                    columns={[
-                      { field: 'MaKH', caption: 'Mã', width: 70 },
-                      { field: 'TenKH', caption: 'Tên nhà cung cấp', width: 220 },
-                      { field: 'DiaChi', caption: 'Địa chỉ', width: 140 },
-                    ]}
-                    placeholder="Gõ mã hoặc tên, F4 để xem tất cả"
-                    onSelect={(row) => f.form.setField('DiaChi', row?.DiaChi ?? '')} />
+                    listName="DmKH"
+                    placeholder="Gõ mã hoặc tên rồi Enter, F4 để xem tất cả"
+                    onSelect={(row) => f.form.setField('DiaChi', row?.Dia_Chi ?? '')} />
                   <CyberTextBox {...f.bind('DiaChi')} label="Địa chỉ" readOnly />
                   <CyberTextBox {...f.bind('GhiChu')} label="Diễn giải" />
                 </div>

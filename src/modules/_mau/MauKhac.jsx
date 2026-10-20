@@ -1,13 +1,15 @@
 import { CyberForm, CyberTextBox, CyberTable, toast } from '@/components/cyber';
 
 /**
- * MẪU MÀN HÌNH – đổi tên file/component, sửa proc + cột là chạy.
- * Màn nhận prop `menu` (Menu_Id, tiêu đề, IsMaxForm, Tag...) từ khung chính.
- * Xem màn mẫu đầy đủ: src/modules/dev/PhieuNhapPage.jsx
+ * MẪU – MÀN KHÁC (không thuộc danh mục / báo cáo / chứng từ / tính toán – CP_SysGetMenu không bật cờ loại nào)
+ *
+ * Cách dùng: chép file này thành src/modules/other/<FormInPut>.jsx, đổi tên component, sửa thủ tục + nội dung.
+ * props: { menu, menuInfo } – menu (Menu_Id, tiêu đề...), menuInfo = dòng CP_SysGetMenu
+ * Màn mẫu đầy đủ (CyberForm): src/modules/dev/PhieuNhapPage.jsx
  */
 const PROC_LOAD = 'Demo_GetHangHoa';   // proc lấy dữ liệu khi mở màn
 
-export default function TenManPage({ menu }) {
+export default function MauKhac({ menu }) {
   /** Chạy khi mở màn và khi bấm Làm mới (F5): gọi API, gán dữ liệu */
   const onLoad = async (f) => {
     const { tables } = await f.call(PROC_LOAD, []);

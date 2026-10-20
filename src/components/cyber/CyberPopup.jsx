@@ -20,6 +20,9 @@ import { createPortal } from 'react-dom';
  *   maximizable      nút phóng to (mặc định true)
  *   resizable        kéo cạnh / góc để đổi kích thước (mặc định true) – minWidth (320), minHeight (180)
  */
+// thời gian hiệu ứng đóng (khớp .cy-popup.is-closing trong cyber.css)
+const CLOSE_MS = 170;
+
 export default function CyberPopup({
   open, onClose, title, width = 560, height, footer, children,
   closeOnBackdrop = false, closeOnEsc = true, draggable = true, maximizable = true, resizable = true,
@@ -31,8 +34,24 @@ export default function CyberPopup({
   const drag = useRef(null);
   const boxRef = useRef(null);
 
+  // Đóng có hiệu ứng: open = false -> giữ thêm CLOSE_MS để chạy hiệu ứng thu lại rồi mới gỡ khỏi màn hình
+  // (vị trí / kích thước kéo giãn reset SAU hiệu ứng – reset ngay thì popup nhảy về giữa trong lúc đang thu lại)
+  const [shown, setShown] = useState(open);
+  const [closing, setClosing] = useState(false);
   useEffect(() => {
-    if (!open) { setOffset({ x: 0, y: 0 }); setMaximized(false); setSize(null); return; }
+    if (open) { setShown(true); setClosing(false); return undefined; }
+    if (!shown) return undefined;
+    setClosing(true);
+    const t = setTimeout(() => {
+      setShown(false); setClosing(false);
+      setOffset({ x: 0, y: 0 }); setMaximized(false); setSize(null);
+    }, CLOSE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     const onKey = (e) => {
       // Chỉ popup trên cùng mới xử lý Esc
       const all = document.querySelectorAll('.cy-popup');
@@ -42,7 +61,7 @@ export default function CyberPopup({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, closeOnEsc, onClose]);
 
-  if (!open) return null;
+  if (!open && !shown) return null;
 
   const startDrag = (e) => {
     if (!draggable || maximized || e.button !== 0 || e.target.closest('button')) return;
@@ -98,8 +117,8 @@ export default function CyberPopup({
     : { width: size?.w ?? width, height: size?.h ?? height, transform: `translate(${offset.x}px, ${offset.y}px)` };
 
   return createPortal(
-    <div className="cy-overlay" onMouseDown={(e) => closeOnBackdrop && e.target === e.currentTarget && onClose?.()}>
-      <div className={`cy-popup ${className}`} style={style} ref={boxRef} role="dialog" aria-modal="true">
+    <div className={`cy-overlay ${closing ? 'is-closing' : ''}`} onMouseDown={(e) => !closing && closeOnBackdrop && e.target === e.currentTarget && onClose?.()}>
+      <div className={`cy-popup ${closing ? 'is-closing' : ''} ${className}`} style={style} ref={boxRef} role="dialog" aria-modal="true">
         <div className={`cy-popup__header ${draggable && !maximized ? 'is-draggable' : ''}`}
           onMouseDown={startDrag} onDoubleClick={() => maximizable && setMaximized((m) => !m)}>
           <span className="cy-popup__title">{title}</span>

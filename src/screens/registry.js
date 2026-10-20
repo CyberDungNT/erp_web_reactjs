@@ -3,8 +3,9 @@ import { lazy } from 'react';
 /**
  * CÁCH MỞ MÀN HÌNH KHI BẤM MENU (screens/MenuScreen.jsx):
  *   1. Menu_Id khai báo cứng ở mục `screens` dưới đây (các module) -> mở luôn
- *   2. Còn lại: gọi CP_SysGetMenu -> cột FormInPut = TÊN FILE màn hình -> tự tìm file đó trong src/modules và mở
- *      (thường dùng cách 2: chỉ cần tạo src/modules/<phân-hệ>/<FormInPut>.jsx, KHÔNG cần khai báo gì – xem screens/menuForm.js)
+ *   2. Còn lại: gọi CP_SysGetMenu -> cờ loại + cột FormInPut = TÊN FILE -> mở file trong thư mục của loại (thường dùng cách này):
+ *      danhmuc/ (IsList) · baocao/ (IsReport) · chungtu/ (IsVoucher) · calculator/ (IsCaculator) · other/ (khác)
+ *      -> chỉ cần tạo src/modules/<thư mục loại>/<FormInPut>.jsx, KHÔNG cần khai báo gì (src/modules/README.md, screens/menuForm.js)
  *
  * DANH MỤC MÀN HÌNH KHAI BÁO CỨNG: Menu_Id -> component.
  *

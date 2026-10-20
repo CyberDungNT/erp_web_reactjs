@@ -168,8 +168,8 @@ export default function ListScreen({ menu, menuInfo }) {
     if (busy) return;
     if (mode === 'edit' && !row) return toast.warning('Chọn 1 dòng trong danh mục trước.');
     if (!formName) return toast.warning(`${LIST_PROC} chưa khai báo FormInPut (form sửa) cho danh mục ${code}.`);
-    const found = findForm(formName);
-    if (!found) return toast.warning(`Chưa có form "${formName}" – tạo file src/modules/<thư mục>/${formName}.jsx (kế thừa CyberFrmListF3).`);
+    const found = findForm(formName, 'list'); // tìm trong src/modules/danhmuc trước
+    if (!found) return toast.warning(`Chưa có form "${formName}" – tạo file src/modules/danhmuc/${formName}.jsx (chép mẫu src/modules/_mau/MauDanhMuc.jsx).`);
     setEditor({ id: Date.now(), Form: found.Component, mode, row: mode === 'new' ? null : row });
   };
 

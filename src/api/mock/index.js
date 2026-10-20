@@ -6,7 +6,7 @@
 import { mockLogin, mockDashboard } from './login';
 import { mockGetUnits } from './units';
 import { mockDashboardHome } from './dashboard';
-import { mockSysList, mockSysListSave } from './sysList';
+import { mockSysList, mockSysListSave, mockSysListLookup } from './sysList';
 
 const khachHang = [
   { MaKH: 'KH001', TenKH: 'Công ty TNHH Minh Phát', DiaChi: 'Q.1, TP.HCM', DienThoai: '0901234567' },
@@ -55,13 +55,17 @@ const procs = {
       '02.29.24': 'HangHoa',           // bỏ đuôi "Page" vẫn tìm ra HangHoaPage.jsx
       '02.03.01': 'PhieuThuTienMat',   // chưa có file -> trang hướng dẫn tạo file
       '05.01.01': 'DMTK0',             // danh mục (IsList = 1) -> ListScreen gọi CP_SysList
+      '03.02.05': 'BcSoChiTietTk',     // báo cáo (IsReport = 1)    -> src/modules/baocao/
+      '02.02.07': 'KetChuyen',         // tính toán (IsCaculator = 1) -> src/modules/calculator/
     };
+    // cờ loại -> thư mục chứa form (screens/menuForm.js FORM_KINDS)
+    const KIND = { '05.01.01': 'IsList', '03.02.05': 'IsReport', '02.02.07': 'IsCaculator', '02.03.01': 'IsVoucher', '02.02.01': 'IsVoucher' };
     if (menuId === '02.02.30') {
       return { Table: [{ Status: 'N', Msg: 'Y', Note: 'Bạn không có quyền sử dụng chức năng Đóng sổ cuối kỳ.' }] };
     }
     return {
       Table: [{
-        Status: 'Y', Msg: 'N', Note: 'OK', Name: `CP_${menuId}`, Ma_Ct: '', IsVoucher: 0, IsList: menuId === '05.01.01' ? 1 : 0, IsReport: 0, IsCaculator: 0,
+        Status: 'Y', Msg: 'N', Note: 'OK', Name: `CP_${menuId}`, Ma_Ct: '', IsVoucher: +(KIND[menuId] === 'IsVoucher'), IsList: +(KIND[menuId] === 'IsList'), IsReport: +(KIND[menuId] === 'IsReport'), IsCaculator: +(KIND[menuId] === 'IsCaculator'),
         IsSystem: 0, FormInPut: MOCK_FORMS[menuId] || '', Menu_Id: menuId, IsMaxForm: 1, Chk_Pass: 0, HelpName: '', Para: '',
         IsShowTab: 0, Cp_NameCaculator: null, isShowPopupCaculator: 0, FormCaculatorNext: null,
       }],
@@ -69,6 +73,7 @@ const procs = {
   },
   CP_SysList: mockSysList,
   CP_SysListSave: mockSysListSave,
+  CP_SysListLookup: mockSysListLookup,
   CP_ToanLC: mockDashboard,
   CP_DashboardBE_Sales: mockDashboard,
   CP_DashboardRO_DsLichHen: mockDashboard,
@@ -112,6 +117,22 @@ procs.Demo_SavePhieuNhap = ([soCT, , maKH, maKho, , chiTiet = '[]']) => {
 // Dashboard trang chủ (HomeDashboard): CP_DashboardHome @SoThang
 procs.CP_DashboardHome = mockDashboardHome;
 
+// ===== Thủ tục của các FILE MẪU src/modules/_mau (chép mẫu ra là chạy thử được ngay ở chế độ dữ liệu giả) =====
+let soCtMau = 100;
+procs.CP_Voucher_NewNo = ([maCt = '']) => ({ Table: [{ So_Ct: `${maCt || 'CT'}-${String(++soCtMau).padStart(5, '0')}` }] });
+procs.CP_Voucher_Save = () => ({ Table: [{ Status: 'Y', Note: 'OK' }] });
+procs.CP_Report_Mau = ([tuNgay, denNgay]) => ({
+  Table: Array.from({ length: 12 }, (_, i) => ({ Ngay: tuNgay, So_Ct: `PT-${1000 + i}`, Dien_Giai: `Nghiệp vụ mẫu ${i + 1} (${tuNgay} → ${denNgay})`, Ps_No: (i + 1) * 1250000, Ps_Co: i % 3 ? 0 : 800000 })),
+  Table1: [
+    { Field: 'Ngay', Caption: 'Ngày', Width: 100, Type: 'date' },
+    { Field: 'So_Ct', Caption: 'Số CT', Width: 100 },
+    { Field: 'Dien_Giai', Caption: 'Diễn giải', Width: 320 },
+    { Field: 'Ps_No', Caption: 'Phát sinh nợ', Width: 140, Type: 'number', Sum: true },
+    { Field: 'Ps_Co', Caption: 'Phát sinh có', Width: 140, Type: 'number', Sum: true },
+  ],
+});
+procs.CP_Calculator_Mau = ([thang, nam]) => ({ Table: [{ Buoc: 1, Noi_Dung: `Tính cho kỳ ${thang}/${nam}`, Ket_Qua: 'Xong' }, { Buoc: 2, Noi_Dung: 'Ghi sổ', Ket_Qua: 'Xong' }], Table1: [{ Status: 'Y', Note: 'OK' }] });
+
 export async function mockExecute({ Name, Para }) {
   // giả lập độ trễ mạng (danh mục chậm hơn để xem hiệu ứng tải)
   await new Promise((r) => setTimeout(r, Name === 'CP_SysList' ? 1200 : 250));
@@ -122,3 +143,13 @@ export async function mockExecute({ Name, Para }) {
   const params = Para ? Para.split('#') : [];
   return { status: true, message: 'thành công', data: fn(params) };
 }
+
+// ===== Tài khoản (menu avatar): đổi mật khẩu, ảnh đại diện – authService.ACCOUNT_PROCS =====
+// Đổi mật khẩu giả lập: mật khẩu hiện tại đúng khi = '123' (MD5 202cb962ac59075b964b07152d234b70)
+let mockPwHash = '202cb962ac59075b964b07152d234b70';
+procs.CP_SysChangePassword = ([, oldHash = '', newHash = '']) => {
+  if (String(oldHash).toLowerCase() !== mockPwHash) return { Table: [{ Status: 'N', Note: 'Mật khẩu hiện tại không đúng.' }] };
+  mockPwHash = String(newHash).toLowerCase();
+  return { Table: [{ Status: 'Y', Note: 'Đã đổi mật khẩu.' }] };
+};
+procs.CP_SysUpdateAvatar = () => ({ Table: [{ Status: 'Y', Note: 'OK' }] });

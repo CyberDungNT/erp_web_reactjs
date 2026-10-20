@@ -274,18 +274,12 @@ export default function DemoControlsPage() {
                   {...form.bind('MaKH')}
                   textField="TenKH"
                   label="Khách hàng" required error={errors.MaKH}
-                  procName="Demo_LookupKhachHang"
-                  valueField="MaKH"
-                  displayField="TenKH"
-                  columns={[
-                    { field: 'MaKH', caption: 'Mã KH', width: 70 },
-                    { field: 'TenKH', caption: 'Tên khách hàng', width: 200 },
-                    { field: 'DiaChi', caption: 'Địa chỉ', width: 140 },
-                  ]}
-                  placeholder="Gõ mã hoặc tên, F4 để xem tất cả"
+                  listName="DmKH"
+                  placeholder="Gõ mã hoặc tên rồi Enter, F4 để xem tất cả"
                   onSelect={(row) => {
-                    form.setField('DiaChi', row?.DiaChi ?? '');
-                    addLog(`Lookup chọn: ${row ? row.MaKH + ' - ' + row.TenKH : '(trống)'}`);
+                    // tên cột theo bảng head của CP_SysListLookup (Ma_KH, Ten_KH, Dia_Chi...)
+                    form.setField('DiaChi', row?.Dia_Chi ?? '');
+                    addLog(`Lookup chọn: ${row ? row.Ma_KH + ' - ' + row.Ten_KH : '(trống)'}`);
                   }}
                 />
                 <CyberTextBox {...form.bind('DiaChi')} label="Địa chỉ" readOnly />
@@ -529,7 +523,7 @@ export default function DemoControlsPage() {
           <CyberDate {...freeForm.bind('DenNgay')} label="Đến ngày" labelWidth={80} min={freeForm.data.TuNgay} />
         </div>
         <CyberLookup {...freeForm.bind('MaKH')} textField="TenKH" label="Khách hàng" labelWidth={80}
-          procName="Demo_LookupKhachHang" valueField="MaKH" displayField="TenKH" />
+          listName="DmKH" />
         <p className="hint">Bảng bên trong popup:</p>
         <CyberTable head={head} data={data} height={200} />
       </CyberPopup>

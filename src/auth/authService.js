@@ -234,3 +234,43 @@ export function getLastLogin() {
 export function setLastLogin(v) {
   lastLogin = { ...(v || {}) };
 }
+
+// ===================== Tài khoản: đổi mật khẩu, ảnh đại diện (menu avatar) =====================
+/**
+ * Tên thủ tục + thứ tự tham số – ĐỔI theo thủ tục thật trên DB.
+ *   CP_SysChangePassword @M_User_Name, @M_Password_Old (MD5), @M_Password_New (MD5), @M_Ma_TTCP, @M_TokenKey, @M_Id_Device
+ *   CP_SysUpdateAvatar   @M_User_Name, @M_Url_Avatar, @M_Ma_TTCP, @M_TokenKey, @M_Id_Device
+ * Thủ tục trả bảng có Status ('Y' thành công / 'N' từ chối) + Note (thông báo).
+ * Mật khẩu gửi dạng MD5 giống CP_SysLogin (hashPassword – loginConfig.passwordUpperCase).
+ */
+export const ACCOUNT_PROCS = {
+  changePassword: 'CP_SysChangePassword',
+  updateAvatar: 'CP_SysUpdateAvatar',
+  minPasswordLength: 6, // độ dài tối thiểu mật khẩu mới
+};
+
+/** Đọc Status / Note từ kết quả thủ tục; Status = N -> throw Error(Note) */
+function ensureOk(res, fallback) {
+  const row = res.tables.find((t) => t?.[0] && Object.keys(t[0]).some((k) => k.toLowerCase() === 'status'))?.[0];
+  if (!row) return '';
+  const get = (n) => row[Object.keys(row).find((k) => k.toLowerCase() === n)];
+  if (String(get('status') ?? 'Y').trim().toUpperCase() === 'N') throw new Error(String(get('note') || fallback));
+  return String(get('note') || '');
+}
+
+/** Đổi mật khẩu tài khoản đang đăng nhập. Lỗi / bị từ chối -> throw (Error.message = Note của thủ tục) */
+export async function changePassword(user, oldPassword, newPassword) {
+  const res = await callProc(ACCOUNT_PROCS.changePassword, [
+    user?.User_name || '', hashPassword(oldPassword), hashPassword(newPassword),
+    user?.Ma_TTCP || '', user?.TokenKey || '', getDeviceId(),
+  ], { silent: true });
+  return ensureOk(res, 'Không đổi được mật khẩu.');
+}
+
+/** Lưu đường dẫn ảnh đại diện (Url_Avatar) của tài khoản đang đăng nhập ('' = bỏ ảnh) */
+export async function updateAvatar(user, url) {
+  const res = await callProc(ACCOUNT_PROCS.updateAvatar, [
+    user?.User_name || '', url || '', user?.Ma_TTCP || '', user?.TokenKey || '', getDeviceId(),
+  ], { silent: true });
+  return ensureOk(res, 'Không lưu được ảnh đại diện.');
+}
