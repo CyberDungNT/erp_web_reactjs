@@ -13,6 +13,7 @@ export const screens = {
   'DEV.PHIEUNHAP': lazy(() => import('./PhieuNhapPage')),
   'DEV.PROC': lazy(() => import('./ProcTesterPage')),
   'DEV.PLATE': lazy(() => import('./BienSoXePage')),
+  'DEV.BARCODE': lazy(() => import('./BarcodePage')),
 };
 
 /**
@@ -41,6 +42,7 @@ export const menu = [
       { id: 'DEV.PHIEUNHAP', parentId: 'DEV', text: 'Phiếu nhập kho (mẫu CyberForm)', icon: '', separator: false, children: [] },
       { id: 'DEV.PROC', parentId: 'DEV', text: 'Gọi proc tuỳ ý', icon: '', separator: false, children: [] },
       { id: 'DEV.PLATE', parentId: 'DEV', text: 'Đọc biển số xe (mẫu)', icon: '', separator: false, children: [] },
+      { id: 'DEV.BARCODE', parentId: 'DEV', text: 'Quét QR / mã vạch (mẫu)', icon: '', separator: false, children: [] },
     ],
   },
 ];
