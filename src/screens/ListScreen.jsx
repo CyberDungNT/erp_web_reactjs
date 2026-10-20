@@ -1,6 +1,7 @@
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/auth/AuthContext';
-import { CyberTable, toast } from '@/components/cyber';
+import { CyberTable, msgbox, toast } from '@/components/cyber';
+import { useScreen } from '@/hooks/screenContext';
 import Icon from '@/components/icons/Icon';
 import { findForm, listCodeOf, loadList, LIST_PROC } from './menuForm';
 import './list.css';
@@ -83,6 +84,13 @@ function useNarrow() {
   return on;
 }
 
+/** Bảng phím tắt (Trợ giúp – F1) */
+const HELP_KEYS = [
+  ['F10', 'Lọc số liệu'], ['F1', 'Trợ giúp'], ['Ctrl+F5', 'Làm tươi dữ liệu'], ['F2', 'Xem bản ghi'], ['F3', 'Sửa bản ghi'],
+  ['F4', 'Tạo mới'], ['F6', 'Đổi mã'], ['F8', 'Xoá mã'], ['F7', 'In danh mục'], ['Ctrl+P', 'In báo cáo'], ['F12', 'Khai báo tham số'],
+  ['Chuột phải', 'Menu chức năng trên dòng'], ['Nháy đúp', 'Sửa bản ghi'],
+];
+
 const OPS = [
   { key: 'like', text: 'Like', test: (s, k) => s.includes(k) },
   { key: 'eq', text: '=', test: (s, k) => s === k },
@@ -98,6 +106,8 @@ export default function ListScreen({ menu, menuInfo }) {
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState({ field: '', op: 'like', text: '' });
   const [editor, setEditor] = useState(null); // form sửa / thêm đang mở: { id, Form, mode, row }
+  const [showFilter, setShowFilter] = useState(true); // Tuỳ chọn: dòng lọc theo cột
+  const [freezeCols, setFreezeCols] = useState(true); // Tuỳ chọn: cố định cột (ColFrozen)
 
   useEffect(() => {
     let alive = true;
@@ -151,7 +161,6 @@ export default function ListScreen({ menu, menuInfo }) {
   const frozen = Math.min(narrow ? 1 : Infinity, Math.max(0, Number(get(config, 'ColFrozen')) || 0));
   const busy = state.loading;
   const pending = (what) => () => toast.info(`${what} – ${title}: chức năng đang được phát triển.`);
-  const needRow = (what) => () => (selected ? pending(what)() : toast.warning('Chọn 1 dòng trong danh mục trước.'));
 
   // Mới / Sửa: mở form có tên = FormInPut (bảng cấu hình CP_SysList) trong popup
   const formName = str(get(config, 'FormInPut'));
@@ -161,8 +170,110 @@ export default function ListScreen({ menu, menuInfo }) {
     if (!formName) return toast.warning(`${LIST_PROC} chưa khai báo FormInPut (form sửa) cho danh mục ${code}.`);
     const found = findForm(formName);
     if (!found) return toast.warning(`Chưa có form "${formName}" – tạo file src/modules/<thư mục>/${formName}.jsx (kế thừa CyberFrmListF3).`);
-    setEditor({ id: Date.now(), Form: found.Component, mode, row: mode === 'edit' ? row : null });
+    setEditor({ id: Date.now(), Form: found.Component, mode, row: mode === 'new' ? null : row });
   };
+
+  // ----- In danh mục: bảng các dòng đang hiển thị -> hộp thoại in của trình duyệt (chọn máy in / lưu PDF) -----
+  const printList = () => {
+    if (!view.length) return toast.warning('Không có dữ liệu để in.');
+    const esc = (v) => str(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const head = columns.map((c) => `<th>${esc(c.caption)}</th>`).join('');
+    const body = view.map((r) => `<tr>${columns.map((c) => {
+      const v = r[c.field];
+      const t = c.type === 'bool' ? (['1', 'true'].includes(str(v).toLowerCase()) ? '✔' : '') : esc(v);
+      return `<td style="text-align:${c.align || (c.type === 'number' ? 'right' : c.type === 'bool' ? 'center' : 'left')};white-space:pre">${t}</td>`;
+    }).join('')}</tr>`).join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+      body{font:12px Arial,sans-serif;margin:16px;color:#000} h2{margin:0 0 4px;font-size:16px} .sub{margin:0 0 10px;color:#555}
+      table{border-collapse:collapse;width:100%} th,td{border:1px solid #999;padding:3px 6px} th{background:#eee}
+      @page{size:A4 landscape;margin:12mm}</style></head><body>
+      <h2>${esc(title)}</h2><p class="sub">${esc(user?.Ten_TTCP || '')} · ${view.length} dòng · in lúc ${new Date().toLocaleString('vi-VN')}</p>
+      <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></body></html>`;
+    // in qua iframe ẩn (không bị chặn cửa sổ bật lên như window.open)
+    const frame = Object.assign(document.createElement('iframe'), { style: 'position:fixed;width:0;height:0;border:0;right:0;bottom:0' });
+    document.body.appendChild(frame);
+    frame.contentDocument.open(); frame.contentDocument.write(html); frame.contentDocument.close();
+    setTimeout(() => { frame.contentWindow.focus(); frame.contentWindow.print(); setTimeout(() => frame.remove(), 1000); }, 150);
+  };
+
+  // ----- Thao tác (menu chuột phải + phím tắt) -----
+  const screen = useScreen();
+  const searchRef = useRef(null);
+  const rootRef = useRef(null);
+  const withRow = (fn) => (row) => { const r = row || selected; if (!r) return toast.warning('Chọn 1 dòng trong danh mục trước.'); fn(r); };
+  const act = {
+    filter: () => { searchRef.current?.focus(); searchRef.current?.select(); },
+    help: () => msgbox.info(HELP_KEYS.map(([k, t]) => `${k.padEnd(9)} ${t}`).join('\n'), { title: `Phím tắt – ${title}` }),
+    refresh: () => !busy && setReload((n) => n + 1),
+    view: withRow((r) => openEditor('view', r)),
+    edit: withRow((r) => openEditor('edit', r)),
+    add: () => openEditor('new'),
+    changeCode: withRow(() => pending('Đổi mã')()),
+    remove: withRow((r) => msgbox.yesNo(`Xoá mã "${str(r[columns[0]?.field])}" khỏi ${title}?`, { title: 'Xoá mã', danger: true, yesText: 'Xoá', noText: 'Huỷ' })
+      .then((ok) => ok && pending('Xoá mã')())),
+    print: printList,
+    printReport: pending('In báo cáo'),
+    editReport: pending('Sửa báo cáo'),
+    params: pending('Khai báo tham số'),
+    import: pending('Import'),
+    quit: () => window.dispatchEvent(new CustomEvent('cyber:close-window', { detail: screen?.id })),
+  };
+  const actRef = useRef(act);
+  actRef.current = act;
+
+  const I = (name, color) => <Icon name={name} size={15} className={`ic-${color}`} />;
+  const rowMenu = (row) => [
+    { text: 'Lọc số liệu', icon: I('filter', 'blue'), shortcut: 'F10', onClick: act.filter },
+    { text: 'Trợ giúp', icon: I('help', 'blue'), shortcut: 'F1', onClick: act.help },
+    { text: 'Làm tươi dữ liệu', icon: I('refresh', 'green'), shortcut: 'Ctrl+F5', onClick: act.refresh, disabled: busy },
+    '-',
+    { text: 'Xem bản ghi', icon: I('eye', 'blue'), shortcut: 'F2', onClick: () => act.view(row) },
+    { text: 'Sửa bản ghi', icon: I('edit', 'orange'), shortcut: 'F3', onClick: () => act.edit(row) },
+    { text: 'Tạo mới', icon: I('plus', 'blue'), shortcut: 'F4', onClick: act.add },
+    { text: 'Đổi mã', icon: I('exchange', 'gray'), shortcut: 'F6', onClick: () => act.changeCode(row) },
+    { text: 'Xoá mã', icon: I('trash', 'red'), shortcut: 'F8', onClick: () => act.remove(row) },
+    '-',
+    { text: 'In danh mục', icon: I('report', 'blue'), shortcut: 'F7', onClick: act.print },
+    { text: 'In báo cáo', icon: I('printer', 'gray'), shortcut: 'Ctrl+P', onClick: act.printReport },
+    { text: 'Sửa báo cáo', icon: I('doc', 'orange'), onClick: act.editReport },
+    '-',
+    { text: 'Khai báo tham số', icon: I('tools', 'purple'), shortcut: 'F12', onClick: act.params },
+    '-',
+    {
+      text: 'Kết xuất', icon: I('download', 'green'), children: [
+        { text: 'Excel (.csv)', icon: I('file', 'green'), onClick: exportCsv },
+        { text: 'In / Lưu PDF', icon: I('printer', 'gray'), onClick: act.print },
+      ],
+    },
+    { text: 'Import', icon: I('upload', 'orange'), onClick: act.import },
+    {
+      text: 'Tuỳ chọn', icon: I('tools', 'gray'), children: [
+        { text: `${showFilter ? 'Ẩn' : 'Hiện'} dòng lọc theo cột`, icon: I('filter', 'gray'), onClick: () => setShowFilter((v) => !v) },
+        { text: `${freezeCols ? 'Bỏ' : 'Bật'} cố định cột`, icon: I('sidebar', 'gray'), onClick: () => setFreezeCols((v) => !v), disabled: !frozen },
+      ],
+    },
+    '-',
+    { text: 'Quay ra', icon: I('close', 'red'), onClick: act.quit },
+  ];
+
+  // Phím tắt – chỉ khi danh mục là cửa sổ đang hiện và không có popup / hộp thoại / menu nào đang mở
+  useEffect(() => {
+    const keys = {
+      F10: 'filter', F1: 'help', 'Ctrl+F5': 'refresh', F2: 'view', F3: 'edit', F4: 'add', F6: 'changeCode', F8: 'remove',
+      F7: 'print', 'Ctrl+P': 'printReport', F12: 'params',
+    };
+    const onKey = (e) => {
+      if (!rootRef.current?.offsetParent) return; // cửa sổ đang ẩn (đang ở cửa sổ khác)
+      if (document.querySelector('.cy-popup, .cy-mb, .cy-menu, .cw.is-open .cw__panel:not([hidden])')) return;
+      const k = `${e.ctrlKey || e.metaKey ? 'Ctrl+' : ''}${e.key.length === 1 ? e.key.toUpperCase() : e.key}`;
+      const name = keys[k];
+      if (!name) return;
+      e.preventDefault(); // chặn F1 trợ giúp / F5 tải lại / F7 / F12 / Ctrl+P của trình duyệt
+      actRef.current[name]();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   const exportCsv = useCallback(() => {
     if (!view.length) return toast.warning('Không có dữ liệu để xuất.');
@@ -175,7 +286,7 @@ export default function ListScreen({ menu, menuInfo }) {
   }, [view, columns, code]);
 
   return (
-    <div className={`ls ${state.loading ? 'is-busy' : ''}`}>
+    <div ref={rootRef} className={`ls ${state.loading ? 'is-busy' : ''}`}>
       {/* Thanh chạy trên đỉnh khi đang gọi thủ tục (giống CyberForm – màn Phiếu nhập kho) */}
       <span className="cf__progress" aria-hidden="true" />
       <div className="ls__bar">
@@ -187,8 +298,8 @@ export default function ListScreen({ menu, menuInfo }) {
           <button type="button" className="cy-btn ls__btn" onClick={() => setReload((n) => n + 1)} disabled={state.loading} title="Tải lại dữ liệu">
             <Icon name="refresh" size={15} className={state.loading ? 'cf__spin' : ''} /><span>Dữ liệu</span>
           </button>
-          <button type="button" className="cy-btn ls__btn" onClick={needRow('Đổi mã')} disabled={busy}><Icon name="exchange" size={15} /><span>Đổi mã</span></button>
-          <button type="button" className="cy-btn cy-btn--danger ls__btn" onClick={needRow('Xoá')} disabled={busy}><Icon name="trash" size={15} /><span>Xoá</span></button>
+          <button type="button" className="cy-btn ls__btn" onClick={() => act.changeCode()} disabled={busy}><Icon name="exchange" size={15} /><span>Đổi mã</span></button>
+          <button type="button" className="cy-btn cy-btn--danger ls__btn" onClick={() => act.remove()} disabled={busy}><Icon name="trash" size={15} /><span>Xoá</span></button>
           <span className="ls__sep" />
           <button type="button" className="cy-btn ls__btn" title="Xuất Excel (CSV)" onClick={exportCsv} disabled={busy}><Icon name="download" size={15} /><span>Xuất</span></button>
         </div>
@@ -206,7 +317,7 @@ export default function ListScreen({ menu, menuInfo }) {
           </select>
           <label className="ls__input">
             <Icon name="search" size={14} />
-            <input value={search.text} placeholder="Nhập nội dung tìm kiếm..." onChange={(e) => setSearch((s) => ({ ...s, text: e.target.value }))} />
+            <input ref={searchRef} value={search.text} placeholder="Nhập nội dung tìm kiếm..." onChange={(e) => setSearch((s) => ({ ...s, text: e.target.value }))} />
           </label>
         </div>
       </div>
@@ -222,13 +333,14 @@ export default function ListScreen({ menu, menuInfo }) {
             columns={columns}
             data={view}
             height="100%"
-            frozenColumns={frozen}
-            filterRow
+            frozenColumns={freezeCols ? frozen : 0}
+            filterRow={showFilter}
+            contextMenu={rowMenu}
             showNavigator
             rowStyle={rowStyle}
             emptyText="Không có dữ liệu"
             onSelectionChange={(row) => setSelected(row)}
-            onRowDoubleClick={(row) => openEditor('edit', row)}
+            onRowDoubleClick={(row) => act.edit(row)}
           />
         </div>
       )}

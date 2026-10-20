@@ -11,7 +11,8 @@ import { toast } from './CyberToast';
  *
  * Màn danh mục (screens/ListScreen) bấm Mới / Sửa -> lấy FormInPut ở bảng cấu hình CP_SysList (vd 'DMTK0')
  *   -> mở file cùng tên trong src/modules (vd src/modules/dm/DMTK0.jsx) và truyền props:
- *      { mode: 'new' | 'edit', row, list: { code, title, config, fields }, onClose, onSaved }
+ *      { mode: 'new' | 'edit' | 'view', row, list: { code, title, config, fields }, onClose, onSaved }
+ *      (mode 'view' = Xem bản ghi (F2): mọi ô chỉ đọc, không có nút Lưu)
  *      (fields = tên các cột dữ liệu danh mục – thêm mới thì form khởi tạo đủ các cột này, rỗng)
  *
  * Form con chỉ cần vẽ phần ô nhập, còn popup, nút Lưu / Quay ra (góc dưới), Ctrl+S, hỏi khi thoát mà chưa lưu,
@@ -32,7 +33,7 @@ import { toast } from './CyberToast';
  *   }
  *
  * Props (ngoài các props ListScreen truyền vào – nhớ {...props}):
- *   children   (form, ctx) => JSX  – ctx: { mode, isNew, row, list, user, close }
+ *   children   (form, ctx) => JSX  – ctx: { mode, isNew, isView, row, list, user, close }
  *   onSave     async (data, ctx) => ... – lỗi thì throw (toast tự hiện), xong -> toast thành công, gọi onSaved, đóng popup
  *              (trả về kết quả callProc: có bảng Status = N thì coi là lỗi, báo Note)
  *   validate   (data, ctx) => chuỗi lỗi | null – có lỗi thì báo toast, không lưu
@@ -44,8 +45,9 @@ export default function CyberFrmListF3({
   children, onSave, validate, defaults, title, width = 640, height, keepOpen = false,
 }) {
   const { user } = useAuth();
-  const isNew = mode !== 'edit';
-  const ctxBase = { mode, isNew, row, list, user };
+  const isNew = mode === 'new';
+  const isView = mode === 'view';
+  const ctxBase = { mode, isNew, isView, row, list, user };
   // Thêm mới: đủ mọi cột của danh mục (rỗng) + defaults – để form.bind nhận ra field
   const blank = () => Object.fromEntries((list?.fields || []).map((f) => [f, '']));
   const freshNew = () => ({ ...blank(), ...(typeof defaults === 'function' ? defaults(ctxBase) : defaults) });
@@ -95,6 +97,7 @@ export default function CyberFrmListF3({
   };
 
   // Ctrl+S: lưu (chỉ popup trên cùng)
+  const isViewRef = useRef(isView);
   const saveRef = useRef(save);
   saveRef.current = save;
   useEffect(() => {
@@ -103,30 +106,30 @@ export default function CyberFrmListF3({
       const all = document.querySelectorAll('.cy-popup');
       if (!all.length || !all[all.length - 1].classList.contains('f3')) return;
       e.preventDefault();
-      saveRef.current();
+      if (!isViewRef.current) saveRef.current();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  const heading = title || `${isNew ? 'Thêm mới' : 'Sửa'} – ${list?.title || ''}`;
+  const heading = title || `${isNew ? 'Thêm mới' : isView ? 'Xem' : 'Sửa'} – ${list?.title || ''}`;
 
   return (
     <CyberPopup open onClose={close} title={heading} width={width} height={height} className={`f3 ${saving ? 'is-busy' : ''}`}
       footer={(
         <div className="f3__foot">
           <span className="f3__hint">{dirty ? 'Có thay đổi chưa lưu' : ''}</span>
-          <button type="button" className="cy-btn cy-btn--primary f3__btn" onClick={save} disabled={saving} title="Lưu (Ctrl+S)">
+          {!isView && <button type="button" className="cy-btn cy-btn--primary f3__btn" onClick={save} disabled={saving} title="Lưu (Ctrl+S)">
             <Icon name={saving ? 'refresh' : 'tick'} size={15} className={saving ? 'cf__spin' : ''} />
             <span>{saving ? 'Đang lưu...' : 'Lưu'}</span>
-          </button>
+          </button>}
           <button type="button" className="cy-btn f3__btn" onClick={close} disabled={saving} title="Quay ra (Esc)">
             <Icon name="exit" size={15} /><span>Quay ra</span>
           </button>
         </div>
       )}>
       <span className="cf__progress" aria-hidden="true" />
-      <fieldset className="f3__body" disabled={saving}>
+      <fieldset className={`f3__body ${isView ? "is-view" : ""}`} disabled={saving || isView}>
         {typeof children === 'function' ? children(form, ctx) : children}
       </fieldset>
     </CyberPopup>

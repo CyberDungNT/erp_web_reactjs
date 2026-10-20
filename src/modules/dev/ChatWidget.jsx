@@ -64,7 +64,8 @@ export default function ChatWidget() {
     const onDown = (e) => {
       if (window.innerWidth <= MOBILE_MAX_W) return; // mobile: khung toàn màn hình, chỉ đóng bằng nút ✕
       if (rootRef.current?.contains(e.target)) return;
-      if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup, .cy-menu, .mn__user')) return; // + menu avatar (nơi mở khung) // popup tin nhắn / toast / hộp thoại / menu chuột phải
+      // bấm avatar (mở menu tài khoản) cũng đóng khung chat – không thì menu bị khung chat đè lên
+      if (e.target.closest?.('.cn, .cy-toasts, .cy-mb, .cy-popup, .cy-menu')) return; // popup tin nhắn / toast / hộp thoại / menu chuột phải
       hide();
     };
     document.addEventListener('keydown', onKey);

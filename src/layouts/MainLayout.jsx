@@ -456,6 +456,14 @@ export default function MainLayout() {
     [windows, activeKey],
   );
 
+  // Màn hình tự đóng cửa sổ của chính nó (vd menu chuột phải "Quay ra"):
+  //   window.dispatchEvent(new CustomEvent('cyber:close-window', { detail: useScreen().id }))
+  useEffect(() => {
+    const onClose = (e) => { if (e.detail && e.detail !== HOME) closeWindows([e.detail]); };
+    window.addEventListener("cyber:close-window", onClose);
+    return () => window.removeEventListener("cyber:close-window", onClose);
+  }, [closeWindows]);
+
   // Ctrl+Alt+W: đóng cửa sổ đang mở
   useEffect(() => {
     const onKey = (e) => {
