@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   CyberTextBox, CyberNumeric, CyberLookup, CyberDate, CyberCheckBox,
-  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox, toast, CyberFileUpload,
+  CyberRadioButton, CyberCombobox, CyberTable, CyberPopup, CyberMsgBox, msgbox, toast, CyberFileUpload, CyberTextEditor,
 } from '@/components/cyber';
 import { useCyberForm } from '@/hooks/useCyberForm';
 import { useProc } from '@/hooks/useProc';
@@ -248,6 +248,8 @@ export default function DemoControlsPage() {
 
   // ===== Popup tuỳ ý =====
   const [freeOpen, setFreeOpen] = useState(false);
+  // CyberTextEditor: nội dung HTML
+  const te = useCyberForm({ NoiDung: '<h2>Thông báo nội bộ</h2><p>Xin chào <b>toàn thể nhân viên</b>, công ty tổ chức <span style="color: rgb(214, 69, 61);">họp giao ban</span> lúc 9h sáng thứ Hai.</p><ul><li>Phòng kế toán: báo cáo công nợ</li><li>Phòng kinh doanh: kế hoạch tháng</li></ul>' }, { draft: false });
   const freeForm = useCyberForm({ TuNgay: '2026-10-01', DenNgay: '2026-10-31', MaKH: null, TenKH: '' });
 
   return (
@@ -312,6 +314,13 @@ export default function DemoControlsPage() {
               <CyberNumeric {...form.bind('DonGia')} label="Đơn giá (VN)" decimals={2}
                 thousandSep="." decimalSep="," />
             </div>
+          </section>
+
+          <section className="panel">
+            <h3 className="panel__title">CyberTextEditor – soạn thảo có định dạng (HTML)</h3>
+            <CyberTextEditor {...te.bind('NoiDung')} label="Nội dung" height={240} />
+            <p className="hint" style={{ margin: '10px 0 4px' }}>Giá trị form.data.NoiDung (chuỗi HTML – lưu thẳng vào DB):</p>
+            <pre className="te-demo__out">{te.data.NoiDung || '(trống)'}</pre>
           </section>
 
           <section className="panel">

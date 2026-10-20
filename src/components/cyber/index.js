@@ -18,3 +18,4 @@ export { default as CyberForm } from './CyberForm';
 export { default as CyberFrmListF3 } from './CyberFrmListF3';
 export { toast, CyberToastHost } from './CyberToast';
 export { default as CyberFileUpload, formatSize } from './CyberFileUpload';
+export { default as CyberTextEditor, sanitizeHtml } from './CyberTextEditor';

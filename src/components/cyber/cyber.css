@@ -631,3 +631,81 @@ a.cy-upload__name:hover { color: var(--brand); text-decoration: underline; }
 .cy-dropdown--lookup tbody tr.is-active td { background: var(--cy-primary-soft); color: var(--cy-primary-text); border-bottom-color: var(--cy-primary-soft); }
 .cy-dropdown--lookup tbody tr.is-active td:first-child { box-shadow: inset 3px 0 0 var(--cy-primary); }
 .cy-dropdown__foot { flex-shrink: 0; padding: 4px 8px; font-size: 11.5px; color: var(--cy-text-muted); background: var(--cy-bg-muted); border-top: 1px solid var(--cy-border); }
+
+/* ===== CyberTextEditor – soạn thảo có định dạng (HTML) ===== */
+.cy-te {
+  display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--cy-border); border-radius: 8px;
+  background: var(--cy-bg); overflow: hidden; transition: border-color .15s, box-shadow .15s;
+}
+.cy-te:focus-within { border-color: var(--cy-primary); box-shadow: 0 0 0 3px var(--cy-primary-soft); }
+.cy-te.is-full { position: fixed; inset: 12px; z-index: 2500; border-radius: 10px; box-shadow: 0 24px 60px rgba(15, 47, 71, .35); }
+.cy-te.is-full .cy-te__area, .cy-te.is-full .cy-te__code { flex: 1; height: auto; }
+.cy-te__toolbar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 5px 6px;
+  background: var(--cy-bg-muted); border-bottom: 1px solid var(--cy-border);
+}
+.cy-te__btn {
+  position: relative; min-width: 30px; height: 30px; padding: 0 6px; border: 1px solid transparent; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  background: transparent; color: var(--ink-2); font: inherit; font-size: 14px; cursor: pointer; transition: background-color .12s, color .12s;
+}
+.cy-te__btn:hover:not(:disabled) { background: var(--cy-bg); border-color: var(--cy-border); color: var(--ink); }
+.cy-te__btn.is-on { background: var(--cy-primary-soft); color: var(--cy-primary-text); border-color: transparent; }
+.cy-te__btn:disabled, .cy-te__btn.is-disabled { opacity: .4; cursor: default; }
+.cy-te__btn b, .cy-te__btn i, .cy-te__btn u, .cy-te__btn s { font-size: 15px; font-family: Georgia, 'Times New Roman', serif; }
+.cy-te__sep { width: 1px; height: 20px; margin: 0 4px; background: var(--cy-border); }
+.cy-te__grow { flex: 1; }
+.cy-te__block {
+  height: 30px; padding: 0 6px; border: 1px solid var(--cy-border); border-radius: 6px; background: var(--cy-bg);
+  color: var(--cy-text); font: inherit; font-size: 13px; outline: none; max-width: 140px;
+}
+.cy-te__color { flex-direction: column; gap: 0; padding-top: 2px; }
+.cy-te__color i { display: block; width: 16px; height: 3px; border-radius: 1px; margin-top: -1px; }
+.cy-te__color input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: 0; padding: 0; }
+.cy-te__a { font-weight: 700; font-size: 14px; line-height: 1; }
+/* thanh phụ: liên kết / ảnh / bảng */
+.cy-te__bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 8px; font-size: 13px;
+  background: var(--cy-primary-soft); border-bottom: 1px solid var(--cy-border); color: var(--cy-text);
+}
+.cy-te__bar .cy-icon { color: var(--cy-primary-text); }
+.cy-te__bar .cy-input { flex: 1; min-width: 160px; height: 30px; }
+.cy-te__bar .cy-input.cy-te__num { flex: 0 0 64px; min-width: 0; }
+.cy-te__bar .cy-btn { height: 30px; display: inline-flex; align-items: center; gap: 5px; }
+.cy-te__barx { border: 0; background: none; color: var(--cy-text-muted); cursor: pointer; font-size: 14px; padding: 4px 6px; }
+/* vùng soạn */
+.cy-te__area {
+  position: relative; overflow: auto; padding: 12px 14px; outline: none; line-height: 1.6; font-size: 14px;
+  color: var(--cy-text); overflow-wrap: anywhere; cursor: text;
+}
+.cy-te.is-locked .cy-te__area { cursor: default; background: var(--cy-bg-muted); }
+.cy-te__area.is-empty::before { content: attr(data-placeholder); position: absolute; color: var(--cy-text-muted); pointer-events: none; }
+.cy-te__area > :first-child { margin-top: 0; }
+.cy-te__area p { margin: 0 0 .6em; }
+.cy-te__area h1 { font-size: 1.6em; margin: .4em 0 .5em; } .cy-te__area h2 { font-size: 1.35em; margin: .4em 0 .5em; } .cy-te__area h3 { font-size: 1.15em; margin: .4em 0 .5em; }
+.cy-te__area blockquote { margin: .4em 0 .8em; padding: .4em 1em; border-left: 4px solid var(--cy-primary); background: var(--cy-bg-muted); color: var(--ink-2); border-radius: 0 6px 6px 0; }
+.cy-te__area pre { margin: .4em 0 .8em; padding: .7em 1em; border-radius: 6px; background: var(--dark-900, #0b1f30); color: #e6edf3; font: 12.5px/1.5 Consolas, 'Courier New', monospace; white-space: pre-wrap; }
+.cy-te__area ul, .cy-te__area ol { margin: 0 0 .6em; padding-left: 1.6em; }
+.cy-te__area a { color: var(--cy-primary-text); text-decoration: underline; }
+.cy-te__area img { max-width: 100%; height: auto; border-radius: 4px; }
+.cy-te__area hr { border: 0; border-top: 1px solid var(--cy-border-strong); margin: 1em 0; }
+.cy-te__area table { border-collapse: collapse; width: 100%; margin: .4em 0 .8em; }
+.cy-te__area th, .cy-te__area td { border: 1px solid var(--cy-border-strong); padding: 5px 8px; min-width: 40px; vertical-align: top; }
+.cy-te__area th { background: var(--cy-bg-muted); font-weight: 600; text-align: left; }
+/* chế độ HTML */
+.cy-te__code {
+  width: 100%; box-sizing: border-box; resize: none; border: 0; outline: none; padding: 12px 14px; margin: 0;
+  background: var(--dark-900, #0b1f30); color: #d6e4f0; font: 12.5px/1.55 Consolas, 'Courier New', monospace; tab-size: 2;
+}
+/* chân: đếm chữ + chuyển chế độ */
+.cy-te__foot {
+  display: flex; align-items: center; gap: 8px; padding: 4px 6px 4px 10px; font-size: 12px; color: var(--cy-text-muted);
+  background: var(--cy-bg-muted); border-top: 1px solid var(--cy-border);
+}
+.cy-te__modes { display: inline-flex; padding: 2px; border-radius: 7px; background: var(--cy-bg); border: 1px solid var(--cy-border); }
+.cy-te__modes button {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border: 0; border-radius: 5px;
+  background: none; color: var(--ink-2); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.cy-te__modes button.is-on { background: var(--cy-primary); color: #fff; }
+.te-demo__out { max-height: 140px; overflow: auto; margin: 0; padding: 8px 10px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); font: 11.5px/1.5 Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
