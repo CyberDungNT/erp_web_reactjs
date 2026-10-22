@@ -6,8 +6,10 @@ import { createPortal } from 'react-dom';
  * items: [{ text, icon, shortcut, onClick, disabled, hidden, danger, children }, '-' (đường kẻ), ...]
  *   icon      chữ / emoji hoặc JSX (vd <Icon name="edit" />)
  *   children  mảng items con -> mục có mũi tên ▸, rê chuột (hoặc bấm) mở menu con bên phải (sát mép màn hình thì bên trái)
+ * placement  'bottom' (mặc định: menu mở xuống từ y) | 'top' (mở lên, đáy menu tại y – vd nút ở thanh dưới cùng)
+ * Menu cao hơn màn hình -> tự giới hạn chiều cao và cuộn.
  */
-export default function CyberContextMenu({ x, y, items, onClose }) {
+export default function CyberContextMenu({ x, y, items, onClose, placement = 'bottom' }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ left: x, top: y });
 
@@ -15,11 +17,15 @@ export default function CyberContextMenu({ x, y, items, onClose }) {
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
+    const maxH = window.innerHeight - 8;
+    const h = Math.min(r.height, maxH);
+    const top = placement === 'top' ? y - h : y;
     setPos({
       left: Math.max(4, Math.min(x, window.innerWidth - r.width - 4)),
-      top: Math.max(4, Math.min(y, window.innerHeight - r.height - 4)),
+      top: Math.max(4, Math.min(top, window.innerHeight - h - 4)),
+      ...(r.height > maxH ? { maxHeight: maxH, overflowY: 'auto' } : null),
     });
-  }, [x, y]);
+  }, [x, y, placement]);
 
   useEffect(() => {
     // bấm ngoài menu (kể cả menu con – nằm trong ref vì là con DOM) -> đóng

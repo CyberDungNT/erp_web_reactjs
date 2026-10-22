@@ -324,7 +324,10 @@
   display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; flex-shrink: 0;
   background: var(--brand-100); color: var(--brand-text); font-size: 11px; font-weight: 700;
   animation: mn-count-pop .35s var(--ease-spring);
+  border: 0; font-family: inherit; cursor: pointer; transition: background-color .15s, color .15s, box-shadow .15s;
 }
+.mn__task-count:hover, .mn__task-count.is-open { background: var(--brand); color: #fff; }
+.mn__task-count:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--brand-100); }
 @keyframes mn-count-pop { from { transform: scale(.4); opacity: 0; } }
 .mn__task-sep { width: 1px; height: 22px; background: var(--line); flex-shrink: 0; }
 
@@ -333,10 +336,25 @@
   overflow-x: auto; scrollbar-width: none;
 }
 .mn__task-list::-webkit-scrollbar { display: none; }
+/* còn tab khuất ở đầu nào thì mờ dần đầu đó */
+.mn__task-list.has-left { -webkit-mask-image: linear-gradient(to right, transparent, #000 28px); mask-image: linear-gradient(to right, transparent, #000 28px); }
+.mn__task-list.has-right { -webkit-mask-image: linear-gradient(to left, transparent, #000 28px); mask-image: linear-gradient(to left, transparent, #000 28px); }
+.mn__task-list.has-left.has-right {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 28px, #000 calc(100% - 28px), transparent);
+}
+/* nút ‹ › cuộn danh sách tab (chỉ hiện khi tràn) */
+.mn__task-nav {
+  display: grid; place-items: center; width: 26px; height: 30px; padding: 0; flex-shrink: 0; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s, opacity .15s;
+}
+.mn__task-nav:hover:not(:disabled) { border-color: var(--brand-200); background: var(--brand-50); color: var(--brand-text); }
+.mn__task-nav:disabled { opacity: .35; cursor: default; }
 .mn__task-item {
   position: relative; display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 5px 0 8px; max-width: 220px; flex-shrink: 0;
   border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink-2);
-  font-size: 12.5px; font-weight: 500; cursor: grab; user-select: none; touch-action: pan-y; outline: none;
+  font-size: 12.5px; font-weight: 500; cursor: grab; user-select: none; touch-action: pan-x; outline: none;
   transition: background-color .2s, color .2s, border-color .2s, box-shadow .2s;
   animation: mn-task-in .35s var(--ease-spring);
 }

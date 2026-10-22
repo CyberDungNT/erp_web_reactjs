@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Icon, { MenuIcon } from '@/components/icons/Icon';
+import CyberContextMenu from '@/components/cyber/CyberContextMenu';
 
 /**
  * Thanh cửa sổ dưới cùng: "Trang chủ" + các cửa sổ chức năng đang mở | ngày khoá sổ.
@@ -7,6 +8,8 @@ import Icon, { MenuIcon } from '@/components/icons/Icon';
  *  - Bấm: chuyển cửa sổ. Chuột giữa / nút ✕: đóng. Chuột phải: menu (Đóng, Đóng các cửa sổ khác...).
  *  - Kéo ngang 1 tab để đổi vị trí; các tab khác tự trượt nhường chỗ (FLIP animation).
  *    Ctrl + Shift + ← / → trên tab đang chọn: đổi vị trí bằng bàn phím.
+ *  - Nhiều tab tràn khỏi thanh: lăn chuột để cuộn ngang, nút ‹ › hai đầu, vuốt ngang (cảm ứng),
+ *    bấm ô số lượng cửa sổ -> danh sách mọi cửa sổ đang mở để chọn nhanh.
  *
  * Props: windows [{ key, node }], activeKey, homeKey, titleOf(w), onActivate(key), onClose(keys),
  *        onReorder(newWindows), onContextMenu(e, w), lang, lockDate
@@ -24,7 +27,61 @@ export default function TaskBar({
   const [dragKey, setDragKey] = useState(null);
   const windowsRef = useRef(windows); // handler kéo đọc danh sách mới nhất qua ref (tránh closure cũ)
   windowsRef.current = windows;
+  const [over, setOver] = useState({ left: false, right: false }); // còn tab bị che bên trái / phải
+  const [listMenu, setListMenu] = useState(null);                  // { x, y } danh sách cửa sổ
   const E = lang === 'E';
+
+  // Còn tab bị khuất ở 2 đầu? (cuộn, đổi cỡ thanh, thêm / đóng tab)
+  const measure = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const left = el.scrollLeft > 1;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+    setOver((o) => (o.left === left && o.right === right ? o : { left, right }));
+  }, []);
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return undefined;
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    // lăn chuột dọc -> cuộn ngang danh sách tab (chỉ khi đang tràn)
+    const onWheel = (e) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      const d = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+      if (!d) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaMode === 1 ? d * 30 : d;
+    };
+    el.addEventListener('scroll', measure, { passive: true });
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => { ro.disconnect(); el.removeEventListener('scroll', measure); el.removeEventListener('wheel', onWheel); };
+  }, [measure]);
+
+  useEffect(measure, [windows, measure]);
+
+  const scrollByPage = (dir) => {
+    const el = listRef.current;
+    if (el) el.scrollBy({ left: dir * Math.max(120, el.clientWidth * 0.7), behavior: 'smooth' });
+  };
+
+  const openListMenu = (e) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setListMenu({ x: r.left, y: r.top - 6 });
+  };
+  const listMenuItems = () => [
+    { text: E ? 'Home' : 'Trang chủ', icon: <Icon name="home" size={14} />, shortcut: activeKey === homeKey ? '✓' : undefined, onClick: () => onActivate(homeKey) },
+    '-',
+    ...windows.map((w) => ({
+      text: titleOf(w),
+      icon: <MenuIcon icon={w.node?.icon} fallbackText={titleOf(w)} size={14} />,
+      shortcut: activeKey === w.key ? '✓' : undefined,
+      onClick: () => onActivate(w.key),
+    })),
+    '-',
+    { text: E ? 'Close all windows' : 'Đóng tất cả cửa sổ', danger: true, onClick: () => onClose(windows.map((w) => w.key)) },
+  ];
 
   const setItemRef = (key) => (el) => { if (el) items.current.set(key, el); else items.current.delete(key); };
 
@@ -51,13 +108,21 @@ export default function TaskBar({
     if (drag.current) drag.current.pending = false;
   }, [windows]);
 
-  // Tab đang chọn luôn nằm trong vùng nhìn thấy
+  // Tab đang chọn luôn nằm trong vùng nhìn thấy – chừa khoảng mép mờ (FADE) để tab không bị mờ một phần
   useEffect(() => {
-    listRef.current?.querySelector('.is-active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [activeKey]);
+    const list = listRef.current;
+    const el = list?.querySelector('.is-active');
+    if (!el) return;
+    const FADE = 32;
+    const left = el.offsetLeft - list.offsetLeft;
+    const right = left + el.offsetWidth;
+    if (left - FADE < list.scrollLeft) list.scrollTo({ left: Math.max(0, left - FADE), behavior: 'smooth' });
+    else if (right + FADE > list.scrollLeft + list.clientWidth) list.scrollTo({ left: right + FADE - list.clientWidth, behavior: 'smooth' });
+  }, [activeKey, windows.length]);
 
   const onPointerDown = (e, key) => {
-    if (e.button !== 0 || e.target.closest('.mn__task-close')) return;
+    // cảm ứng: vuốt ngang = cuộn danh sách (không kéo đổi chỗ)
+    if (e.button !== 0 || e.pointerType === 'touch' || e.target.closest('.mn__task-close')) return;
     const el = items.current.get(key);
     drag.current = { key, startX: e.clientX, grab: e.clientX - el.getBoundingClientRect().left, x: el.offsetLeft, moved: false };
 
@@ -148,10 +213,22 @@ export default function TaskBar({
         <Icon name="home" size={15} />
         <span>{E ? 'Home' : 'Trang chủ'}</span>
       </button>
-      {windows.length > 0 && <span className="mn__task-count" title={E ? 'Open windows' : 'Cửa sổ đang mở'}>{windows.length}</span>}
+      {windows.length > 0 && (
+        <button type="button" className={`mn__task-count ${listMenu ? 'is-open' : ''}`} onClick={openListMenu}
+          title={E ? 'Open windows – click to list all' : 'Cửa sổ đang mở – bấm để xem danh sách'}
+          aria-label={E ? `${windows.length} open windows` : `${windows.length} cửa sổ đang mở`}>
+          {windows.length}
+        </button>
+      )}
       <span className="mn__task-sep" />
 
-      <div className={`mn__task-list ${dragKey ? 'is-dragging' : ''}`} ref={listRef} role="tablist"
+      {(over.left || over.right) && (
+        <button type="button" className="mn__task-nav" disabled={!over.left} onClick={() => scrollByPage(-1)}
+          title={E ? 'Scroll left' : 'Cuộn sang trái'} aria-label={E ? 'Scroll left' : 'Cuộn sang trái'}>
+          <Icon name="chevronLeft" size={15} strokeWidth={2.2} />
+        </button>
+      )}
+      <div className={`mn__task-list ${dragKey ? 'is-dragging' : ''} ${over.left ? 'has-left' : ''} ${over.right ? 'has-right' : ''}`} ref={listRef} role="tablist"
         aria-label={E ? 'Open windows' : 'Cửa sổ đang mở'}>
         {windows.map((w) => {
           const title = titleOf(w);
@@ -174,6 +251,16 @@ export default function TaskBar({
           );
         })}
       </div>
+
+      {(over.left || over.right) && (
+        <button type="button" className="mn__task-nav" disabled={!over.right} onClick={() => scrollByPage(1)}
+          title={E ? 'Scroll right' : 'Cuộn sang phải'} aria-label={E ? 'Scroll right' : 'Cuộn sang phải'}>
+          <Icon name="chevronRight" size={15} strokeWidth={2.2} />
+        </button>
+      )}
+      {listMenu && (
+        <CyberContextMenu x={listMenu.x} y={listMenu.y} placement="top" items={listMenuItems()} onClose={() => setListMenu(null)} />
+      )}
 
       {lockDate && (
         <span className="mn__lockdate" title={E ? 'Lock date' : 'Ngày khoá sổ'}>
