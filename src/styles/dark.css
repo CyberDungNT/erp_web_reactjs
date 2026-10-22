@@ -179,3 +179,8 @@
 }
 :root[data-theme='dark'] .cy-popup__btn:hover { background: rgba(255, 255, 255, .18); }
 :root[data-theme='dark'] .cy-popup__footer { background: #18242f; border-top-color: #34495c; }
+
+/* ---------- Menu tài khoản (bấm avatar) ---------- */
+:root[data-theme='dark'] .mn__chip--online { color: #4ade80; }
+:root[data-theme='dark'] .mn__mock { background: #4a2a12; color: #fdba74; }
+:root[data-theme='dark'] .mn__avatar--lg { box-shadow: 0 0 0 3px var(--surface), 0 0 0 4px var(--brand-200), 0 6px 16px rgba(0, 0, 0, .45); }

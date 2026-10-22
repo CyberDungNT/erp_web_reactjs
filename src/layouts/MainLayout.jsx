@@ -66,8 +66,12 @@ const USER_TEXT = {
     member: "Người dùng",
     lockDate: "Ngày khoá sổ",
     appVer: "Phiên bản",
-    devBuild: "bản dev",
+    devBuild: "Bản dev",
     mock: "Đang dùng dữ liệu giả",
+    online: "Đang hoạt động",
+    prefs: "Tuỳ chọn",
+    grpAccount: "Tài khoản",
+    grpApp: "Ứng dụng",
     lang: "Ngôn ngữ",
     theme: "Giao diện",
     themes: { light: "Sáng", dark: "Tối", system: "Theo máy" },
@@ -112,8 +116,12 @@ const USER_TEXT = {
     member: "User",
     lockDate: "Lock date",
     appVer: "Version",
-    devBuild: "dev build",
+    devBuild: "Dev build",
     mock: "Using mock data",
+    online: "Active",
+    prefs: "Preferences",
+    grpAccount: "Account",
+    grpApp: "Application",
     lang: "Language",
     theme: "Appearance",
     themes: { light: "Light", dark: "Dark", system: "System" },
@@ -560,6 +568,18 @@ export default function MainLayout() {
   );
 
   // ----- Chức năng trong menu người dùng -----
+  // ↑ ↓ / Home / End: chuyển giữa các mục của menu avatar
+  const onUserMenuKey = (e) => {
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
+    const acts = [...e.currentTarget.querySelectorAll('[role="menuitem"]')];
+    if (!acts.length) return;
+    e.preventDefault();
+    const i = acts.indexOf(document.activeElement);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? acts.length - 1
+      : e.key === "ArrowDown" ? (i + 1) % acts.length : (i <= 0 ? acts.length - 1 : i - 1);
+    acts[next].focus();
+  };
+
   const showAccount = () =>
     msgbox.info(displayName, {
       lang,
@@ -661,217 +681,119 @@ export default function MainLayout() {
               <Icon name="chevronDown" size={16} />
             </button>
             {userOpen && (
-              <div className="mn__user-pop" role="menu">
+              <div className="mn__user-pop" role="menu" aria-label={UT.account} onKeyDown={onUserMenuKey}>
+                {/* ----- Thẻ hồ sơ ----- */}
                 <div className="mn__user-head">
-                  {/* Ảnh đại diện: bấm vào avatar / nút máy ảnh cạnh avatar -> đổi ảnh (không để trong danh sách menu) */}
+                  {/* Ảnh đại diện: bấm vào avatar -> đổi ảnh (không để trong danh sách menu) */}
                   <button type="button" className="mn__avatar mn__avatar--lg mn__avatar--btn" title={UT.avatar} aria-label={UT.avatar}
                     onClick={() => { setUserOpen(false); setAvatarOpen(true); }}>
                     <AvatarImage url={user?.Url_Avatar} initial={initial} />
                     <span className="mn__avatar-edit" aria-hidden="true">{UT.avatarEdit}</span>
                     <span className="mn__avatar-cam" aria-hidden="true"><Icon name="camera" size={12} strokeWidth={2} /></span>
-                    <i className="mn__online" />
                   </button>
                   <div className="mn__user-id">
-                    <b>{displayName}</b>
-                    <small>{user?.EMail || user?.User_name}</small>
-                    <span className="mn__role">
-                      {user?.is_Admin ? UT.admin : UT.member}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mn__user-info">
-                  <div className="mn__user-row">
-                    <Icon name="building" size={14} />{" "}
-                    <span>{user?.Ten_Dvcs}</span>
-                  </div>
-                  <div className="mn__user-row">
-                    <Icon name="briefcase" size={14} />{" "}
-                    <span>{user?.Ten_TTCP}</span>
-                  </div>
-                  {user?.Ngay_Ks && (
-                    <div className="mn__user-row">
-                      <Icon name="lock" size={14} />{" "}
-                      <span>
-                        {UT.lockDate}: {user.Ngay_Ks}
+                    <b title={displayName}>{displayName}</b>
+                    <small title={user?.EMail || user?.User_name}>{user?.EMail || user?.User_name}</small>
+                    <div className="mn__user-chips">
+                      <span className={`mn__chip ${user?.is_Admin ? "mn__chip--admin" : ""}`}>
+                        <Icon name={user?.is_Admin ? "shield" : "user"} size={11} strokeWidth={2.2} />
+                        {user?.is_Admin ? UT.admin : UT.member}
                       </span>
+                      <span className="mn__chip mn__chip--online"><i />{UT.online}</span>
                     </div>
-                  )}
-                  {/* Phiên bản giao diện web đang chạy (tự tăng 1.0.n mỗi lần deploy) – rê chuột: commit + thời điểm build */}
-                  <div className="mn__user-row mn__user-ver"
-                    title={APP_BUILD.id === "dev" ? undefined : [APP_BUILD.commit, APP_BUILD.builtAt && new Date(APP_BUILD.builtAt).toLocaleString(lang === "E" ? "en-GB" : "vi-VN")].filter(Boolean).join(" · ")}>
-                    <Icon name="info" size={14} />{" "}
-                    <span>
-                      {UT.appVer}: <b>{APP_BUILD.id === "dev" || !APP_BUILD.version ? UT.devBuild : `v${APP_BUILD.version}`}</b>
-                    </span>
-                  </div>
-                  {apiConfig.USE_MOCK && (
-                    <div className="mn__user-row">
-                      <span className="badge badge--warn">MOCK</span> {UT.mock}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mn__user-sec">
-                  <div className="mn__user-label">
-                    <Icon name="globe" size={14} /> {UT.lang}
-                  </div>
-                  <div
-                    className={`mn__seg ${lang === "E" ? "is-right" : ""}`}
-                    role="radiogroup"
-                    aria-label={UT.lang}
-                  >
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={lang !== "E"}
-                      className={lang !== "E" ? "is-on" : ""}
-                      onClick={() => setLang("V")}
-                    >
-                      Tiếng Việt
-                    </button>
-                    <button
-                      type="button"
-                      role="radio"
-                      aria-checked={lang === "E"}
-                      className={lang === "E" ? "is-on" : ""}
-                      onClick={() => setLang("E")}
-                    >
-                      English
-                    </button>
                   </div>
                 </div>
 
-                <div className="mn__user-sec">
-                  <div className="mn__user-label">
-                    <Icon name={theme === "dark" ? "moon" : "sun"} size={14} /> {UT.theme}
+                <div className="mn__user-body">
+                  {/* ----- Đơn vị làm việc ----- */}
+                  <div className="mn__ws">
+                    <div className="mn__ws-row" title={user?.Ten_Dvcs}>
+                      <span className="mn__ws-ic"><Icon name="building" size={14} /></span>
+                      <span className="mn__ws-txt"><small>{UT.company}</small><b>{user?.Ten_Dvcs || "—"}</b></span>
+                    </div>
+                    <div className="mn__ws-row" title={user?.Ten_TTCP}>
+                      <span className="mn__ws-ic"><Icon name="briefcase" size={14} /></span>
+                      <span className="mn__ws-txt"><small>{UT.unit}</small><b>{user?.Ten_TTCP || "—"}</b></span>
+                    </div>
+                    {user?.Ngay_Ks && (
+                      <div className="mn__ws-row">
+                        <span className="mn__ws-ic"><Icon name="lock" size={14} /></span>
+                        <span className="mn__ws-txt"><small>{UT.lockDate}</small><b>{user.Ngay_Ks}</b></span>
+                      </div>
+                    )}
                   </div>
-                  <div
-                    className="mn__seg mn__seg--3"
-                    style={{ "--seg-i": THEMES.indexOf(themePref) }}
-                    role="radiogroup"
-                    aria-label={UT.theme}
-                  >
-                    {THEMES.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        role="radio"
-                        aria-checked={themePref === t}
-                        className={themePref === t ? "is-on" : ""}
-                        title={UT.themes[t]}
-                        onClick={() => setThemePref(t)}
-                      >
-                        <Icon name={t === "light" ? "sun" : t === "dark" ? "moon" : "monitor"} size={14} />
+
+                  {/* ----- Tuỳ chọn ----- */}
+                  <div className="mn__user-group">{UT.prefs}</div>
+                  <div className="mn__user-sec">
+                    <div className="mn__user-label"><Icon name="globe" size={15} /> {UT.lang}</div>
+                    <div className={`mn__seg ${lang === "E" ? "is-right" : ""}`} role="radiogroup" aria-label={UT.lang}>
+                      <button type="button" role="radio" aria-checked={lang !== "E"} className={lang !== "E" ? "is-on" : ""}
+                        title="Tiếng Việt" onClick={() => setLang("V")}>
+                        Tiếng Việt
                       </button>
+                      <button type="button" role="radio" aria-checked={lang === "E"} className={lang === "E" ? "is-on" : ""}
+                        title="English" onClick={() => setLang("E")}>
+                        English
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mn__user-sec">
+                    <div className="mn__user-label"><Icon name={theme === "dark" ? "moon" : "sun"} size={15} /> {UT.theme}</div>
+                    <div className="mn__seg mn__seg--3" style={{ "--seg-i": THEMES.indexOf(themePref) }} role="radiogroup" aria-label={UT.theme}>
+                      {THEMES.map((t) => (
+                        <button key={t} type="button" role="radio" aria-checked={themePref === t} className={themePref === t ? "is-on" : ""}
+                          title={UT.themes[t]} aria-label={UT.themes[t]} onClick={() => setThemePref(t)}>
+                          <Icon name={t === "light" ? "sun" : t === "dark" ? "moon" : "monitor"} size={14} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ----- Tài khoản ----- */}
+                  <div className="mn__user-group">{UT.grpAccount}</div>
+                  <div className="mn__user-list">
+                    {/* Mục của các module (vd "Tin nhắn" – số tin chưa đọc) */}
+                    {moduleUserMenu.map((it) => (
+                      <UserAct key={it.key} icon={it.icon} text={it.text?.[lang] || it.text?.V || it.text}
+                        onClick={() => { setUserOpen(false); it.onClick?.(); }}>
+                        {it.useBadge && <UserMenuBadge items={[it]} inline />}
+                      </UserAct>
                     ))}
+                    <UserAct icon="user" text={UT.account} onClick={() => { setUserOpen(false); showAccount(); }} />
+                    <UserAct icon="lock" text={UT.changePw} onClick={() => { setUserOpen(false); setPwOpen(true); }} />
+                  </div>
+
+                  {/* ----- Ứng dụng ----- */}
+                  <div className="mn__user-group">{UT.grpApp}</div>
+                  <div className="mn__user-list">
+                    <UserAct icon={fullscreen ? "shrink" : "expand"} text={fullscreen ? UT.exitFs : UT.fs} onClick={toggleFullscreen}>
+                      <kbd>F11</kbd>
+                    </UserAct>
+                    <UserAct icon="sidebar" text={collapsed ? UT.expandSide : UT.collapseSide} onClick={() => setCollapsed((c) => !c)} />
+                    <UserAct icon="keyboard" text={UT.keys} onClick={() => { setUserOpen(false); showShortcuts(); }} />
+                    <UserAct icon="refresh" text={UT.reload} onClick={() => { setUserOpen(false); reloadApp(); }} />
+                    <UserAct icon="info" text={UT.about} onClick={() => { setUserOpen(false); showAbout(); }} />
+                    {/* Cập nhật phiên bản web / API trực tiếp lên server – chỉ quản trị viên */}
+                    {user?.is_Admin && (
+                      <UserAct icon="upload" text={UT.deploy} onClick={() => { setUserOpen(false); setDeployOpen(true); }}>
+                        <span className="mn__act-tag">Admin</span>
+                      </UserAct>
+                    )}
                   </div>
                 </div>
 
-                <div className="mn__user-list">
-                  {/* Mục của các module (vd "Tin nhắn" – số tin chưa đọc) */}
-                  {moduleUserMenu.map((it) => (
-                    <button key={it.key} type="button" role="menuitem" className="mn__user-act"
-                      onClick={() => { setUserOpen(false); it.onClick?.(); }}>
-                      <Icon name={it.icon} size={16} /> <span>{it.text?.[lang] || it.text?.V || it.text}</span>
-                      {it.useBadge && <UserMenuBadge items={[it]} inline />}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act"
-                    onClick={() => {
-                      setUserOpen(false);
-                      showAccount();
-                    }}
-                  >
-                    <Icon name="user" size={16} /> <span>{UT.account}</span>
-                  </button>
-                  <button type="button" role="menuitem" className="mn__user-act"
-                    onClick={() => { setUserOpen(false); setPwOpen(true); }}>
-                    <Icon name="lock" size={16} /> <span>{UT.changePw}</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act"
-                    onClick={toggleFullscreen}
-                  >
-                    <Icon name={fullscreen ? "shrink" : "expand"} size={16} />{" "}
-                    <span>{fullscreen ? UT.exitFs : UT.fs}</span>
-                    <kbd>F11</kbd>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act"
-                    onClick={() => setCollapsed((c) => !c)}
-                  >
-                    <Icon name="sidebar" size={16} />{" "}
-                    <span>{collapsed ? UT.expandSide : UT.collapseSide}</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act"
-                    onClick={() => {
-                      setUserOpen(false);
-                      showShortcuts();
-                    }}
-                  >
-                    <Icon name="keyboard" size={16} /> <span>{UT.keys}</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act"
-                    onClick={() => {
-                      setUserOpen(false);
-                      reloadApp();
-                    }}
-                  >
-                    <Icon name="refresh" size={16} /> <span>{UT.reload}</span>
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act"
-                    onClick={() => {
-                      setUserOpen(false);
-                      showAbout();
-                    }}
-                  >
-                    <Icon name="info" size={16} /> <span>{UT.about}</span>
-                  </button>
-                  {/* Cập nhật phiên bản web / API trực tiếp lên server – chỉ quản trị viên */}
-                  {user?.is_Admin && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="mn__user-act"
-                      onClick={() => {
-                        setUserOpen(false);
-                        setDeployOpen(true);
-                      }}
-                    >
-                      <Icon name="upload" size={16} /> <span>{UT.deploy}</span>
-                    </button>
-                  )}
-                </div>
-
+                {/* ----- Chân: đăng xuất + phiên bản ----- */}
                 <div className="mn__user-foot">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="mn__user-act is-danger"
-                    onClick={() => {
-                      setUserOpen(false);
-                      doLogout();
-                    }}
-                  >
-                    <Icon name="exit" size={16} /> <span>{UT.logout}</span>
+                  <button type="button" role="menuitem" className="mn__logout" onClick={() => { setUserOpen(false); doLogout(); }}>
+                    <Icon name="exit" size={15} /> <span>{UT.logout}</span>
                   </button>
+                  {/* Phiên bản giao diện web đang chạy (tự tăng 1.0.n mỗi lần deploy) – rê chuột: commit + thời điểm build */}
+                  <span className="mn__user-ver"
+                    title={APP_BUILD.id === "dev" ? undefined : [APP_BUILD.commit, APP_BUILD.builtAt && new Date(APP_BUILD.builtAt).toLocaleString(lang === "E" ? "en-GB" : "vi-VN")].filter(Boolean).join(" · ")}>
+                    {apiConfig.USE_MOCK && <span className="mn__mock" title={UT.mock}>MOCK</span>}
+                    {APP_BUILD.id === "dev" || !APP_BUILD.version ? UT.devBuild : `${UT.appVer} v${APP_BUILD.version}`}
+                  </span>
                 </div>
               </div>
             )}
@@ -1018,6 +940,17 @@ const HOME_SCREEN = { id: HOME };
  * Số trên mục menu avatar (inline) / chấm đỏ trên ảnh avatar (tổng các mục).
  * items là danh sách CỐ ĐỊNH (khai báo trong module) -> gọi hook theo vòng lặp vẫn đúng thứ tự.
  */
+/** 1 mục trong menu avatar: ô biểu tượng + chữ + phần phụ bên phải (phím tắt, số tin, nhãn) */
+function UserAct({ icon, text, onClick, children }) {
+  return (
+    <button type="button" role="menuitem" className="mn__user-act" onClick={onClick}>
+      <span className="mn__act-ic"><Icon name={icon} size={15} /></span>
+      <span className="mn__act-txt">{text}</span>
+      {children}
+    </button>
+  );
+}
+
 function UserMenuBadge({ items, inline = false }) {
   let n = 0;
   for (const it of items) if (it.useBadge) n += Number(it.useBadge()) || 0;
