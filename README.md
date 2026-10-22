@@ -67,7 +67,7 @@ tên sản phẩm, version, khẩu hiệu, chữ chìm website/hotline, link "Qu
 - Menu trái: cây nhiều cấp theo `Menu_Id`/`Menu_Id0`,
   có tìm kiếm không dấu, nút ☰ thu gọn. `---` là đường kẻ, `&` trong tiêu đề được bỏ.
 - Ngôn ngữ VI/EN đổi giữa cột `Bar` và `Bar2`/`bar2`. `01.12.00` đổi ngôn ngữ, `01.19.00` (hoặc Icon `EXIT`) đăng xuất.
-- **Gắn màn hình vào menu**: xem mục [Thêm màn hình mới](#thêm-màn-hình-mới).
+- **Gắn màn hình vào menu**: xem [src/README.md](src/README.md) (mục "Gọi form").
   Màn hình nhận prop `menu` (Menu_Id, tiêu đề, IsMaxForm, isShowTab, Tag...). Chưa khai báo thì mở trang tạm.
 
 ## Giao diện & màu
@@ -98,6 +98,8 @@ src/
   realtime/               SOCKET dùng chung: socket, useSocketEvent, SocketStatus (xem mục Realtime)
   components/
     cyber/                BỘ CONTROL dùng chung: CyberForm, CyberTextBox, CyberTable, msgbox, toast...
+    barcode/              quét QR / mã vạch (CyberBarcodeScanner, CyberBarcodeInput)
+    plate/                đọc biển số xe (CyberPlateReader)
     charts/               biểu đồ SVG (LineChart, BarList, StackBar, Sparkline)
     icons/                bộ icon
   layouts/                khung màn chính: thanh trên, MenuStrip, menu trái, TaskBar, chọn đơn vị
@@ -105,11 +107,12 @@ src/
     login/                màn đăng nhập
     home/                 trang chủ (dashboard)
     PlaceholderPage.jsx   trang tạm cho chức năng chưa làm
-  modules/                MÀN NGHIỆP VỤ – mỗi thư mục là 1 PHÂN HỆ
-    _template/            mẫu phân hệ để copy (thư mục bắt đầu bằng "_" không được nạp)
+  modules/                MÀN NGHIỆP VỤ – tên file = FormInPut (xem src/modules/README.md)
+    danhmuc/ baocao/ chungtu/ calculator/ other/   theo cờ loại của CP_SysGetMenu
+    _mau/                 file mẫu để chép (thư mục / file bắt đầu bằng "_" không được nạp)
     dev/                  công cụ phát triển: test control, màn mẫu, gọi proc
-      index.js            khai báo Menu_Id -> màn hình của phân hệ
-  screens/registry.js     tự gộp mọi modules/*/index.js + trang chủ + trang tạm
+  screens/                mở màn theo menu: menuForm.js (CP_SysGetMenu, CP_SysList), MenuScreen, ListScreen (danh mục chung)
+  README.md               HƯỚNG DẪN DÙNG CONTROL & GỌI FORM
 ```
 
 Import tuyệt đối từ `src` bằng `@/` (không phải đếm `../../`, chuyển file không gãy import):
@@ -120,34 +123,11 @@ import { callProc } from '@/api/apiClient';
 import { useAuth } from '@/auth/AuthContext';
 ```
 
-## Thêm màn hình mới
+## Thêm màn hình, gọi form & dùng control
 
-**1. Màn thuộc phân hệ đã có** (vd `modules/ke-toan`):
-
-1. Tạo file `src/modules/ke-toan/PhieuKeToanPage.jsx` (copy `modules/_template/TenManPage.jsx` hoặc màn mẫu
-   đầy đủ `modules/dev/PhieuNhapPage.jsx`). Màn dùng `CyberForm`: code gọi API / xử lý khi mở màn đặt trong `onLoad`.
-2. Thêm 1 dòng vào `src/modules/ke-toan/index.js`, khoá là `Menu_Id` của chức năng trong menu hệ thống:
-   ```js
-   export const screens = {
-     '02.02.01': lazy(() => import('./PhieuKeToanPage')),   // Phiếu kế toán
-   };
-   ```
-3. Đăng nhập, bấm chức năng trong menu là màn mở ra. Chưa khai báo thì mở trang tạm (hiện sẵn Menu_Id cần khai báo).
-
-**2. Phân hệ mới**: copy thư mục `src/modules/_template` thành `src/modules/<ten-phan-he>` (chữ thường, gạch ngang:
-`ke-toan`, `kho`, `ban-hang`, `nhan-su`...) rồi làm như trên. **Không cần sửa `screens/registry.js`** – file này tự nạp.
-
-Quy ước:
-
-- Tên file màn hình: `PascalCase` + đuôi `Page` (`PhieuKeToanPage.jsx`, `DmKhachHangPage.jsx`).
-- CSS riêng của 1 màn đặt cạnh màn đó (`phieu-ke-toan.css`) và đặt tiền tố class riêng để không đè màn khác.
-  Ưu tiên dùng class/biến có sẵn (`cy-btn`, `panel`, `var(--brand)`...) thay vì tự viết màu.
-- Code dùng lại giữa nhiều màn trong 1 phân hệ: để trong `modules/<phân-hệ>/` (vd `components/`, `api.js`);
-  dùng chung nhiều phân hệ thì đưa lên `src/components`, `src/hooks`, `src/utils`.
-- Proc giả để test khi chưa có backend: thêm vào `src/api/mock/index.js` (`procs.Ten_Proc = (params) => ({ Table: [...] })`).
-- Màn chưa có trong menu hệ thống (màn test, màn nội bộ): khai báo thêm `menu` trong `index.js` của phân hệ
-  (xem `modules/dev/index.js`). Ẩn các menu này: `SHOW_DEV_MENU = false` trong `screens/registry.js`.
-- Thông báo: `toast.*` cho báo nhanh (lưu xong, chưa hỗ trợ...), `msgbox.*` khi cần người dùng xác nhận / đọc kỹ lỗi.
+Xem **[src/README.md](src/README.md)**: mở màn theo `CP_SysGetMenu` / `FormInPut`, file mẫu `src/modules/_mau`,
+CyberForm, form danh mục CyberFrmListF3, binding, props từng control (CyberLookup, CyberDate, CyberTable, CyberPopup...),
+toast / msgbox, `callProc`, các control quét mã / đọc biển số / tải file / soạn thảo. Quy ước thư mục: `src/modules/README.md`.
 
 ## Realtime (socket)
 
@@ -180,102 +160,3 @@ const msg = await socket.invoke('SendMessage', 'chung', 'Xin chào', clientId);
   Tên hàm & sự kiện trùng bản giả lập `src/realtime/transports/mockHub.js`.
 - Thêm chức năng realtime mới: thêm hàm vào `API_App_Demo/Realtime/AppHub.cs` (hoặc đẩy sự kiện bằng `IRealtimeNotifier`) (và `mockHub.js` nếu muốn test không cần backend),
   trong màn hình dùng `useSocketEvent` / `socket.invoke`. Không cần sửa `socket.js`.
-
-## Gọi API
-
-```js
-import { callProc } from '@/api/apiClient';
-
-const res = await callProc('GetData', [1, 2]);   // Para = "1#2"
-res.table   // bảng đầu tiên
-res.tables  // tất cả bảng (DataSet nhiều bảng)
-```
-
-Lỗi (Status = false, mạng, HTTP) đều `throw` – bắt bằng try/catch, `err.message` là Message server trả.
-`normalizeTables` tự nhận dạng Data dạng `{Table:[],Table1:[]}`, `[[...],[...]]` hoặc `[...]`.
-
-> Lưu ý: tham số chứa ký tự `#` sẽ bị tách sai vì backend tách theo `#`.
-
-## Two-way binding
-
-```jsx
-const form = useCyberForm({ MaKH: null, TenKH: '', SoLuong: 0 });
-
-<CyberTextBox {...form.bind('TenKH')} label="Tên KH" />
-<CyberNumeric {...form.bind('SoLuong')} label="Số lượng" />
-
-form.data               // đọc dữ liệu
-form.setField('SoLuong', 10)   // gán từ code -> control tự cập nhật
-form.setData({...})     // gán cả object
-```
-
-Mọi control cũng dùng được kiểu thường: `value={x} onChange={setX}`.
-
-## Control
-
-| Control | Props chính |
-|---|---|
-| CyberTextBox | `multiline rows maxLength upperCase type readOnly onEnter` |
-| CyberNumeric | `decimals thousandSep decimalSep allowNegative min max fixedDecimals` |
-| CyberLookup | `procName para buildPara valueField displayField textField columns minChars debounce onSelect` |
-| CyberDate | `min max showToday` – giá trị chuỗi `yyyy-MM-dd` |
-| CyberCheckBox | `text trueValue falseValue` (vd `1/0` cho cột bit) |
-| CyberRadioButton | `items` hoặc `dataSource valueField displayField`, `direction` |
-| CyberCombobox | `dataSource` hoặc `procName para`, `valueField displayField showValue allowEmpty`, `onChange(value,row)` |
-| CyberTable | `head data onRowClick onRowDoubleClick onSelectionChange contextMenu height showSearch sortable rowClassName frozenColumns frozenRightColumns frozenRows isRowFrozen` |
-| CyberPopup | `open onClose title width height footer closeOnBackdrop closeOnEsc draggable maximizable` |
-| CyberFileUpload | `accept multiple maxSize(MB) maxFiles user deleteOnRemove onUploaded onRemove` – kéo thả / chọn / dán file, tải lên `api/File/upload`; giá trị = mảng file đã lưu `[{ id, name, size, contentType, url }]` (lưu `id` vào DB). Gọi API trực tiếp: `src/api/fileApi.js` (`uploadFile`, `deleteFile`, `fileUrl`) |
-
-Props chung cho control nhập liệu: `label labelWidth layout('horizontal'|'vertical') required error width disabled`.
-
-### Bảng head của CyberTable
-
-Mỗi dòng mô tả 1 cột (key hoa/thường đều được), có thể lấy từ DB:
-
-| Field | Caption | Width | Type | Decimals | Align | Sum | Visible |
-|---|---|---|---|---|---|---|---|
-| MaHang | Mã hàng | 90 | text | | | | |
-| SoLuong | Số lượng | 90 | number | 0 | right | 1 | 1 |
-
-Type: `text | number | date | datetime | bool`. Không truyền head thì tự sinh cột từ data.
-Cột `Fixed`: `left` (hoặc 1) / `right` để cố định cột đó khi cuộn ngang.
-
-### Cố định cột & dòng khi cuộn
-
-Dòng tiêu đề và dòng tổng cộng luôn cố định. Thêm:
-
-```jsx
-<CyberTable head={head} data={data}
-  frozenColumns={2}          // 2 cột đầu cố định bên trái (cột STT tự cố định theo)
-  frozenRightColumns={1}     // 1 cột cuối cố định bên phải
-  frozenRows={1}             // 1 dòng dữ liệu đầu cố định dưới tiêu đề
-  isRowFrozen={(row) => row.LaDongTong === 1}   // ghim dòng bất kỳ lên đầu
-/>
-```
-
-Có thể khai báo ngay trong bảng head lấy từ DB bằng cột `Fixed` thay cho `frozenColumns`.
-Dòng ghim không bị sắp xếp/lọc đẩy đi và hiển thị 📌 ở cột STT.
-
-### Menu chuột phải (khai báo bên ngoài)
-
-```jsx
-<CyberTable head={head} data={data}
-  contextMenu={(row, index) => [
-    { text: 'Sửa', icon: '✎', onClick: () => edit(row) },
-    { text: 'Duyệt', disabled: row.DaDuyet, onClick: () => approve(row) },
-    '-',
-    { text: 'Xoá', danger: true, onClick: () => remove(row) },
-  ]} />
-```
-
-### Lookup
-
-Proc nhận từ khoá ở tham số đầu: `Para = "tukhoa"` (hoặc `"tukhoa#para"` khi truyền thêm `para`).
-Phím: ↑↓ chọn, Enter chọn, Esc đóng, F4 mở toàn bộ.
-
-```sql
-CREATE PROC LookupKhachHang @Keyword NVARCHAR(100) = ''
-AS
-SELECT TOP 50 MaKH, TenKH, DiaChi FROM DMKhachHang
-WHERE @Keyword = '' OR MaKH LIKE '%' + @Keyword + '%' OR TenKH LIKE N'%' + @Keyword + '%'
-```
