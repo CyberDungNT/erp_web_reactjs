@@ -164,7 +164,7 @@ const USER_TEXT = {
 };
 const HOME = "HOME";
 
-/** Dữ liệu dùng chung cho các trang trong màn chính: useMain() */
+/** Dữ liệu dùng chung cho các trang trong màn chính: useMain() -> { leftTree, topTree, nodeMap, openMenu, lang, activeKey (Menu_Id cửa sổ đang xem, null = Trang chủ) } */
 const MainContext = createContext(null);
 export const useMain = () => useContext(MainContext);
 
@@ -538,8 +538,8 @@ export default function MainLayout() {
   };
 
   const ctx = useMemo(
-    () => ({ leftTree, topTree, nodeMap, openMenu, lang }),
-    [leftTree, topTree, nodeMap, openMenu, lang],
+    () => ({ leftTree, topTree, nodeMap, openMenu, lang, activeKey: activeKey === HOME ? null : activeKey }),
+    [leftTree, topTree, nodeMap, openMenu, lang, activeKey],
   );
   const displayName = user?.Comment || user?.User_name || "";
   const initial =

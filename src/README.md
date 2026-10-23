@@ -583,6 +583,19 @@ HTML luôn được lọc an toàn (`sanitizeHtml` – bỏ script, on*, javascr
 `<div dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }} />`.
 Props: `height` (260), `placeholder`, `readOnly`, `disabled`, `uploadImage` (true), `layout` (mặc định `'vertical'`).
 
+### Hỏi AI – trợ lý trong màn chính
+
+Mở bằng menu avatar → **Hỏi AI** hoặc phím **Ctrl + /**. Code ở `src/modules/ai/`. Máy chủ ở `API_App_Demo/Ai/`.
+
+- **Web:** gửi câu hỏi kèm màn đang mở và danh sách chức năng người dùng được dùng tới `POST /api/Ai/chat`. Câu trả lời hiện dần.
+- **Liên kết trong câu trả lời:** `[Tên](menu:MENU_ID)` thành nút mở chức năng đó.
+- **Máy chủ:** kiểm tra TokenKey (cùng proc với Realtime), giới hạn số câu hỏi mỗi phút, rồi gọi Claude bằng Anthropic SDK.
+- **Lời dặn:** lời dặn và danh sách chức năng được cache, các câu hỏi sau nhanh và rẻ hơn.
+- **API key:** đặt biến môi trường `ANTHROPIC_API_KEY` trên server, hoặc `Ai:ApiKey` trong `appsettings.Production.json`. **Không** ghi vào `appsettings.json`.
+- **Cấu hình mục `Ai`:** `Model`, `Effort`, `RateLimitPerMinute`, `ProductName`, `ExtraInstructions` (quy định riêng của công ty), `Fallbacks`.
+- **Thử khi không có backend:** `VITE_USE_MOCK=true` dùng trả lời giả (`src/api/mock/ai.js`). Câu hỏi có chữ "lỗi" giả lập lỗi máy chủ.
+- **Giới hạn:** trợ lý **không** đọc số liệu trong DB, chỉ hướng dẫn và chỉ đường.
+
 ---
 
 ## 10. Quy tắc chung
